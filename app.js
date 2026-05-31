@@ -3,7 +3,7 @@
 // 1. Supabase Initialization
 const SUPABASE_URL = 'https://uidilhuybmtuokunutgz.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpZGlsaHV5Ym10dW9rdW51dGd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDU0NTAsImV4cCI6MjA5MTQyMTQ1MH0.ir9FnuHhW_1i4OslE_SNbOCIgLUEWakScP71WYqnfJM';
-const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // State management
 let leadsList = [];
@@ -62,7 +62,18 @@ function shakeElement(el) {
     setTimeout(() => el.style.transform = 'translateX(0)', 320);
 }
 
-function unlockDashboard() {
+async function unlockDashboard() {
+    try {
+        const configRes = await fetch('/api/config');
+        if (configRes.ok) {
+            const config = await configRes.json();
+            _supabase = supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+            console.log('Supabase client initialized dynamically with URL:', config.supabaseUrl);
+        }
+    } catch (configErr) {
+        console.error('Error initializing dynamic Supabase client, using fallback:', configErr);
+    }
+
     document.getElementById('lock-screen').style.opacity = '0';
     setTimeout(() => {
         document.getElementById('lock-screen').style.display = 'none';
@@ -144,6 +155,7 @@ async function initializeDashboard() {
         document.getElementById('metrics-booked').textContent = booked;
     } catch (e) {
         console.error('Error cargando métricas:', e);
+        showAlert('Error de Base de Datos', `Error al cargar métricas del dashboard: ${e.message || JSON.stringify(e)}`);
     }
 }
 
@@ -173,7 +185,8 @@ async function loadLeadsGrid() {
             tbody.appendChild(tr);
         });
     } catch (e) {
-        showAlert('Error', 'No se pudieron cargar los leads en la rejilla');
+        console.error('Error in loadLeadsGrid:', e);
+        showAlert('Error', `No se pudieron cargar los leads en la rejilla: ${e.message || JSON.stringify(e)}`);
     }
 }
 
