@@ -194,7 +194,7 @@ const implementations = {
       let geminiAnalysis = {};
 
       if (scrapedText) {
-        const gUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        const gUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
         const prompt = `Analiza los siguientes datos extraídos del sitio web de la empresa "${lead.company_name}":
 ---
 ${scrapedText}
