@@ -305,8 +305,6 @@ async function sendToBrain() {
 
         const data = await res.json();
 
-        chatMessages.removeChild(loadDiv);
-
         if (res.ok && data.text) {
             const brainDiv = document.createElement('div');
             brainDiv.className = 'chat-bubble model';
@@ -320,13 +318,15 @@ async function sendToBrain() {
             throw new Error(data.error || 'Error del Orquestador');
         }
     } catch (e) {
-        chatMessages.removeChild(loadDiv);
         const errDiv = document.createElement('div');
         errDiv.className = 'chat-bubble model';
         errDiv.style.color = 'var(--accent-red)';
         errDiv.textContent = `❌ Error: ${e.message}`;
         chatMessages.appendChild(errDiv);
     } finally {
+        if (loadDiv && loadDiv.parentNode === chatMessages) {
+            chatMessages.removeChild(loadDiv);
+        }
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 }
