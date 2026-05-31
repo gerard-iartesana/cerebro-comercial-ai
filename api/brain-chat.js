@@ -71,33 +71,204 @@ const implementations = {
   },
 
   async searchLeads({ domain }) {
-    // Llamada local al endpoint interno
-    const port = process.env.PORT || '3000';
-    const host = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:${port}`;
+    const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
+    if (!HUNTER_API_KEY) {
+      return { error: 'HUNTER_API_KEY no está configurada' };
+    }
     try {
-      const res = await fetch(`${host}/api/hunter-search`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain })
+      const hunterUrl = `https://api.hunter.io/v2/domain-search?domain=${encodeURIComponent(domain)}&api_key=${HUNTER_API_KEY}`;
+      const response = await fetch(hunterUrl);
+      if (!response.ok) {
+        const errText = await response.text();
+        return { error: `Hunter.io API error: ${response.status} - ${errText}` };
+      }
+      const json = await response.json();
+      const hunterData = json.data;
+      if (!hunterData || !hunterData.emails || hunterData.emails.length === 0) {
+        return { message: `No se encontraron correos para el dominio ${domain}`, insertedCount: 0 };
+      }
+      
+      const leadsToInsert = hunterData.emails.map(emailObj => {
+        const companyName = hunterData.organization || domain.split('.')[0];
+        return {
+          email: emailObj.value,
+          first_name: emailObj.first_name || '',
+          company_name: companyName,
+          website: `https://${domain}`,
+          linkedin_url: emailObj.linkedin || '',
+          status: 'lead',
+          sequence_step: 0,
+          scraped_data: {
+            position: emailObj.position || '',
+            confidence: emailObj.confidence || 0,
+            twitter: emailObj.twitter || '',
+            source: 'hunter.io'
+          }
+        };
       });
-      return await res.json();
+
+      let insertedCount = 0;
+      for (const lead of leadsToInsert) {
+        await supabase
+          .from('outreach_leads')
+          .upsert(lead, { onConflict: 'email', ignoreDuplicates: true });
+        insertedCount++;
+      }
+
+      return {
+        success: true,
+        message: `Búsqueda completada para ${domain}`,
+        foundCount: hunterData.emails.length,
+        insertedCount
+      };
     } catch (e) {
-      return { error: `Error interno de conexión: ${e.message}` };
+      return { error: `Error en la búsqueda de leads: ${e.message}` };
     }
   },
 
   async enrichLead({ lead_id }) {
-    const port = process.env.PORT || '3000';
-    const host = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:${port}`;
     try {
-      const res = await fetch(`${host}/api/scrape-enrich`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lead_id })
-      });
-      return await res.json();
+      const { data: lead, error: getErr } = await supabase
+        .from('outreach_leads')
+        .select('*')
+        .eq('id', lead_id)
+        .single();
+
+      if (getErr || !lead) {
+        return { error: `Lead no encontrado: ${getErr ? getErr.message : ''}` };
+      }
+
+      if (!lead.website) {
+        return { error: 'El lead no tiene un sitio web configurado' };
+      }
+
+      await supabase.from('outreach_leads').update({ status: 'enriching' }).eq('id', lead.id);
+
+      const extractText = (html) => {
+        return html
+          .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+          .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+          .replace(/<svg[\s\S]*?<\/svg>/gi, ' ')
+          .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&#[0-9]+;/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      };
+
+      const extractSocials = (html) => {
+        const linkedinRegex = /https?:\/\/(?:www\.)?linkedin\.com\/(?:company|in)\/[a-zA-Z0-9-_\.\/\?=&]+/gi;
+        const twitterRegex = /https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/[a-zA-Z0-9-_]+/gi;
+        const linkedinMatch = html.match(linkedinRegex);
+        const twitterMatch = html.match(twitterRegex);
+        return {
+          linkedin: linkedinMatch ? linkedinMatch[0] : null,
+          twitter: twitterMatch ? twitterMatch[0] : null
+        };
+      };
+
+      let html = '';
+      let scrapedText = '';
+      let socialLinks = { linkedin: null, twitter: null };
+
+      try {
+        const fetchRes = await fetch(lead.website, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+          signal: AbortSignal.timeout(8000)
+        });
+
+        if (fetchRes.ok) {
+          html = await fetchRes.text();
+          scrapedText = extractText(html).substring(0, 8000);
+          socialLinks = extractSocials(html);
+        }
+      } catch (scrapeErr) {
+        console.warn(`Scraping falló para ${lead.website}:`, scrapeErr.message);
+      }
+
+      let icebreaker = `Hola ${lead.first_name || 'allí'},\n\nEstuve revisando vuestra web de ${lead.company_name} y veo que hacéis un trabajo excelente.`;
+      let geminiAnalysis = {};
+
+      if (scrapedText) {
+        const gUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        const prompt = `Analiza los siguientes datos extraídos del sitio web de la empresa "${lead.company_name}":
+---
+${scrapedText}
+---
+
+Tu objetivo es redactar un "icebreaker" (rompehielos) comercial en ESPAÑOL que sea ultra-personalizado, directo y cercano (tuteando). Debe sonar natural, escrito por un humano real, sin rodeos formales ni frases cliché. 
+
+Debe enlazar directamente lo que hace su empresa con un dolor o mejora en Captación de Clientes, Productividad o Automatización gracias a la Inteligencia Artificial + nosotros.
+
+Genera una respuesta en formato JSON estrictamente válido con los siguientes campos:
+{
+  "icebreaker": "Una sola frase directa y cercana conectando con su web (ej: Veo que en {empresa} ayudáis a {su cliente} con {servicio}, y estaba pensando que...",
+  "company_value_prop": "Breve resumen de la propuesta de valor detectada en su web.",
+  "pain_points": "Dolores o áreas de automatización e IA recomendadas para su tipo de negocio."
+}`;
+
+        const geminiRes = await fetch(gUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: 'application/json' }
+          })
+        });
+
+        if (geminiRes.ok) {
+          const geminiJson = await geminiRes.json();
+          const responseText = geminiJson.candidates[0].content.parts[0].text;
+          try {
+            geminiAnalysis = JSON.parse(responseText);
+            if (geminiAnalysis.icebreaker) {
+              icebreaker = geminiAnalysis.icebreaker;
+            }
+          } catch (jsonErr) {
+            console.error('Error parseando JSON de Gemini:', responseText);
+          }
+        }
+      }
+
+      const updatedScrapedData = {
+        ...lead.scraped_data,
+        company_value_prop: geminiAnalysis.company_value_prop || '',
+        pain_points: geminiAnalysis.pain_points || '',
+        scraped_at: new Date().toISOString()
+      };
+
+      const updateData = {
+        status: 'enriched',
+        custom_icebreaker: icebreaker,
+        scraped_data: updatedScrapedData
+      };
+
+      if (socialLinks.linkedin && !lead.linkedin_url) {
+        updateData.linkedin_url = socialLinks.linkedin;
+      }
+      if (socialLinks.twitter) {
+        updateData.scraped_data.twitter = socialLinks.twitter;
+      }
+
+      await supabase.from('outreach_leads').update(updateData).eq('id', lead.id);
+
+      return {
+        success: true,
+        lead_id: lead.id,
+        icebreaker,
+        linkedin: socialLinks.linkedin,
+        company_value_prop: geminiAnalysis.company_value_prop || 'No detectada'
+      };
+
     } catch (e) {
-      return { error: `Error interno de conexión: ${e.message}` };
+      if (lead_id) {
+        await supabase.from('outreach_leads').update({ status: 'lead' }).eq('id', lead_id).catch(() => {});
+      }
+      return { error: `Error en enriquecimiento: ${e.message}` };
     }
   },
 
