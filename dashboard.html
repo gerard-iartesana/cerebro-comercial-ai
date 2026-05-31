@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CerebroComercial AI — Panel de Control</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <!-- macOS System Modal Alert (Centered) -->
+    <div class="macos-modal-overlay" id="alert-modal">
+        <div class="macos-modal-box">
+            <div class="macos-alert-icon" id="alert-icon">✦</div>
+            <h3 class="macos-alert-title" id="alert-title">Notificación</h3>
+            <p class="macos-alert-desc" id="alert-desc">Mensaje de prueba...</p>
+            <div class="macos-alert-actions">
+                <button class="macos-alert-btn" onclick="closeAlert()">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- macOS Lock Screen Authentication (Password Protected) -->
+    <div class="macos-lock-screen" id="lock-screen">
+        <div class="macos-lock-card">
+            <div class="macos-avatar">🧠</div>
+            <div class="macos-lock-user">CerebroComercial AI</div>
+            <div class="macos-password-wrapper">
+                <input type="password" class="macos-lock-input" id="lock-password" placeholder="Contraseña del Sistema" onkeydown="if(event.key==='Enter')validateLock()">
+                <button class="macos-lock-submit" onclick="validateLock()">➔</button>
+            </div>
+            <p class="macos-lock-error" id="lock-error">Clave del panel incorrecta</p>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Container -->
+    <div class="dashboard-container" id="dashboard-wrapper" style="display:none">
+        
+        <!-- Apple Minimalist Sidebar Navigation -->
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-logo">
+                <span class="logo-bold">Cerebro</span><span class="logo-light">Comercial</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <button class="sidebar-nav-item active" data-section="overview">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    Resumen
+                </button>
+                <button class="sidebar-nav-item" data-section="leads">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    Registro Leads
+                </button>
+                <button class="sidebar-nav-item" data-section="kanban">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+                    CRM Kanban
+                </button>
+                <button class="sidebar-nav-item" data-section="brain">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    Hablar con el Cerebro
+                </button>
+                <button class="sidebar-nav-item" data-section="emails">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    Bandeja Email
+                </button>
+                <button class="sidebar-nav-item" data-section="ads">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16"></path><path d="M2 21h20"></path></svg>
+                    Anuncios de Pago
+                </button>
+                <button class="sidebar-nav-item" data-section="calendar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    Calendario
+                </button>
+                <button class="sidebar-nav-item" data-section="proposals">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    Propuestas
+                </button>
+                <button class="sidebar-nav-item" data-section="clients">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    Clientes
+                </button>
+                <button class="sidebar-nav-item" data-section="whatsapp">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    WhatsApp
+                </button>
+                <button class="sidebar-nav-item" data-section="support">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12.01" y2="16"></line><path d="M12 8a2 2 0 0 1 2 2c0 2-3 3-3 3"></path></svg>
+                    Soporte
+                </button>
+                <button class="sidebar-nav-item" data-section="config">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    Configuración
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="sidebar-nav-item" onclick="toggleTheme()" style="opacity:0.8">
+                    <span class="theme-icon">🌙</span> Selector Tema
+                </button>
+                <button class="sidebar-nav-item" onclick="lockPanel()" style="opacity:0.6;color:var(--accent-red)">
+                    🔐 Cerrar Sesión
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard Viewport -->
+        <main class="dashboard-main">
+            
+            <!-- SECTION: Overview (Resumen mixto) -->
+            <div class="dashboard-section active" id="sec-overview">
+                <div class="section-header">
+                    <h1>Resumen Ejecutivo</h1>
+                    <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Outbound + Paid Ads</span>
+                </div>
+
+                <!-- Live Metrics Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card-glass">
+                        <span class="stat-label">Leads Totales</span>
+                        <div class="stat-value" id="metrics-total">—</div>
+                        <span class="stat-trend trend-up">✦ Base Activa</span>
+                    </div>
+                    <div class="stat-card-glass">
+                        <span class="stat-label">Leads Enriquecidos</span>
+                        <div class="stat-value" id="metrics-enriched">—</div>
+                        <span class="stat-trend trend-up">✦ Gemini AI</span>
+                    </div>
+                    <div class="stat-card-glass">
+                        <span class="stat-label">Tasa Respuestas (Outbound)</span>
+                        <div class="stat-value" id="metrics-replied">—</div>
+                        <span class="stat-trend trend-up">✦ Resend Inbound</span>
+                    </div>
+                    <div class="stat-card-glass">
+                        <span class="stat-label">Citas Agendadas</span>
+                        <div class="stat-value" id="metrics-booked">—</div>
+                        <span class="stat-trend trend-up">✦ Cal.com Sync</span>
+                    </div>
+                </div>
+
+                <!-- Paid Ads Indicators (Mocked/Simulated) -->
+                <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:16px;letter-spacing:-0.02em">Tráfico Pagado (Meta, Google, LinkedIn)</h2>
+                <div class="stats-grid" style="margin-bottom:0">
+                    <div class="stat-card-glass" style="border-color:rgba(52, 199, 89, 0.15)">
+                        <span class="stat-label">Impresiones Anuncios</span>
+                        <div class="stat-value">124.5K</div>
+                        <span class="stat-trend trend-up">▲ 14% este mes</span>
+                    </div>
+                    <div class="stat-card-glass" style="border-color:rgba(52, 199, 89, 0.15)">
+                        <span class="stat-label">Clics Totales</span>
+                        <div class="stat-value">3.8K</div>
+                        <span class="stat-trend trend-up">▲ CTR 3.05%</span>
+                    </div>
+                    <div class="stat-card-glass" style="border-color:rgba(52, 199, 89, 0.15)">
+                        <span class="stat-label">Inversión Estimada</span>
+                        <div class="stat-value">420€</div>
+                        <span class="stat-trend trend-down">▼ -2% coste</span>
+                    </div>
+                    <div class="stat-card-glass" style="border-color:rgba(52, 199, 89, 0.15)">
+                        <span class="stat-label">CPA Medio</span>
+                        <div class="stat-value">2.40€</div>
+                        <span class="stat-trend trend-up">▲ Eficiente</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: Lead Registry (Spreadsheet view) -->
+            <div class="dashboard-section" id="sec-leads">
+                <div class="section-header">
+                    <h1>Registro de Leads</h1>
+                    <button class="btn-primary" onclick="loadLeadsGrid()">🔄 Recargar</button>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="spreadsheet-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th>Empresa</th>
+                                <th>Sitio Web</th>
+                                <th>LinkedIn</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leads-table-body">
+                            <!-- Populated in app.js -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SECTION: CRM Kanban Board -->
+            <div class="dashboard-section" id="sec-kanban">
+                <div class="section-header">
+                    <h1>CRM Kanban</h1>
+                </div>
+
+                <div class="kanban-board">
+                    <div class="kanban-column" data-status="lead" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'lead')">
+                        <span class="kanban-column-title">Sin Procesar <span id="count-lead">(0)</span></span>
+                        <div class="kanban-cards-wrapper" id="column-lead"></div>
+                    </div>
+                    <div class="kanban-column" data-status="enriched" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'enriched')">
+                        <span class="kanban-column-title">Enriquecido IA <span id="count-enriched">(0)</span></span>
+                        <div class="kanban-cards-wrapper" id="column-enriched"></div>
+                    </div>
+                    <div class="kanban-column" data-status="replied" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'replied')">
+                        <span class="kanban-column-title">Respondido <span id="count-replied">(0)</span></span>
+                        <div class="kanban-cards-wrapper" id="column-replied"></div>
+                    </div>
+                    <div class="kanban-column" data-status="booked" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'booked')">
+                        <span class="kanban-column-title">Reunión <span id="count-booked">(0)</span></span>
+                        <div class="kanban-cards-wrapper" id="column-booked"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: Hablar con el Cerebro (Chat Orchestrator) -->
+            <div class="dashboard-section" id="sec-brain">
+                <div class="section-header">
+                    <h1>Hablar con el Cerebro</h1>
+                    <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Gemini 3/3.1 Agentic Orchestrator</span>
+                </div>
+
+                <div class="chat-wrapper">
+                    <div class="chat-messages" id="brain-messages">
+                        <div class="chat-bubble model">
+                            👋 ¡Hola! Soy "El Cerebro", el orquestador cognitivo comercial de <strong>iadebarrio.com</strong>.
+                            Puedo ayudarte a gestionar leads, lanzar enriquecimientos automáticos y comprobar estadísticas. 
+                            ¿Qué quieres que hagamos hoy?
+                        </div>
+                    </div>
+                    <div class="chat-input-bar">
+                        <input type="text" class="chat-input" id="brain-chat-input" placeholder="Escribe al Cerebro... (Ej: Busca leads de stripe.com o muestra las estadísticas)" onkeydown="if(event.key==='Enter')sendToBrain()">
+                        <button class="chat-btn" onclick="sendToBrain()">Enviar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: Email Inbox / Outbox -->
+            <div class="dashboard-section" id="sec-emails">
+                <div class="section-header">
+                    <h1>Gestor de Email Outreach</h1>
+                </div>
+
+                <div class="email-box-grid">
+                    <div class="email-list" id="email-inbox-list">
+                        <!-- Populated dynamic -->
+                        <div style="padding:20px;text-align:center;color:var(--text-grey);font-size:0.8rem">No hay correos registrados</div>
+                    </div>
+                    <div class="email-reader">
+                        <div class="email-reader-header">
+                            <h2 id="email-view-subject">Selecciona un correo</h2>
+                            <div id="email-view-from">Remitente: —</div>
+                        </div>
+                        <div class="email-reader-body" id="email-view-body">
+                            Haga clic en un email de la lista lateral para visualizar su contenido completo y trazas de envío.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: Paid Ads Blank Section -->
+            <div class="dashboard-section" id="sec-ads">
+                <div class="section-header">
+                    <h1>Anuncios de Pago</h1>
+                </div>
+                
+                <div style="padding:60px 40px;border:2px dashed var(--border-color);border-radius:24px;text-align:center;background:var(--bg-card);backdrop-filter:var(--glass-blur)">
+                    <div style="font-size:3rem;margin-bottom:20px">📣</div>
+                    <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:10px">Módulo de Paid Ads (Meta, Google, YouTube, LinkedIn)</h2>
+                    <p style="color:var(--text-grey);font-size:0.9rem;max-width:480px;margin:0 auto 24px;line-height:1.5">Configure, rastree y automatice sus campañas pagadas directamente en este panel. La integración de APIs de anuncios está preparada en el núcleo.</p>
+                    <button class="btn-primary" disabled style="opacity:0.6;cursor:not-allowed">Configurar Campañas Ads</button>
+                </div>
+            </div>
+
+            <!-- SECTION: Calendar -->
+            <div class="dashboard-section" id="sec-calendar">
+                <div class="section-header">
+                    <h1>Calendario de Consultorías</h1>
+                </div>
+                
+                <div class="stat-card-glass" style="padding:40px;text-align:center">
+                    <div style="font-size:2.5rem;margin-bottom:16px">📅</div>
+                    <p style="color:var(--text-grey);font-size:0.9rem;line-height:1.5">Calendario unificado de citas comerciales sincronizado con <strong>iadebarrio.com</strong>.<br>Las reservas aparecerán aquí en cuanto el webhook de Cal.com las registre.</p>
+                </div>
+            </div>
+
+            <!-- Placeholders for other tabs: Proposals, Clients, WhatsApp, Support, Config -->
+            <div class="dashboard-section" id="sec-proposals">
+                <div class="section-header"><h1>Propuestas Comerciales</h1></div>
+                <div class="stat-card-glass" style="padding:30px">
+                    <p style="color:var(--text-grey);font-size:0.9rem">Generación de presupuestos B2B automatizados con Gemini 3.1 Pro en base al raspado web.</p>
+                </div>
+            </div>
+            
+            <div class="dashboard-section" id="sec-clients">
+                <div class="section-header"><h1>Clientes B2B</h1></div>
+                <div class="stat-card-glass" style="padding:30px">
+                    <p style="color:var(--text-grey);font-size:0.9rem">Listado de leads convertidos en clientes de consultoría para iadebarrio.com.</p>
+                </div>
+            </div>
+
+            <div class="dashboard-section" id="sec-whatsapp">
+                <div class="section-header"><h1>WhatsApp Outreach</h1></div>
+                <div class="stat-card-glass" style="padding:30px">
+                    <p style="color:var(--text-grey);font-size:0.9rem">Integración futura de mensajería comercial instantánea.</p>
+                </div>
+            </div>
+
+            <div class="dashboard-section" id="sec-support">
+                <div class="section-header"><h1>Consola de Soporte y Logs</h1></div>
+                <div class="stat-card-glass" style="padding:30px;font-family:monospace;font-size:0.8rem;background:#000;color:#34c759;max-height:300px;overflow-y:auto">
+                    [SYSTEM LOG - 2026-05-31] CerebroComercial AI inicializado correctamente.<br>
+                    [SYSTEM LOG - 2026-05-31] Orquestador central en línea usando Gemini 3.1.<br>
+                    [SYSTEM LOG - 2026-05-31] Supabase client conectado. RLS habilitado.<br>
+                </div>
+            </div>
+
+            <div class="dashboard-section" id="sec-config">
+                <div class="section-header"><h1>Configuración del Sistema</h1></div>
+                <div class="stat-card-glass" style="display:flex;flex-direction:column;gap:16px">
+                    <div class="form-group">
+                        <label>Hunter.io API Key</label>
+                        <input type="password" value="••••••••••••••••••••" readonly class="form-input" style="max-width:400px">
+                    </div>
+                    <div class="form-group">
+                        <label>Resend API Key</label>
+                        <input type="password" value="••••••••••••••••••••" readonly class="form-input" style="max-width:400px">
+                    </div>
+                    <div class="form-group">
+                        <label>Google AI Studio Gemini Key</label>
+                        <input type="password" value="••••••••••••••••••••" readonly class="form-input" style="max-width:400px">
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- App Scripts -->
+    <script src="app.js"></script>
+</body>
+</html>

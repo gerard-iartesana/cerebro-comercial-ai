@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CerebroComercial AI — Adquisición B2B Autónoma con IA</title>
+    <meta name="description" content="Automatiza tu prospección y prosigue con secuencias cognitivas hiper-personalizadas de tuteo impulsadas por el Orquestador Central de iadebarrio.com.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <!-- macOS System Modal Alert (Centered) -->
+    <div class="macos-modal-overlay" id="alert-modal">
+        <div class="macos-modal-box">
+            <div class="macos-alert-icon" id="alert-icon">✦</div>
+            <h3 class="macos-alert-title" id="alert-title">Notificación</h3>
+            <p class="macos-alert-desc" id="alert-desc">Mensaje de prueba...</p>
+            <div class="macos-alert-actions">
+                <button class="macos-alert-btn" onclick="closeAlert()">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header Navigation -->
+    <header class="apple-header">
+        <div class="header-container">
+            <div class="header-logo">
+                <span class="logo-bold">Cerebro</span><span class="logo-light">Comercial AI</span>
+                <span class="logo-subdomain">iadebarrio.com</span>
+            </div>
+            
+            <nav class="header-nav">
+                <a href="#proceso">El Proceso</a>
+                <a href="#formulario" class="nav-cta">Agendar Consultoría</a>
+            </nav>
+
+            <!-- Theme Switcher (White / Black) -->
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Cambiar Tema">
+                <span class="theme-icon">🌙</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="apple-hero">
+        <div class="hero-glow"></div>
+        <div class="hero-container">
+            <span class="hero-eyebrow">La Nueva Era de las Ventas B2B</span>
+            <h1 class="hero-title">Adquisición comercial<br><span class="hero-gradient">100% autónoma con IA</span></h1>
+            <p class="hero-lead">Deje que "El Cerebro" comercial extraiga valor de sus leads, cree propuestas a medida en segundos y gestione secuencias de email hiper-personalizadas en tono cercano hasta agendar reuniones por usted.</p>
+            <div class="hero-actions">
+                <a href="#formulario" class="btn-primary">Captar Leads con IA</a>
+                <a href="#proceso" class="btn-secondary">Saber más ➔</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Core Process Section -->
+    <section class="apple-section" id="proceso">
+        <div class="section-container">
+            <h2 class="section-title">El poder de la prospección cognitiva</h2>
+            <p class="section-lead">Olvídese de las plantillas de correo genéricas que acaban en spam. CerebroComercial AI ejecuta un pipeline de múltiples agentes inteligentes:</p>
+
+            <div class="apple-grid">
+                <div class="grid-card">
+                    <div class="card-icon">🔍</div>
+                    <h3>Agente Extractor</h3>
+                    <p>Raspa el sitio web de sus leads en tiempo real para extraer su propuesta de valor, dolores específicos y perfiles sociales de su HTML.</p>
+                </div>
+                <div class="grid-card">
+                    <div class="card-icon">✍️</div>
+                    <h3>Agente Redactor</h3>
+                    <p>Usa Gemini 3.1 Pro para escribir un correo de prospección único y natural (tuteando) adaptado a las necesidades de cada lead.</p>
+                </div>
+                <div class="grid-card">
+                    <div class="card-icon">🧠</div>
+                    <h3>El Orquestador</h3>
+                    <p>Gestiona colas de seguimiento, procesa respuestas entrantes y detiene las cadenas de inmediato cuando un cliente muestra interés o agenda cita.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Lead Captation Form Section -->
+    <section class="apple-section section-bg-alt" id="formulario">
+        <div class="form-container">
+            <div class="form-header">
+                <span class="form-eyebrow">Sin Compromiso</span>
+                <h2>Automatice su negocio hoy</h2>
+                <p>Déjenos sus datos y vea en tiempo real cómo nuestra Inteligencia Artificial diseña y le envía una propuesta comercial de automatización 100% personalizada.</p>
+            </div>
+
+            <form class="apple-form" id="lead-form" onsubmit="submitLead(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="first_name">Nombre de pila</label>
+                        <input type="text" id="first_name" required placeholder="Ej: Gerard" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email Corporativo</label>
+                        <input type="email" id="email" required placeholder="Ej: gerard@iartesana.es" class="form-input">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="company_name">Nombre de tu empresa</label>
+                        <input type="text" id="company_name" required placeholder="Ej: IA de Barrio" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="website">Sitio Web (URL)</label>
+                        <input type="url" id="website" required placeholder="Ej: https://iadebarrio.com" class="form-input">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="industry">Sector de tu negocio</label>
+                    <input type="text" id="industry" placeholder="Ej: Consultoría, eCommerce, Logística..." class="form-input">
+                </div>
+
+                <button type="submit" class="btn-submit" id="btn-submit-text">✦ Generar Propuesta de Valor</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="apple-footer">
+        <div class="footer-container">
+            <p>&copy; 2026 CerebroComercial AI — Un servicio de <a href="https://iadebarrio.com" target="_blank">iadebarrio.com</a>. Todos los derechos reservados.</p>
+            <p class="footer-links">
+                <a href="dashboard.html" class="admin-link">🔓 Acceder al Cerebro</a>
+            </p>
+        </div>
+    </footer>
+
+    <!-- App Script -->
+    <script>
+        // Supabase Initialization
+        const SUPABASE_URL = 'https://uidilhuybmtuokunutgz.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpZGlsaHV5Ym10dW9rdW51dGd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDU0NTAsImV4cCI6MjA5MTQyMTQ1MH0.ir9FnuHhW_1i4OslE_SNbOCIgLUEWakScP71WYqnfJM';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // macOS Centered Modal Helper
+        function showAlert(title, desc, icon = '✦') {
+            document.getElementById('alert-title').textContent = title;
+            document.getElementById('alert-desc').textContent = desc;
+            document.getElementById('alert-icon').textContent = icon;
+            document.getElementById('alert-modal').classList.add('active');
+        }
+
+        function closeAlert() {
+            document.getElementById('alert-modal').classList.remove('active');
+        }
+
+        // Theme Toggle (White / Black)
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            html.setAttribute('data-theme', newTheme);
+            document.querySelector('.theme-icon').textContent = newTheme === 'light' ? '☀️' : '🌙';
+            localStorage.setItem('cc_theme', newTheme);
+        }
+
+        // On Load Theme Restore
+        (function() {
+            const savedTheme = localStorage.getItem('cc_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            window.addEventListener('DOMContentLoaded', () => {
+                document.querySelector('.theme-icon').textContent = savedTheme === 'light' ? '☀️' : '🌙';
+            });
+        })();
+
+        // Form Submission
+        async function submitLead(event) {
+            event.preventDefault();
+            const btn = document.getElementById('btn-submit-text');
+            btn.textContent = 'Procesando con IA...';
+            btn.disabled = true;
+
+            const first_name = document.getElementById('first_name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const company_name = document.getElementById('company_name').value.trim();
+            const website = document.getElementById('website').value.trim();
+            const industry = document.getElementById('industry').value.trim();
+
+            try {
+                // Registrar lead en Supabase
+                const { data, error } = await _supabase
+                    .from('outreach_leads')
+                    .insert([{
+                        first_name,
+                        email,
+                        company_name,
+                        website,
+                        status: 'lead',
+                        sequence_step: 0,
+                        scraped_data: { industry, source: 'organic_landing' }
+                    }])
+                    .select();
+
+                if (error) throw error;
+
+                showAlert('¡Éxito Comercial!', `Hola ${first_name}, tu solicitud para ${company_name} ha sido registrada. "El Cerebro" AI está analizando tu web y en breves momentos recibirás un correo totalmente personalizado.`, '✨');
+                document.getElementById('lead-form').reset();
+            } catch (err) {
+                console.error(err);
+                showAlert('Error del Sistema', `No se pudo registrar la solicitud: ${err.message}`, '⚠️');
+            } finally {
+                btn.textContent = '✦ Generar Propuesta de Valor';
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

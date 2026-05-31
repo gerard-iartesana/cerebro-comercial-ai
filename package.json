@@ -1,0 +1,10 @@
+{
+  "name": "cerebro-comercial-ai",
+  "version": "1.0.0",
+  "description": "Sistema de Ventas Automático B2B Multi-Agente con IA para iadebarrio.com",
+  "main": "index.html",
+  "private": true,
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}
