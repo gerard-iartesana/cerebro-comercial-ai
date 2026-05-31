@@ -132,10 +132,8 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    // 1. Estructurar el cuerpo de la llamada a Gemini
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`;
-    
-    // Mapear historial al formato de Gemini
+    const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro:generateContent?key=' + GEMINI_API_KEY;
+
     const contents = [];
     if (history && history.length > 0) {
       history.forEach(h => {
