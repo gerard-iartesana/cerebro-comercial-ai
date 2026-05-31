@@ -132,7 +132,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro:generateContent?key=' + GEMINI_API_KEY;
+    const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key=' + GEMINI_API_KEY;
 
     const contents = [];
     if (history && history.length > 0) {
