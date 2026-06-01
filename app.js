@@ -840,17 +840,27 @@ async function loadCalendarEvents() {
         try {
             const { data: taskData } = await _supabase
                 .from('tasks')
-                .select('*')
-                .or(`start_date.gte.${from.split('T')[0]},due_date.lte.${to.split('T')[0]}`);
+                .select('*');
             if (taskData) {
-                const taskEvents = taskData.map(t => ({
-                    id: t.id,
-                    title: t.title,
-                    date: t.start_date ? t.start_date + 'T' + (t.task_time || '09:00') + ':00' : t.created_at,
-                    type: 'task',
-                    taskType: t.task_type,
-                    status: t.status
-                }));
+                const taskEvents = taskData.map(t => {
+                    // Use start_date, then due_date, then created_at as fallback
+                    let eventDate;
+                    if (t.start_date) {
+                        eventDate = t.start_date + 'T' + (t.task_time || '09:00') + ':00';
+                    } else if (t.due_date) {
+                        eventDate = t.due_date + 'T' + (t.task_time || '09:00') + ':00';
+                    } else {
+                        eventDate = t.created_at;
+                    }
+                    return {
+                        id: t.id,
+                        title: t.title,
+                        date: eventDate,
+                        type: 'task',
+                        taskType: t.task_type,
+                        status: t.status
+                    };
+                });
                 calEvents = calEvents.concat(taskEvents);
             }
         } catch(e) { /* tasks table may not exist yet */ }
