@@ -1047,7 +1047,14 @@ function renderCalEvent(ev) {
     else if (ev.meetingType === 'followup' || ev.meetingType === 'closing' || ev.meetingType === 'support') evClass = 'ev-business';
     if (ev.status === 'done') evClass = 'ev-done';
     const label = ev.type === 'task' ? ev.title : (ev.isGcal ? `📅 ${ev.title}` : (evClass === 'ev-business' ? `[Negocio] ${ev.title}` : ev.title));
-    return `<div class="cal-event ${evClass}"><span class="cal-ev-time">${evTime}</span><span class="cal-ev-badge"></span>${label}</div>`;
+    const clickAction = ev.type === 'task' ? `onclick="openTaskModal('${ev.id}')"` : (ev.isGcal ? '' : `onclick="scrollToMeeting('${ev.id}')"`);
+    return `<div class="cal-event ${evClass}" ${clickAction} style="cursor:pointer"><span class="cal-ev-time">${evTime}</span><span class="cal-ev-badge"></span>${label}</div>`;
+}
+
+function scrollToMeeting(id) {
+    // Switch to meetings section and highlight
+    const el = document.getElementById('mtg-' + id);
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.style.boxShadow = '0 0 0 2px var(--accent)'; setTimeout(() => el.style.boxShadow = '', 2000); }
 }
 
 // 11. MEETINGS MANAGEMENT
@@ -1414,7 +1421,7 @@ function renderTaskCards(tasks) {
                     <option value="started" ${t.status==='started'?'selected':''}>🟡 Empezada</option>
                     <option value="done" ${t.status==='done'?'selected':''}>✅ Finalizada</option>
                 </select>
-                <button class="task-card-expand" onclick="openTaskModal('${t.id}')" title="Editar">∨</button>
+                <button class="task-card-edit-btn" onclick="openTaskModal('${t.id}')" title="Editar">✏️ Editar</button>
                 <button class="task-card-delete" onclick="deleteTask('${t.id}')" title="Eliminar">🗑️</button>
             </div>
         </div>`;

@@ -1551,15 +1551,21 @@ html, body {
     font-size: 0.75rem; background: white;
     cursor: pointer;
 }
-.task-card-expand, .task-card-delete {
+.task-card-edit-btn {
+    padding: 6px 14px; border-radius: 8px;
+    border: none; background: linear-gradient(135deg, #007AFF, #5856d6);
+    color: white; font-size: 0.75rem; font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+    white-space: nowrap;
+}
+.task-card-edit-btn:hover { transform: scale(1.05); box-shadow: 0 2px 8px rgba(0,122,255,0.3); }
+.task-card-delete {
     width: 28px; height: 28px; border-radius: 8px;
     border: none; background: transparent;
     font-size: 0.9rem; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     transition: all 0.2s;
 }
-.task-card-expand { color: var(--text-grey); }
-.task-card-expand:hover { background: var(--bg-secondary); }
 .task-card-delete { color: #ff3b30; }
 .task-card-delete:hover { background: rgba(255,59,48,0.08); }
 
