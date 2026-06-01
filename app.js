@@ -1098,6 +1098,7 @@ async function loadMeetings() {
     const now = new Date().toISOString();
     const listEl = document.getElementById('meetings-list');
     const historyEl = document.getElementById('meetings-history');
+    if (!listEl) { console.log('[Meetings] meetings-list element not found, skip render'); }
 
     console.log('[Meetings] Loading meetings... now =', now);
 
@@ -1119,16 +1120,20 @@ async function loadMeetings() {
 
         if (e1 || e2) throw (e1 || e2);
 
-        if (!upcoming || upcoming.length === 0) {
-            listEl.innerHTML = '<div style="text-align:center;padding:30px 0"><div style="font-size:2.5rem;margin-bottom:8px">📭</div><p style="color:var(--text-grey);font-size:0.85rem">No hay reuniones programadas</p></div>';
-        } else {
-            listEl.innerHTML = upcoming.map(m => renderMeetingCard(m, false)).join('');
+        if (listEl) {
+            if (!upcoming || upcoming.length === 0) {
+                listEl.innerHTML = '<div style="text-align:center;padding:30px 0"><div style="font-size:2.5rem;margin-bottom:8px">📭</div><p style="color:var(--text-grey);font-size:0.85rem">No hay reuniones programadas</p></div>';
+            } else {
+                listEl.innerHTML = upcoming.map(m => renderMeetingCard(m, false)).join('');
+            }
         }
 
-        if (!past || past.length === 0) {
-            historyEl.innerHTML = '<p style="color:var(--text-grey);font-size:0.85rem;text-align:center;padding:20px 0">Sin reuniones anteriores</p>';
-        } else {
-            historyEl.innerHTML = past.map(m => renderMeetingCard(m, true)).join('');
+        if (historyEl) {
+            if (!past || past.length === 0) {
+                historyEl.innerHTML = '<p style="color:var(--text-grey);font-size:0.85rem;text-align:center;padding:20px 0">Sin reuniones anteriores</p>';
+            } else {
+                historyEl.innerHTML = past.map(m => renderMeetingCard(m, true)).join('');
+            }
         }
 
         // Load Google Calendar events if connected
@@ -1136,7 +1141,7 @@ async function loadMeetings() {
 
     } catch (err) {
         console.error('[Meetings] Load error:', err);
-        listEl.innerHTML = '<p style="color:#ff3b30;font-size:0.85rem">Error: ' + err.message + '</p>';
+        if (listEl) listEl.innerHTML = '<p style="color:#ff3b30;font-size:0.85rem">Error: ' + err.message + '</p>';
     }
 }
 
