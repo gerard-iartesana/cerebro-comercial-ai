@@ -144,7 +144,7 @@ document.querySelectorAll('.sidebar-nav-item[data-section]').forEach(btn => {
         if (btn.dataset.section === 'leads') loadLeadsGrid();
         if (btn.dataset.section === 'kanban') loadKanbanCRM();
         if (btn.dataset.section === 'emails') loadEmailsLog();
-        if (btn.dataset.section === 'calendar') loadMeetings();
+        if (btn.dataset.section === 'calendar') { renderCalGrid(); loadMeetings(); }
     });
 });
 
@@ -736,6 +736,150 @@ function viewEmailDetails(log) {
 }
 
 // =============================================
+// 10. CUSTOM CALENDAR GRID
+// =============================================
+
+let calDate = new Date();
+let calFilter = 'all';
+let calEvents = [];
+
+const MONTH_NAMES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function switchCalTab(tab) {
+    document.querySelectorAll('.cal-tab').forEach(t => t.classList.remove('active'));
+    if (tab === 'calendar') {
+        document.getElementById('cal-view-calendar').style.display = '';
+        document.getElementById('cal-view-tasks').style.display = 'none';
+        document.querySelector('.cal-tab:first-child').classList.add('active');
+    } else {
+        document.getElementById('cal-view-calendar').style.display = 'none';
+        document.getElementById('cal-view-tasks').style.display = '';
+        document.getElementById('cal-tab-tasks').classList.add('active');
+    }
+}
+
+function calPrev() {
+    calDate.setMonth(calDate.getMonth() - 1);
+    renderCalGrid();
+}
+function calNext() {
+    calDate.setMonth(calDate.getMonth() + 1);
+    renderCalGrid();
+}
+function calToday() {
+    calDate = new Date();
+    renderCalGrid();
+}
+
+function setCalFilter(f) {
+    calFilter = f;
+    document.querySelectorAll('.cal-filter').forEach(b => b.classList.remove('active'));
+    const el = document.querySelector(`.cal-filter[data-filter="${f}"]`);
+    if (el) el.classList.add('active');
+    renderCalGrid();
+}
+
+function setCalMode(m) {
+    document.querySelectorAll('.cal-mode').forEach(b => b.classList.remove('active'));
+    const el = document.querySelector(`.cal-mode[data-mode="${m}"]`);
+    if (el) el.classList.add('active');
+    // Only month view implemented for now
+}
+
+async function loadCalendarEvents() {
+    try {
+        const year = calDate.getFullYear();
+        const month = calDate.getMonth();
+        const from = new Date(year, month - 1, 20).toISOString();
+        const to = new Date(year, month + 2, 7).toISOString();
+
+        const { data, error } = await _supabase
+            .from('meetings')
+            .select('*')
+            .gte('meeting_date', from)
+            .lte('meeting_date', to)
+            .order('meeting_date', { ascending: true });
+
+        if (error) { console.warn('[Cal] Events error:', error); return; }
+        calEvents = (data || []).map(m => ({
+            id: m.id,
+            title: m.contact_name,
+            date: m.meeting_date,
+            type: 'meeting',
+            meetingType: m.meeting_type,
+            status: m.status
+        }));
+        console.log('[Cal] Loaded', calEvents.length, 'events');
+    } catch(e) {
+        console.warn('[Cal] Load error:', e);
+        calEvents = [];
+    }
+}
+
+async function renderCalGrid() {
+    await loadCalendarEvents();
+
+    const year = calDate.getFullYear();
+    const month = calDate.getMonth();
+
+    // Update title
+    const titleEl = document.getElementById('cal-month-title');
+    if (titleEl) titleEl.textContent = MONTH_NAMES_ES[month] + ' de ' + year;
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    // Monday-based: getDay() returns 0=Sun → we want 0=Mon
+    let startOffset = firstDay.getDay() - 1;
+    if (startOffset < 0) startOffset = 6;
+
+    const daysInMonth = lastDay.getDate();
+    const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+    const today = new Date();
+    const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+
+    let html = '';
+    for (let i = 0; i < totalCells; i++) {
+        const cellDate = new Date(year, month, 1 - startOffset + i);
+        const dateStr = cellDate.getFullYear() + '-' + String(cellDate.getMonth()+1).padStart(2,'0') + '-' + String(cellDate.getDate()).padStart(2,'0');
+        const isOtherMonth = cellDate.getMonth() !== month;
+        const isToday = dateStr === todayStr;
+
+        // Filter events for this day
+        let dayEvents = calEvents.filter(ev => {
+            const evDate = new Date(ev.date);
+            const evStr = evDate.getFullYear() + '-' + String(evDate.getMonth()+1).padStart(2,'0') + '-' + String(evDate.getDate()).padStart(2,'0');
+            return evStr === dateStr;
+        });
+
+        // Apply filter
+        if (calFilter === 'meetings') dayEvents = dayEvents.filter(e => e.type === 'meeting');
+        if (calFilter === 'tasks') dayEvents = dayEvents.filter(e => e.type === 'task');
+
+        const maxShow = 3;
+        const overflow = dayEvents.length > maxShow ? dayEvents.length - maxShow : 0;
+
+        html += `<div class="cal-cell${isOtherMonth ? ' other-month' : ''}${isToday ? ' today' : ''}">`;
+        html += `<div class="cal-day-num">${cellDate.getDate()}</div>`;
+
+        dayEvents.slice(0, maxShow).forEach(ev => {
+            const evTime = new Date(ev.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            const icon = ev.type === 'meeting' ? '🟢' : '🟣';
+            html += `<div class="cal-event ${ev.type}" title="${ev.title} — ${evTime}">${icon} ${ev.title}</div>`;
+        });
+
+        if (overflow > 0) {
+            html += `<div class="cal-more">+${overflow} más</div>`;
+        }
+
+        html += '</div>';
+    }
+
+    const container = document.getElementById('cal-days');
+    if (container) container.innerHTML = html;
+}
+
 // 11. MEETINGS MANAGEMENT
 // =============================================
 
@@ -929,6 +1073,7 @@ async function addMeeting() {
         document.getElementById('mtg-status').value = 'pending';
 
         showAlert('Reunión registrada', `${name} — ${new Date(dateISO).toLocaleDateString('es-ES')}`, '📅');
+        renderCalGrid();
         loadMeetings();
     } catch (err) {
         showMtgNotif('❌ Error guardando: ' + err.message, 'error');
