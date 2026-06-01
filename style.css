@@ -1028,56 +1028,69 @@ html, body {
     border-radius: 7px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(255, 255, 255, 0.03);
+    color: rgba(255, 255, 255, 0.6);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    font-size: 0.85rem;
     position: relative;
     line-height: 1;
     padding: 0;
 }
 
+.lead-action-btn svg.svg-icon {
+    width: 14px;
+    height: 14px;
+    display: inline-block;
+    vertical-align: middle;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: inherit;
+}
+
 /* Hover and Active Transitions */
 .lead-action-btn:hover {
-    transform: scale(1.15) translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    transform: scale(1.18) translateY(-2px);
 }
 
 .lead-action-btn:active {
     transform: scale(0.95) translateY(0);
 }
 
-/* Individual Action Hover Highlights - Icon (Emoji) Glows and Border Tints */
+/* Individual Action Hover Highlights - Icon (SVG) Glows and Border Tints */
 .lead-action-btn.btn-edit:hover {
+    color: #0A84FF !important;
     background: rgba(10, 132, 255, 0.08);
     border-color: rgba(10, 132, 255, 0.4);
-    text-shadow: 0 0 8px rgba(10, 132, 255, 0.9);
+    box-shadow: 0 4px 12px rgba(10, 132, 255, 0.25), 0 0 8px rgba(10, 132, 255, 0.2);
 }
 
 .lead-action-btn.btn-delete:hover {
+    color: #FF453A !important;
     background: rgba(255, 69, 58, 0.08);
     border-color: rgba(255, 69, 58, 0.4);
-    text-shadow: 0 0 8px rgba(255, 69, 58, 0.9);
+    box-shadow: 0 4px 12px rgba(255, 69, 58, 0.25), 0 0 8px rgba(255, 69, 58, 0.2);
 }
 
 .lead-action-btn.btn-email:hover {
+    color: #FF9F0A !important;
     background: rgba(255, 159, 10, 0.08);
     border-color: rgba(255, 159, 10, 0.4);
-    text-shadow: 0 0 8px rgba(255, 159, 10, 0.9);
+    box-shadow: 0 4px 12px rgba(255, 159, 10, 0.25), 0 0 8px rgba(255, 159, 10, 0.2);
 }
 
 .lead-action-btn.btn-whatsapp:hover {
+    color: #30D158 !important;
     background: rgba(48, 209, 88, 0.08);
     border-color: rgba(48, 209, 88, 0.4);
-    text-shadow: 0 0 8px rgba(48, 209, 88, 0.9);
+    box-shadow: 0 4px 12px rgba(48, 209, 88, 0.25), 0 0 8px rgba(48, 209, 88, 0.2);
 }
 
 .lead-action-btn.btn-signup:hover {
+    color: #BF5AF2 !important;
     background: rgba(191, 90, 242, 0.08);
     border-color: rgba(191, 90, 242, 0.4);
-    text-shadow: 0 0 8px rgba(191, 90, 242, 0.9);
+    box-shadow: 0 4px 12px rgba(191, 90, 242, 0.25), 0 0 8px rgba(191, 90, 242, 0.2);
 }
 
 /* Custom CSS Tooltips */
