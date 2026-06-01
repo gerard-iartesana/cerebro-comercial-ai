@@ -1697,12 +1697,25 @@ async function saveTask() {
         if (_gcalConnected && _gcalToken && taskData.start_date) {
             try {
                 const existingTask = id ? allTasks.find(t => t.id === id) : null;
-                const gcalId = existingTask?.gcal_event_id;
-                const newGcalId = await syncTaskToGCal(taskId, taskData, gcalId);
-                if (newGcalId && !gcalId) {
+                const oldGcalId = existingTask?.gcal_event_id;
+                
+                // Delete old GCal event if exists (to recreate with fresh format)
+                if (oldGcalId) {
+                    try { await deleteGCalEvent(oldGcalId); } catch(e) { /* ignore */ }
+                }
+                
+                // Always create fresh
+                console.log('[GCal] Syncing task to Google Calendar...', taskData.title);
+                const newGcalId = await syncTaskToGCal(taskId, taskData);
+                if (newGcalId) {
                     await _supabase.from('tasks').update({ gcal_event_id: newGcalId }).eq('id', taskId);
+                    console.log('[GCal] Task synced OK:', newGcalId);
+                } else {
+                    console.warn('[GCal] syncTaskToGCal returned null');
                 }
             } catch(e) { console.warn('[GCal] Task sync error:', e); }
+        } else {
+            console.log('[GCal] Skip sync: connected=' + _gcalConnected + ' token=' + !!_gcalToken + ' start_date=' + taskData.start_date);
         }
         
         closeTaskModal();
@@ -1934,7 +1947,7 @@ async function createGCalEvent(name, dateISO, durationMinutes, notes, email) {
     }
 }
 
-async function syncTaskToGCal(taskId, taskData, existingGcalId) {
+async function syncTaskToGCal(taskId, taskData) {
     if (!_gcalConnected || !_gcalToken) return null;
 
     const startDate = taskData.start_date;
@@ -1948,6 +1961,7 @@ async function syncTaskToGCal(taskId, taskData, existingGcalId) {
     const endTime = String(endH).padStart(2,'0') + ':' + String(endM).padStart(2,'0');
 
     const typeLabels = { business: 'Negocio', personal: 'Personal', application: 'Aplicación' };
+    const typeIcons = { business: '💼', personal: '👤', application: '💻' };
     const statusLabels = { new: 'nueva', started: 'empezada', done: 'finalizada' };
     const statusIcons = { new: '🔵', started: '🚩', done: '✅' };
     const effective = (taskData.hourly_rate || 53) * (1 - (taskData.discount || 0) / 100);
@@ -1965,8 +1979,9 @@ async function syncTaskToGCal(taskId, taskData, existingGcalId) {
     if (taskData.notes) descLines.push('', 'Notas: ' + taskData.notes);
     descLines.push('', '— Sincronizado desde GF Gestión');
 
+    const icon = typeIcons[taskData.task_type] || '📋';
     const event = {
-        summary: `[${typeLabels[taskData.task_type] || 'Tarea'}] ${taskData.title}`,
+        summary: `${icon} [${typeLabels[taskData.task_type] || 'Tarea'}] ${taskData.title}`,
         description: descLines.join('\n'),
         start: { dateTime: `${startDate}T${startTime}:00`, timeZone: 'Europe/Madrid' },
         end: { dateTime: `${endDate}T${endTime}:00`, timeZone: 'Europe/Madrid' },
@@ -1980,26 +1995,27 @@ async function syncTaskToGCal(taskId, taskData, existingGcalId) {
         }
     };
 
-    try {
-        const url = existingGcalId
-            ? `https://www.googleapis.com/calendar/v3/calendars/primary/events/${existingGcalId}`
-            : 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
-        const method = existingGcalId ? 'PUT' : 'POST';
+    console.log('[GCal] Creating event:', JSON.stringify(event, null, 2));
 
-        const res = await fetch(url, {
-            method,
+    try {
+        const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+            method: 'POST',
             headers: { 'Authorization': 'Bearer ' + _gcalToken, 'Content-Type': 'application/json' },
             body: JSON.stringify(event)
         });
+        const responseText = await res.text();
         if (!res.ok) {
-            console.warn('[GCal] Task sync failed:', await res.text());
+            console.error('[GCal] Create failed:', res.status, responseText);
+            showAlert('Error GCal', 'No se pudo crear el evento: ' + res.status, '❌');
             return null;
         }
-        const data = await res.json();
-        console.log('[GCal] Task synced:', data.id);
+        const data = JSON.parse(responseText);
+        console.log('[GCal] Event created:', data.id, data.htmlLink);
+        showAlert('Sincronizado con GCal', taskData.title, '📅');
         return data.id;
     } catch(e) {
-        console.warn('[GCal] Task sync error:', e);
+        console.error('[GCal] Network error:', e);
+        showAlert('Error de red GCal', e.message, '❌');
         return null;
     }
 }
