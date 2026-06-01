@@ -282,7 +282,82 @@ window.handleDrop = async function(event, targetStatus) {
     }
 };
 
-// 8. Chat interactivo con "El Cerebro"
+// 8. Multi-Agent Status Management System
+const AGENT_NAMES = {
+    searcher: { name: 'Buscador', icon: '🔍', tech: 'Hunter.io' },
+    enricher: { name: 'Enriquecedor', icon: '🕷️', tech: 'Scraping + IA' },
+    emailer: { name: 'Email', icon: '📧', tech: 'Resend' },
+    analytics: { name: 'Analítico', icon: '📊', tech: 'Supabase' }
+};
+
+function setAgentStatus(agentId, status, message) {
+    // Update tree node
+    const node = document.getElementById(`node-${agentId}`);
+    const statusEl = document.getElementById(`status-${agentId}`);
+    if (node) {
+        node.classList.remove('agent-working', 'agent-done', 'agent-error');
+        if (status === 'working') node.classList.add('agent-working');
+        if (status === 'done') node.classList.add('agent-done');
+        if (status === 'error') node.classList.add('agent-error');
+    }
+    if (statusEl) {
+        const dotClass = status === 'working' ? 'status-working' : status === 'done' ? 'status-done' : status === 'error' ? 'status-error' : 'status-idle';
+        const label = status === 'working' ? 'Ejecutando...' : status === 'done' ? 'Completado' : status === 'error' ? 'Error' : 'Inactivo';
+        statusEl.innerHTML = `<span class="status-dot ${dotClass}"></span> ${label}`;
+    }
+
+    // Update activity card badge
+    const badge = document.getElementById(`badge-${agentId}`);
+    if (badge) {
+        badge.className = `agent-card-badge badge-${status === 'working' ? 'working' : status === 'done' ? 'done' : status === 'error' ? 'error' : 'idle'}`;
+        const badgeLabels = { idle: '💤 Inactivo', working: '⚡ Ejecutando', done: '✅ Completado', error: '❌ Error' };
+        badge.textContent = badgeLabels[status] || badgeLabels.idle;
+    }
+
+    // Update card active state
+    const card = document.getElementById(`card-${agentId}`);
+    if (card) {
+        card.classList.toggle('card-active', status === 'working');
+    }
+
+    // Add log entry
+    if (message && status !== 'idle') {
+        addAgentLog(agentId, message, status);
+    }
+}
+
+function addAgentLog(agentId, message, status) {
+    const logEl = document.getElementById(`log-${agentId}`);
+    if (!logEl) return;
+
+    // Remove the "empty" placeholder if it exists
+    const emptyEntry = logEl.querySelector('.log-empty');
+    if (emptyEntry) emptyEntry.remove();
+
+    const time = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const statusIcon = status === 'done' ? '✅' : status === 'error' ? '❌' : '⚡';
+    
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<span class="log-time">${time}</span> ${statusIcon} ${message}`;
+    
+    // Insert at the top
+    logEl.insertBefore(entry, logEl.firstChild);
+
+    // Keep only last 5 entries
+    while (logEl.children.length > 5) {
+        logEl.removeChild(logEl.lastChild);
+    }
+}
+
+function resetAllAgents() {
+    Object.keys(AGENT_NAMES).forEach(id => {
+        setAgentStatus(id, 'idle');
+    });
+    setAgentStatus('orchestrator', 'idle');
+}
+
+// 9. Chat interactivo con "El Cerebro" (Multi-Agent Orchestrator)
 async function sendToBrain() {
     const input = document.getElementById('brain-chat-input');
     const msg = input.value.trim();
@@ -302,9 +377,12 @@ async function sendToBrain() {
     // Render loading indicator
     const loadDiv = document.createElement('div');
     loadDiv.className = 'chat-bubble model';
-    loadDiv.innerHTML = '✦ El Cerebro está pensando...';
+    loadDiv.innerHTML = '✦ El Cerebro está orquestando...';
     chatMessages.appendChild(loadDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // Activate orchestrator node
+    setAgentStatus('orchestrator', 'working', 'Analizando petición del usuario...');
 
     try {
         const res = await fetch('/api/brain-chat', {
@@ -319,6 +397,23 @@ async function sendToBrain() {
         const data = await res.json();
 
         if (res.ok && data.text) {
+            // If an agent was used, update its status
+            if (data.agentUsed) {
+                const agent = AGENT_NAMES[data.agentUsed];
+                const actionName = data.actionExecuted || 'acción';
+                setAgentStatus(data.agentUsed, 'done', `${actionName} completado`);
+                setAgentStatus('orchestrator', 'done', `Delegado a ${agent ? agent.name : data.agentUsed}`);
+
+                // Auto-reset agent to idle after 8 seconds
+                setTimeout(() => {
+                    setAgentStatus(data.agentUsed, 'idle');
+                    setAgentStatus('orchestrator', 'idle');
+                }, 8000);
+            } else {
+                setAgentStatus('orchestrator', 'done', 'Respuesta directa generada');
+                setTimeout(() => setAgentStatus('orchestrator', 'idle'), 5000);
+            }
+
             const brainDiv = document.createElement('div');
             brainDiv.className = 'chat-bubble model';
             brainDiv.innerHTML = data.text.replace(/\n/g, '<br>');
@@ -327,10 +422,18 @@ async function sendToBrain() {
             // Save to history
             brainChatHistory.push({ role: 'user', text: msg });
             brainChatHistory.push({ role: 'model', text: data.text });
+
+            // Refresh dashboard data if an action was executed
+            if (data.actionExecuted) {
+                initializeDashboard();
+            }
         } else {
             throw new Error(data.error || 'Error del Orquestador');
         }
     } catch (e) {
+        setAgentStatus('orchestrator', 'error', `Error: ${e.message}`);
+        setTimeout(() => setAgentStatus('orchestrator', 'idle'), 8000);
+
         const errDiv = document.createElement('div');
         errDiv.className = 'chat-bubble model';
         errDiv.style.color = 'var(--accent-red)';

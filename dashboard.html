@@ -243,6 +243,119 @@
                         <button class="chat-btn" onclick="sendToBrain()">Enviar</button>
                     </div>
                 </div>
+
+                <!-- Agent Architecture Tree -->
+                <div class="agent-tree-section">
+                    <h2 class="agent-tree-title">Arquitectura Multi-Agente</h2>
+                    <div class="agent-tree">
+                        <div class="agent-node agent-node-master" id="node-orchestrator">
+                            <div class="agent-node-icon">🧠</div>
+                            <div class="agent-node-name">El Cerebro</div>
+                            <div class="agent-node-role">Orquestador</div>
+                            <div class="agent-node-status" id="status-orchestrator">
+                                <span class="status-dot status-idle"></span> Esperando
+                            </div>
+                        </div>
+                        <div class="agent-tree-lines">
+                            <div class="tree-line"></div>
+                            <div class="tree-horizontal"></div>
+                        </div>
+                        <div class="agent-tree-children">
+                            <div class="agent-node agent-node-child" id="node-searcher">
+                                <div class="agent-node-icon">🔍</div>
+                                <div class="agent-node-name">Buscador</div>
+                                <div class="agent-node-role">Hunter.io</div>
+                                <div class="agent-node-status" id="status-searcher">
+                                    <span class="status-dot status-idle"></span> Inactivo
+                                </div>
+                            </div>
+                            <div class="agent-node agent-node-child" id="node-enricher">
+                                <div class="agent-node-icon">🕷️</div>
+                                <div class="agent-node-name">Enriquecedor</div>
+                                <div class="agent-node-role">Scraping + IA</div>
+                                <div class="agent-node-status" id="status-enricher">
+                                    <span class="status-dot status-idle"></span> Inactivo
+                                </div>
+                            </div>
+                            <div class="agent-node agent-node-child" id="node-emailer">
+                                <div class="agent-node-icon">📧</div>
+                                <div class="agent-node-name">Email</div>
+                                <div class="agent-node-role">Resend</div>
+                                <div class="agent-node-status" id="status-emailer">
+                                    <span class="status-dot status-idle"></span> Inactivo
+                                </div>
+                            </div>
+                            <div class="agent-node agent-node-child" id="node-analytics">
+                                <div class="agent-node-icon">📊</div>
+                                <div class="agent-node-name">Analítico</div>
+                                <div class="agent-node-role">Supabase</div>
+                                <div class="agent-node-status" id="status-analytics">
+                                    <span class="status-dot status-idle"></span> Inactivo
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agent Activity Panel -->
+                <div class="agent-activity-section">
+                    <h2 class="agent-tree-title">Actividad de Agentes</h2>
+                    <div class="agent-cards-grid">
+                        <div class="agent-card" id="card-searcher">
+                            <div class="agent-card-header">
+                                <span class="agent-card-icon">🔍</span>
+                                <div>
+                                    <div class="agent-card-name">Agente Buscador</div>
+                                    <div class="agent-card-tech">Hunter.io API</div>
+                                </div>
+                                <span class="agent-card-badge badge-idle" id="badge-searcher">💤 Inactivo</span>
+                            </div>
+                            <div class="agent-card-log" id="log-searcher">
+                                <div class="log-entry log-empty">Sin actividad reciente</div>
+                            </div>
+                        </div>
+                        <div class="agent-card" id="card-enricher">
+                            <div class="agent-card-header">
+                                <span class="agent-card-icon">🕷️</span>
+                                <div>
+                                    <div class="agent-card-name">Agente Enriquecedor</div>
+                                    <div class="agent-card-tech">Web Scraping + Gemini IA</div>
+                                </div>
+                                <span class="agent-card-badge badge-idle" id="badge-enricher">💤 Inactivo</span>
+                            </div>
+                            <div class="agent-card-log" id="log-enricher">
+                                <div class="log-entry log-empty">Sin actividad reciente</div>
+                            </div>
+                        </div>
+                        <div class="agent-card" id="card-emailer">
+                            <div class="agent-card-header">
+                                <span class="agent-card-icon">📧</span>
+                                <div>
+                                    <div class="agent-card-name">Agente Email</div>
+                                    <div class="agent-card-tech">Resend API</div>
+                                </div>
+                                <span class="agent-card-badge badge-idle" id="badge-emailer">💤 Inactivo</span>
+                            </div>
+                            <div class="agent-card-log" id="log-emailer">
+                                <div class="log-entry log-empty">Sin actividad reciente</div>
+                            </div>
+                        </div>
+                        <div class="agent-card" id="card-analytics">
+                            <div class="agent-card-header">
+                                <span class="agent-card-icon">📊</span>
+                                <div>
+                                    <div class="agent-card-name">Agente Analítico</div>
+                                    <div class="agent-card-tech">Supabase Realtime</div>
+                                </div>
+                                <span class="agent-card-badge badge-idle" id="badge-analytics">💤 Inactivo</span>
+                            </div>
+                            <div class="agent-card-log" id="log-analytics">
+                                <div class="log-entry log-empty">Sin actividad reciente</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- SECTION: Email Inbox / Outbox -->

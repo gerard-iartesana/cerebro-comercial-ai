@@ -1,5 +1,6 @@
 // /api/brain-chat.js
-// Vercel serverless function: Orchestrator Central Agent ('El Cerebro') using Gemini 3/3.1 Experimental with function calling
+// Vercel serverless function: Orchestrator Central Agent ('El Cerebro') using Gemini with function calling
+// Pure orchestrator – delegates heavy operations to existing API endpoints
 
 const { createClient } = require('@supabase/supabase-js');
 
@@ -8,6 +9,20 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsIn
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyDy3zdb67ICMuhrU0qmaAMnztDPFT09Z24';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Base URL for internal API calls (self-referencing)
+const baseUrl = process.env.VERCEL_URL
+  ? 'https://' + process.env.VERCEL_URL
+  : 'http://localhost:3000';
+
+// Map tool names → agent identifiers for the frontend
+const agentMap = {
+  searchLeads: 'searcher',
+  enrichLead: 'enricher',
+  sendSequence: 'emailer',
+  getOutboxStats: 'analytics',
+  listLeads: 'analytics'
+};
 
 // Define tools available for Gemini
 const geminiTools = [
@@ -41,6 +56,17 @@ const geminiTools = [
         }
       },
       {
+        name: "sendSequence",
+        description: "Envía la secuencia de emails de prospección a un lead específico.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            lead_id: { type: "STRING", description: "El ID del lead al que enviar la secuencia de email" }
+          },
+          required: ["lead_id"]
+        }
+      },
+      {
         name: "listLeads",
         description: "Obtiene una lista de leads filtrada opcionalmente por estado.",
         parameters: {
@@ -54,222 +80,22 @@ const geminiTools = [
   }
 ];
 
-// Helper tools implementation
+// Tool implementations — lightweight queries inline, heavy ops delegated via fetch()
 const implementations = {
+  // ── Lightweight (inline Supabase) ──────────────────────────────────────
+
   async getOutboxStats() {
     const { count: total } = await supabase.from('outreach_leads').select('*', { count: 'exact', head: true });
     const { count: enriched } = await supabase.from('outreach_leads').select('*', { count: 'exact', head: true }).eq('status', 'enriched');
     const { count: replied } = await supabase.from('outreach_leads').select('*', { count: 'exact', head: true }).eq('status', 'replied');
     const { count: booked } = await supabase.from('outreach_leads').select('*', { count: 'exact', head: true }).eq('status', 'booked');
-    
+
     return {
       leads_totales: total || 0,
       leads_enriquecidos: enriched || 0,
       contestados_replied: replied || 0,
       citas_agendadas: booked || 0
     };
-  },
-
-  async searchLeads({ domain }) {
-    const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
-    if (!HUNTER_API_KEY) {
-      return { error: 'HUNTER_API_KEY no está configurada' };
-    }
-    try {
-      const hunterUrl = `https://api.hunter.io/v2/domain-search?domain=${encodeURIComponent(domain)}&api_key=${HUNTER_API_KEY}`;
-      const response = await fetch(hunterUrl);
-      if (!response.ok) {
-        const errText = await response.text();
-        return { error: `Hunter.io API error: ${response.status} - ${errText}` };
-      }
-      const json = await response.json();
-      const hunterData = json.data;
-      if (!hunterData || !hunterData.emails || hunterData.emails.length === 0) {
-        return { message: `No se encontraron correos para el dominio ${domain}`, insertedCount: 0 };
-      }
-      
-      const leadsToInsert = hunterData.emails.map(emailObj => {
-        const companyName = hunterData.organization || domain.split('.')[0];
-        return {
-          email: emailObj.value,
-          first_name: emailObj.first_name || '',
-          company_name: companyName,
-          website: `https://${domain}`,
-          linkedin_url: emailObj.linkedin || '',
-          status: 'lead',
-          sequence_step: 0,
-          scraped_data: {
-            position: emailObj.position || '',
-            confidence: emailObj.confidence || 0,
-            twitter: emailObj.twitter || '',
-            source: 'hunter.io'
-          }
-        };
-      });
-
-      let insertedCount = 0;
-      for (const lead of leadsToInsert) {
-        await supabase
-          .from('outreach_leads')
-          .upsert(lead, { onConflict: 'email', ignoreDuplicates: true });
-        insertedCount++;
-      }
-
-      return {
-        success: true,
-        message: `Búsqueda completada para ${domain}`,
-        foundCount: hunterData.emails.length,
-        insertedCount
-      };
-    } catch (e) {
-      return { error: `Error en la búsqueda de leads: ${e.message}` };
-    }
-  },
-
-  async enrichLead({ lead_id }) {
-    try {
-      const { data: lead, error: getErr } = await supabase
-        .from('outreach_leads')
-        .select('*')
-        .eq('id', lead_id)
-        .single();
-
-      if (getErr || !lead) {
-        return { error: `Lead no encontrado: ${getErr ? getErr.message : ''}` };
-      }
-
-      if (!lead.website) {
-        return { error: 'El lead no tiene un sitio web configurado' };
-      }
-
-      await supabase.from('outreach_leads').update({ status: 'enriching' }).eq('id', lead.id);
-
-      const extractText = (html) => {
-        return html
-          .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-          .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-          .replace(/<svg[\s\S]*?<\/svg>/gi, ' ')
-          .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/&amp;/g, '&')
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>')
-          .replace(/&nbsp;/g, ' ')
-          .replace(/&#[0-9]+;/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-      };
-
-      const extractSocials = (html) => {
-        const linkedinRegex = /https?:\/\/(?:www\.)?linkedin\.com\/(?:company|in)\/[a-zA-Z0-9-_\.\/\?=&]+/gi;
-        const twitterRegex = /https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/[a-zA-Z0-9-_]+/gi;
-        const linkedinMatch = html.match(linkedinRegex);
-        const twitterMatch = html.match(twitterRegex);
-        return {
-          linkedin: linkedinMatch ? linkedinMatch[0] : null,
-          twitter: twitterMatch ? twitterMatch[0] : null
-        };
-      };
-
-      let html = '';
-      let scrapedText = '';
-      let socialLinks = { linkedin: null, twitter: null };
-
-      try {
-        const fetchRes = await fetch(lead.website, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
-          signal: AbortSignal.timeout(8000)
-        });
-
-        if (fetchRes.ok) {
-          html = await fetchRes.text();
-          scrapedText = extractText(html).substring(0, 8000);
-          socialLinks = extractSocials(html);
-        }
-      } catch (scrapeErr) {
-        console.warn(`Scraping falló para ${lead.website}:`, scrapeErr.message);
-      }
-
-      let icebreaker = `Hola ${lead.first_name || 'allí'},\n\nEstuve revisando vuestra web de ${lead.company_name} y veo que hacéis un trabajo excelente.`;
-      let geminiAnalysis = {};
-
-      if (scrapedText) {
-        const gUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-        const prompt = `Analiza los siguientes datos extraídos del sitio web de la empresa "${lead.company_name}":
----
-${scrapedText}
----
-
-Tu objetivo es redactar un "icebreaker" (rompehielos) comercial en ESPAÑOL que sea ultra-personalizado, directo y cercano (tuteando). Debe sonar natural, escrito por un humano real, sin rodeos formales ni frases cliché. 
-
-Debe enlazar directamente lo que hace su empresa con un dolor o mejora en Captación de Clientes, Productividad o Automatización gracias a la Inteligencia Artificial + nosotros.
-
-Genera una respuesta en formato JSON estrictamente válido con los siguientes campos:
-{
-  "icebreaker": "Una sola frase directa y cercana conectando con su web (ej: Veo que en {empresa} ayudáis a {su cliente} con {servicio}, y estaba pensando que...",
-  "company_value_prop": "Breve resumen de la propuesta de valor detectada en su web.",
-  "pain_points": "Dolores o áreas de automatización e IA recomendadas para su tipo de negocio."
-}`;
-
-        const geminiRes = await fetch(gUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: 'application/json' }
-          })
-        });
-
-        if (geminiRes.ok) {
-          const geminiJson = await geminiRes.json();
-          const responseText = geminiJson.candidates[0].content.parts[0].text;
-          try {
-            geminiAnalysis = JSON.parse(responseText);
-            if (geminiAnalysis.icebreaker) {
-              icebreaker = geminiAnalysis.icebreaker;
-            }
-          } catch (jsonErr) {
-            console.error('Error parseando JSON de Gemini:', responseText);
-          }
-        }
-      }
-
-      const updatedScrapedData = {
-        ...lead.scraped_data,
-        company_value_prop: geminiAnalysis.company_value_prop || '',
-        pain_points: geminiAnalysis.pain_points || '',
-        scraped_at: new Date().toISOString()
-      };
-
-      const updateData = {
-        status: 'enriched',
-        custom_icebreaker: icebreaker,
-        scraped_data: updatedScrapedData
-      };
-
-      if (socialLinks.linkedin && !lead.linkedin_url) {
-        updateData.linkedin_url = socialLinks.linkedin;
-      }
-      if (socialLinks.twitter) {
-        updateData.scraped_data.twitter = socialLinks.twitter;
-      }
-
-      await supabase.from('outreach_leads').update(updateData).eq('id', lead.id);
-
-      return {
-        success: true,
-        lead_id: lead.id,
-        icebreaker,
-        linkedin: socialLinks.linkedin,
-        company_value_prop: geminiAnalysis.company_value_prop || 'No detectada'
-      };
-
-    } catch (e) {
-      if (lead_id) {
-        await supabase.from('outreach_leads').update({ status: 'lead' }).eq('id', lead_id).catch(() => {});
-      }
-      return { error: `Error en enriquecimiento: ${e.message}` };
-    }
   },
 
   async listLeads({ status }) {
@@ -280,6 +106,35 @@ Genera una respuesta en formato JSON estrictamente válido con los siguientes ca
     const { data, error } = await query;
     if (error) return { error: error.message };
     return data;
+  },
+
+  // ── Heavy ops (delegated to API endpoints) ─────────────────────────────
+
+  async searchLeads({ domain }) {
+    const res = await fetch(baseUrl + '/api/hunter-search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ domain })
+    });
+    return res.json();
+  },
+
+  async enrichLead({ lead_id }) {
+    const res = await fetch(baseUrl + '/api/scrape-enrich', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lead_id })
+    });
+    return res.json();
+  },
+
+  async sendSequence({ lead_id }) {
+    const res = await fetch(baseUrl + '/api/send-sequence', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lead_id, mode: 'single' })
+    });
+    return res.json();
   }
 };
 
@@ -315,19 +170,18 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Agregar el mensaje actual del usuario con las instrucciones de sistema en el primer turno o integradas
     const systemPrompt = `Actúas como "El Cerebro", el orquestador cognitivo principal de CerebroComercial AI (marca iadebarrio.com). 
-Tienes acceso a herramientas automáticas (tools) para buscar leads, enriquecerlos y consultar métricas. 
+Tienes acceso a un equipo de agentes especializados: 🔍 Buscador (Hunter.io), 🕷️ Enriquecedor (Scraping+IA), 📧 Email (Resend), 📊 Analítico (Supabase). Cuando necesites ejecutar una acción, delegas al agente correspondiente.
 Tu tono de voz es cercano, directo, amigable (tuteando, ej: "¡Hola! Claro, ahora mismo busco leads...") y extremadamente resolutivo. Evita formalidades y rodeos cliché.
 
-Responde de forma natural e interactúa con el usuario. Si te piden buscar leads de un dominio, usa la herramienta searchLeads. Si te piden enriquecer un lead, usa enrichLead. Si te piden estadísticas, usa getOutboxStats.`;
+Responde de forma natural e interactúa con el usuario. Si te piden buscar leads de un dominio, usa la herramienta searchLeads. Si te piden enriquecer un lead, usa enrichLead. Si te piden enviar un email o secuencia, usa sendSequence. Si te piden estadísticas, usa getOutboxStats. Si te piden listar leads, usa listLeads.`;
 
     contents.push({
       role: 'user',
       parts: [{ text: `${systemPrompt}\n\nPetición del usuario: ${message}` }]
     });
 
-    // 2. Hacer la primera llamada a Gemini para ver si decide llamar a una herramienta
+    // First call to Gemini – may trigger a function call
     const geminiRes = await fetch(geminiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -345,21 +199,20 @@ Responde de forma natural e interactúa con el usuario. Si te piden buscar leads
     const candidate = geminiJson.candidates && geminiJson.candidates[0];
     const functionCalls = candidate && candidate.content && candidate.content.parts[0] && candidate.content.parts[0].functionCall;
 
-    // 3. Si decide llamar a una función, la ejecutamos y le damos el resultado de vuelta
+    // If Gemini decided to call a tool, execute it and feed the result back
     if (functionCalls) {
       const { name, args } = functionCalls;
-      console.log(`El Cerebro decidió llamar a la función: ${name} con argumentos:`, args);
+      console.log(`El Cerebro delegó al agente [${agentMap[name]}] → ${name}`, args);
 
       const implementation = implementations[name];
       if (!implementation) {
         throw new Error(`La función ${name} no está implementada.`);
       }
 
-      // Ejecutar la acción
       const toolResult = await implementation(args);
 
-      // Enviar el resultado de vuelta a Gemini para que construya la respuesta final para el usuario
-      contents.push(candidate.content); // Añadimos la llamada del modelo
+      // Send tool result back to Gemini for the final natural-language response
+      contents.push(candidate.content);
       contents.push({
         role: 'user',
         parts: [{
@@ -387,11 +240,12 @@ Responde de forma natural e interactúa con el usuario. Si te piden buscar leads
         role: 'model',
         text: finalResponseText,
         actionExecuted: name,
+        agentUsed: agentMap[name] || null,
         toolResult
       });
     }
 
-    // 4. Si no llamó a ninguna función, devolvemos la respuesta conversacional directa
+    // No function call – return the conversational response directly
     const directResponseText = candidate.content.parts[0].text;
     return res.status(200).json({
       role: 'model',
