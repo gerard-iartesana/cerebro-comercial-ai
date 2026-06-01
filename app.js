@@ -144,6 +144,7 @@ document.querySelectorAll('.sidebar-nav-item[data-section]').forEach(btn => {
         if (btn.dataset.section === 'leads') loadLeadsGrid();
         if (btn.dataset.section === 'kanban') loadKanbanCRM();
         if (btn.dataset.section === 'emails') loadEmailsLog();
+        if (btn.dataset.section === 'calendar') loadMeetings();
     });
 });
 
@@ -732,4 +733,523 @@ function viewEmailDetails(log) {
     document.getElementById('email-view-subject').textContent = log.subject;
     document.getElementById('email-view-from').textContent = `Destinatario: ${lead.first_name} <${lead.email}> · Empresa: ${lead.company_name}`;
     document.getElementById('email-view-body').innerHTML = log.body;
+}
+
+// =============================================
+// 11. MEETINGS MANAGEMENT
+// =============================================
+
+let _meetingsTableReady = false;
+
+async function ensureMeetingsTable() {
+    const { error } = await _supabase.from('meetings').select('id').limit(1);
+    if (error && error.code === '42P01') {
+        const list = document.getElementById('meetings-list');
+        if (list) {
+            list.innerHTML = `<div style="text-align:center;padding:30px">
+                <p style="font-size:0.9rem;color:#ff9500;margin-bottom:12px">⚠️ La tabla <strong>meetings</strong> no existe en Supabase.</p>
+                <p style="font-size:0.8rem;color:var(--text-grey)">Créala en Supabase con este SQL:</p>
+                <pre style="font-size:0.7rem;text-align:left;background:rgba(0,0,0,0.04);padding:12px;border-radius:10px;margin-top:8px;overflow-x:auto;white-space:pre-wrap">CREATE TABLE meetings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  contact_name TEXT NOT NULL,
+  contact_email TEXT,
+  contact_phone TEXT,
+  meeting_date TIMESTAMPTZ NOT NULL,
+  meeting_type TEXT DEFAULT 'discovery',
+  status TEXT DEFAULT 'pending',
+  notes TEXT,
+  source TEXT DEFAULT 'manual',
+  gcal_event_id TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all" ON meetings FOR ALL USING (true);</pre>
+            </div>`;
+        }
+        return false;
+    }
+    _meetingsTableReady = true;
+    return true;
+}
+
+async function loadMeetings() {
+    const ready = await ensureMeetingsTable();
+    if (!ready) return;
+
+    tryRestoreGCalSession();
+
+    const now = new Date().toISOString();
+    const listEl = document.getElementById('meetings-list');
+    const historyEl = document.getElementById('meetings-history');
+
+    try {
+        const { data: upcoming, error: e1 } = await _supabase
+            .from('meetings')
+            .select('*')
+            .gte('meeting_date', now)
+            .order('meeting_date', { ascending: true });
+
+        const { data: past, error: e2 } = await _supabase
+            .from('meetings')
+            .select('*')
+            .lt('meeting_date', now)
+            .order('meeting_date', { ascending: false })
+            .limit(20);
+
+        if (e1 || e2) throw (e1 || e2);
+
+        if (!upcoming || upcoming.length === 0) {
+            listEl.innerHTML = '<div style="text-align:center;padding:30px 0"><div style="font-size:2.5rem;margin-bottom:8px">📭</div><p style="color:var(--text-grey);font-size:0.85rem">No hay reuniones programadas</p></div>';
+        } else {
+            listEl.innerHTML = upcoming.map(m => renderMeetingCard(m, false)).join('');
+        }
+
+        if (!past || past.length === 0) {
+            historyEl.innerHTML = '<p style="color:var(--text-grey);font-size:0.85rem;text-align:center;padding:20px 0">Sin reuniones anteriores</p>';
+        } else {
+            historyEl.innerHTML = past.map(m => renderMeetingCard(m, true)).join('');
+        }
+
+        // Load Google Calendar events if connected
+        loadGCalEvents();
+
+    } catch (err) {
+        listEl.innerHTML = '<p style="color:#ff3b30;font-size:0.85rem">Error: ' + err.message + '</p>';
+    }
+}
+
+function renderMeetingCard(m, isPast) {
+    const d = new Date(m.meeting_date);
+    const dateStr = d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+    const timeStr = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+    let contactInfo = '';
+    if (m.contact_email) contactInfo += `<a href="mailto:${m.contact_email}" style="font-size:0.75rem;color:var(--accent);text-decoration:none">${m.contact_email}</a> `;
+    if (m.contact_phone) contactInfo += `<a href="tel:${m.contact_phone}" style="font-size:0.75rem;color:var(--text-grey);text-decoration:none">${m.contact_phone}</a>`;
+
+    const statusSelect = `<select onchange="updateMeetingField('${m.id}','status',this.value)" style="font-size:0.72rem;padding:3px 6px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:inherit;cursor:pointer;font-weight:600">
+        <option value="pending"${m.status === 'pending' ? ' selected' : ''}>⏳ Pendiente</option>
+        <option value="confirmed"${m.status === 'confirmed' ? ' selected' : ''}>✅ Confirmada</option>
+        <option value="done"${m.status === 'done' ? ' selected' : ''}>✔️ Realizada</option>
+        <option value="cancelled"${m.status === 'cancelled' ? ' selected' : ''}>❌ Cancelada</option>
+    </select>`;
+
+    const typeSelect = `<select onchange="updateMeetingField('${m.id}','meeting_type',this.value)" style="font-size:0.72rem;padding:3px 6px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:inherit;cursor:pointer;font-weight:600">
+        <option value="discovery"${m.meeting_type === 'discovery' ? ' selected' : ''}>📅 Reunión</option>
+        <option value="followup"${m.meeting_type === 'followup' ? ' selected' : ''}>🔄 Follow-up</option>
+        <option value="closing"${m.meeting_type === 'closing' ? ' selected' : ''}>🤝 Cierre</option>
+        <option value="support"${m.meeting_type === 'support' ? ' selected' : ''}>🛠️ Soporte</option>
+    </select>`;
+
+    const hasSynced = !!(m.gcal_event_id);
+    let syncBtn = '';
+    if (!isPast && hasSynced) {
+        syncBtn = '<span style="font-size:0.65rem;padding:3px 6px;border-radius:6px;background:rgba(66,133,244,0.1);color:#4285F4" title="Sincronizado con Google Calendar">✓ GCal</span>';
+    } else if (!isPast) {
+        const syncStyle = `padding:3px 8px;border-radius:8px;border:1px solid ${_gcalConnected ? '#4285F4' : '#ccc'};background:transparent;color:${_gcalConnected ? '#4285F4' : '#999'};font-size:0.72rem;cursor:pointer;font-weight:600`;
+        syncBtn = `<button onclick="syncMeetingToGCal('${m.id}')" id="sync-${m.id}" style="${syncStyle}" title="${_gcalConnected ? 'Sincronizar con Google Calendar' : 'Conecta Google Calendar primero'}">📅</button>`;
+    }
+
+    const deleteBtn = `<button onclick="deleteMeetingItem('${m.id}')" id="del-${m.id}" style="padding:4px 10px;border-radius:8px;border:1px solid var(--border-color);background:transparent;color:var(--text-grey);font-size:0.72rem;cursor:pointer" title="Eliminar">🗑️</button>`;
+
+    return `<div style="padding:14px 18px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-secondary);${isPast ? 'opacity:0.7' : ''}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div style="flex:1">
+                <div style="font-weight:700;font-size:0.95rem">${m.contact_name || 'Sin nombre'}</div>
+                <div style="font-size:0.8rem;color:var(--text-grey);margin-top:2px">📅 ${dateStr} · ${timeStr}</div>
+                ${contactInfo ? '<div style="margin-top:4px">' + contactInfo + '</div>' : ''}
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                ${typeSelect} ${statusSelect} ${syncBtn} ${deleteBtn}
+            </div>
+        </div>
+        ${m.notes ? '<p style="font-size:0.8rem;color:var(--text-grey);margin:8px 0 0;line-height:1.5">💬 ' + m.notes + '</p>' : ''}
+    </div>`;
+}
+
+function showMtgNotif(msg, type) {
+    const colors = { error: '#ff3b30', success: '#34c759', info: '#4285F4', warn: '#ff9500' };
+    const color = colors[type] || colors.info;
+    const el = document.getElementById('gcal-status');
+    el.style.display = 'flex';
+    el.style.color = color;
+    el.style.background = color + '10';
+    el.style.border = '1px solid ' + color + '30';
+    el.innerHTML = msg;
+    if (type !== 'error') {
+        setTimeout(() => { el.style.display = 'none'; }, 5000);
+    }
+}
+
+async function addMeeting() {
+    const name = document.getElementById('mtg-name').value.trim();
+    const email = document.getElementById('mtg-email').value.trim();
+    const phone = document.getElementById('mtg-phone').value.trim();
+    const date = document.getElementById('mtg-date').value;
+    const type = document.getElementById('mtg-type').value;
+    const status = document.getElementById('mtg-status').value;
+    const notes = document.getElementById('mtg-notes').value.trim();
+    const source = document.getElementById('mtg-source') ? document.getElementById('mtg-source').value : 'manual';
+
+    if (!name || !date) {
+        showMtgNotif('⚠️ Nombre y fecha son obligatorios', 'warn');
+        return;
+    }
+
+    try {
+        const dateISO = new Date(date).toISOString();
+
+        let gcalEventId = null;
+        if (_gcalConnected) {
+            gcalEventId = await createGCalEvent(name, dateISO, 60, notes, email);
+            if (gcalEventId) {
+                showGCalStatus('✅ Evento creado en Google Calendar', '#34c759');
+                setTimeout(() => {
+                    const iframe = document.querySelector('#sec-calendar iframe');
+                    if (iframe) iframe.src = iframe.src;
+                }, 2000);
+            }
+        }
+
+        const insertData = {
+            contact_name: name,
+            contact_email: email || null,
+            contact_phone: phone || null,
+            meeting_date: dateISO,
+            meeting_type: type,
+            status: status,
+            notes: notes || null,
+            source: source
+        };
+        if (gcalEventId) insertData.gcal_event_id = gcalEventId;
+
+        const { error } = await _supabase.from('meetings').insert(insertData);
+        if (error) throw error;
+
+        // Clear form
+        document.getElementById('mtg-name').value = '';
+        document.getElementById('mtg-email').value = '';
+        document.getElementById('mtg-phone').value = '';
+        document.getElementById('mtg-date').value = '';
+        document.getElementById('mtg-notes').value = '';
+        document.getElementById('mtg-type').value = 'discovery';
+        document.getElementById('mtg-status').value = 'pending';
+
+        showAlert('Reunión registrada', `${name} — ${new Date(dateISO).toLocaleDateString('es-ES')}`, '📅');
+        loadMeetings();
+    } catch (err) {
+        showMtgNotif('❌ Error guardando: ' + err.message, 'error');
+    }
+}
+
+async function updateMeetingField(id, field, value) {
+    try {
+        const { error } = await _supabase.from('meetings').update({ [field]: value }).eq('id', id);
+        if (error) throw error;
+    } catch (err) {
+        showMtgNotif('❌ Error actualizando: ' + err.message, 'error');
+        loadMeetings();
+    }
+}
+
+async function deleteMeetingItem(id) {
+    const btn = document.getElementById('del-' + id);
+    if (btn && !btn.dataset.confirmed) {
+        btn.dataset.confirmed = 'true';
+        btn.innerHTML = '¿Seguro?';
+        btn.style.color = '#ff3b30';
+        btn.style.borderColor = '#ff3b30';
+        btn.style.fontWeight = '700';
+        setTimeout(() => {
+            if (btn && btn.parentNode) {
+                delete btn.dataset.confirmed;
+                btn.innerHTML = '🗑️';
+                btn.style.color = 'var(--text-grey)';
+                btn.style.borderColor = 'var(--border-color)';
+                btn.style.fontWeight = 'normal';
+            }
+        }, 3000);
+        return;
+    }
+
+    try {
+        if (_gcalConnected) {
+            try {
+                const { data: mtg } = await _supabase.from('meetings').select('gcal_event_id').eq('id', id).single();
+                if (mtg && mtg.gcal_event_id) {
+                    await deleteGCalEvent(mtg.gcal_event_id);
+                    setTimeout(() => {
+                        const iframe = document.querySelector('#sec-calendar iframe');
+                        if (iframe) iframe.src = iframe.src;
+                    }, 2000);
+                }
+            } catch(e) { console.log('GCal sync skip:', e.message); }
+        }
+
+        const { error } = await _supabase.from('meetings').delete().eq('id', id);
+        if (error) throw error;
+        loadMeetings();
+    } catch (err) {
+        showMtgNotif('❌ Error eliminando: ' + err.message, 'error');
+    }
+}
+
+// =============================================
+// 12. GOOGLE CALENDAR INTEGRATION
+// =============================================
+
+let _gcalToken = null;
+let _gcalConnected = false;
+const GCAL_SCOPES = 'https://www.googleapis.com/auth/calendar.events';
+
+function getGCalClientId() {
+    return localStorage.getItem('gf_gcal_client_id') || '';
+}
+
+function saveGCalClientId() {
+    const id = document.getElementById('gcal-client-id').value.trim();
+    if (!id || !id.includes('.apps.googleusercontent.com')) {
+        showAlert('Error', 'Client ID no válido. Debe terminar en .apps.googleusercontent.com', '❌');
+        return;
+    }
+    localStorage.setItem('gf_gcal_client_id', id);
+    document.getElementById('gcal-config').style.display = 'none';
+    showGCalStatus('🔑 Client ID guardado. Haz clic en "Conectar Google Calendar" para autenticar.', '#4285F4');
+}
+
+function showGCalStatus(msg, color) {
+    const el = document.getElementById('gcal-status');
+    el.style.display = 'flex';
+    el.style.color = color || '#4285F4';
+    el.style.background = (color || '#4285F4') + '10';
+    el.style.border = '1px solid ' + (color || '#4285F4') + '30';
+    el.innerHTML = msg;
+}
+
+function connectGoogleCalendar() {
+    const clientId = getGCalClientId();
+    
+    if (!clientId) {
+        const config = document.getElementById('gcal-config');
+        config.style.display = config.style.display === 'none' ? 'block' : 'none';
+        const saved = localStorage.getItem('gf_gcal_client_id');
+        if (saved) document.getElementById('gcal-client-id').value = saved;
+        return;
+    }
+
+    if (_gcalConnected) {
+        _gcalToken = null;
+        _gcalConnected = false;
+        localStorage.removeItem('gf_gcal_authorized');
+        localStorage.removeItem('gf_gcal_token');
+        localStorage.removeItem('gf_gcal_token_expiry');
+        updateGCalButton(false);
+        document.getElementById('gcal-status').style.display = 'none';
+        showMtgNotif('Google Calendar desconectado', 'info');
+        return;
+    }
+
+    _initiateGCalAuth(clientId, '');
+}
+
+function _initiateGCalAuth(clientId, prompt) {
+    try {
+        const tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: clientId,
+            scope: GCAL_SCOPES,
+            callback: function(tokenResponse) {
+                if (tokenResponse.error) {
+                    showGCalStatus('❌ Error de autenticación: ' + tokenResponse.error, '#ff3b30');
+                    return;
+                }
+                _onGCalAuthSuccess(tokenResponse);
+            }
+        });
+        tokenClient.requestAccessToken({ prompt: prompt });
+    } catch(e) {
+        showGCalStatus('❌ Error: ' + e.message + '. ¿Se cargó la librería de Google?', '#ff3b30');
+    }
+}
+
+function _onGCalAuthSuccess(tokenResponse) {
+    _gcalToken = tokenResponse.access_token;
+    _gcalConnected = true;
+
+    const expiry = Date.now() + ((tokenResponse.expires_in || 3600) - 300) * 1000;
+    localStorage.setItem('gf_gcal_token', tokenResponse.access_token);
+    localStorage.setItem('gf_gcal_token_expiry', expiry.toString());
+    localStorage.setItem('gf_gcal_authorized', 'true');
+
+    updateGCalButton(true);
+    showGCalStatus('✅ Google Calendar conectado', '#34c759');
+    loadGCalEvents();
+}
+
+function updateGCalButton(connected) {
+    const btn = document.getElementById('btn-gcal-connect');
+    if (!btn) return;
+    if (connected) {
+        btn.style.background = 'linear-gradient(135deg, #34c759, #30d158)';
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Calendar Conectado';
+    } else {
+        btn.style.background = 'linear-gradient(135deg, #4285F4, #34A853)';
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M19.5 22h-15A2.5 2.5 0 0 1 2 19.5v-15A2.5 2.5 0 0 1 4.5 2H8v2H4.5a.5.5 0 0 0-.5.5v15a.5.5 0 0 0 .5.5h15a.5.5 0 0 0 .5-.5V16h2v3.5a2.5 2.5 0 0 1-2.5 2.5z"/><path d="M16 2v2h3.59l-9.3 9.29 1.42 1.42L21 5.41V9h2V2h-7z"/></svg> Conectar Google Calendar';
+    }
+}
+
+async function createGCalEvent(name, dateISO, durationMinutes, notes, email) {
+    if (!_gcalConnected || !_gcalToken) return null;
+
+    const start = new Date(dateISO);
+    const end = new Date(start.getTime() + (durationMinutes || 60) * 60000);
+
+    const event = {
+        summary: 'Reunión con ' + name,
+        description: notes || '',
+        start: { dateTime: start.toISOString(), timeZone: 'Europe/Madrid' },
+        end: { dateTime: end.toISOString(), timeZone: 'Europe/Madrid' }
+    };
+    if (email) event.attendees = [{ email }];
+
+    try {
+        const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + _gcalToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify(event)
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data.id;
+    } catch(e) {
+        console.error('GCal create error:', e);
+        return null;
+    }
+}
+
+async function deleteGCalEvent(gcalEventId) {
+    if (!_gcalConnected || !_gcalToken || !gcalEventId) return;
+    try {
+        await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + gcalEventId, {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + _gcalToken }
+        });
+    } catch(e) { console.error('GCal delete error:', e); }
+}
+
+async function loadGCalEvents() {
+    if (!_gcalConnected || !_gcalToken) return;
+    try {
+        const now = new Date().toISOString();
+        const maxDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        const res = await fetch(
+            'https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=' + encodeURIComponent(now) + '&timeMax=' + encodeURIComponent(maxDate) + '&singleEvents=true&orderBy=startTime&maxResults=20',
+            { headers: { 'Authorization': 'Bearer ' + _gcalToken } }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (data.items && data.items.length > 0) {
+            const gcalList = document.getElementById('meetings-list');
+            const existingHTML = gcalList.innerHTML;
+            let gcalEventsHTML = '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border-color)"><p style="font-size:0.78rem;font-weight:700;color:#4285F4;margin:0 0 10px;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="#4285F4"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-2 .9-2 2v14a2 2 0 002 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg> Eventos de Google Calendar</p>';
+
+            data.items.forEach(ev => {
+                const startDate = ev.start.dateTime ? new Date(ev.start.dateTime) : new Date(ev.start.date);
+                const dateStr = startDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+                const timeStr = ev.start.dateTime ? startDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : 'Todo el día';
+                gcalEventsHTML += `<div style="padding:10px 14px;border-radius:12px;border:1px solid rgba(66,133,244,0.2);background:rgba(66,133,244,0.04);margin-bottom:6px">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <div>
+                            <div style="font-weight:600;font-size:0.88rem">${ev.summary || 'Sin título'}</div>
+                            <div style="font-size:0.76rem;color:var(--text-grey);margin-top:2px">📅 ${dateStr} · ${timeStr}</div>
+                        </div>
+                        <span style="font-size:0.65rem;padding:3px 8px;border-radius:6px;background:rgba(66,133,244,0.1);color:#4285F4;font-weight:600">Google</span>
+                    </div>
+                </div>`;
+            });
+            gcalEventsHTML += '</div>';
+            gcalList.innerHTML = existingHTML + gcalEventsHTML;
+        }
+    } catch(e) { console.error('Error loading GCal events:', e); }
+}
+
+async function syncMeetingToGCal(id) {
+    if (!_gcalConnected || !_gcalToken) {
+        showMtgNotif('🔑 Para sincronizar: conecta Google Calendar primero', 'warn');
+        connectGoogleCalendar();
+        return;
+    }
+
+    const btn = document.getElementById('sync-' + id);
+    if (btn) { btn.innerHTML = '⏳'; btn.style.pointerEvents = 'none'; }
+
+    try {
+        const { data: mtg, error } = await _supabase.from('meetings').select('*').eq('id', id).single();
+        if (error) throw error;
+
+        const gcalId = await createGCalEvent(mtg.contact_name, mtg.meeting_date, 60, mtg.notes, mtg.contact_email);
+        if (!gcalId) throw new Error('No se pudo crear el evento en Google Calendar');
+
+        try { await _supabase.from('meetings').update({ gcal_event_id: gcalId }).eq('id', id); } catch(e) {}
+
+        setTimeout(() => {
+            const iframe = document.querySelector('#sec-calendar iframe');
+            if (iframe) iframe.src = iframe.src;
+        }, 1500);
+
+        loadMeetings();
+    } catch(err) {
+        showMtgNotif('❌ Error sincronizando: ' + err.message, 'error');
+        if (btn) { btn.innerHTML = '📅'; btn.style.pointerEvents = 'auto'; }
+    }
+}
+
+let _gcalRestoreAttempted = false;
+function tryRestoreGCalSession() {
+    if (_gcalConnected || _gcalRestoreAttempted) return;
+    _gcalRestoreAttempted = true;
+
+    const wasAuthorized = localStorage.getItem('gf_gcal_authorized');
+    const clientId = getGCalClientId();
+    if (!wasAuthorized || !clientId) return;
+
+    const storedToken = localStorage.getItem('gf_gcal_token');
+    const storedExpiry = parseInt(localStorage.getItem('gf_gcal_token_expiry') || '0');
+
+    if (storedToken && storedExpiry > Date.now()) {
+        _gcalToken = storedToken;
+        _gcalConnected = true;
+        updateGCalButton(true);
+        showGCalStatus('✅ Google Calendar reconectado automáticamente', '#34c759');
+        setTimeout(() => {
+            if (document.getElementById('meetings-list')) loadGCalEvents();
+        }, 800);
+        return;
+    }
+
+    try {
+        const tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: clientId,
+            scope: GCAL_SCOPES,
+            callback: function(tokenResponse) {
+                if (tokenResponse.error) {
+                    _showGCalReconnectBtn();
+                    return;
+                }
+                _onGCalAuthSuccess(tokenResponse);
+            }
+        });
+        tokenClient.requestAccessToken({ prompt: '' });
+    } catch(e) {
+        _showGCalReconnectBtn();
+    }
+}
+
+function _showGCalReconnectBtn() {
+    const btn = document.getElementById('btn-gcal-connect');
+    if (btn) {
+        btn.style.background = 'linear-gradient(135deg, #ff9500, #ff6b00)';
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg> Reconectar Calendar';
+    }
 }
