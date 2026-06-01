@@ -763,11 +763,15 @@ function switchCalTab(tab) {
 }
 
 function calPrev() {
-    calDate.setMonth(calDate.getMonth() - 1);
+    if (calMode === 'day') calDate.setDate(calDate.getDate() - 1);
+    else if (calMode === 'week') calDate.setDate(calDate.getDate() - 7);
+    else calDate.setMonth(calDate.getMonth() - 1);
     renderCalGrid();
 }
 function calNext() {
-    calDate.setMonth(calDate.getMonth() + 1);
+    if (calMode === 'day') calDate.setDate(calDate.getDate() + 1);
+    else if (calMode === 'week') calDate.setDate(calDate.getDate() + 7);
+    else calDate.setMonth(calDate.getMonth() + 1);
     renderCalGrid();
 }
 function calToday() {
@@ -783,11 +787,14 @@ function setCalFilter(f) {
     renderCalGrid();
 }
 
+let calMode = 'month';
+
 function setCalMode(m) {
+    calMode = m;
     document.querySelectorAll('.cal-mode').forEach(b => b.classList.remove('active'));
     const el = document.querySelector(`.cal-mode[data-mode="${m}"]`);
     if (el) el.classList.add('active');
-    // Only month view implemented for now
+    renderCalGrid();
 }
 
 function calGoToDate(val) {
@@ -848,6 +855,35 @@ async function loadCalendarEvents() {
             }
         } catch(e) { /* tasks table may not exist yet */ }
 
+        // Also load Google Calendar events if connected
+        if (_gcalConnected && _gcalToken) {
+            try {
+                const res = await fetch(
+                    'https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=' + encodeURIComponent(from) + '&timeMax=' + encodeURIComponent(to) + '&singleEvents=true&orderBy=startTime&maxResults=100',
+                    { headers: { 'Authorization': 'Bearer ' + _gcalToken } }
+                );
+                if (res.ok) {
+                    const gcalData = await res.json();
+                    if (gcalData.items) {
+                        // Filter out events already synced (matching gcal_event_id in meetings)
+                        const syncedIds = (data || []).filter(m => m.gcal_event_id).map(m => m.gcal_event_id);
+                        const gcalEvents = gcalData.items
+                            .filter(ev => !syncedIds.includes(ev.id))
+                            .map(ev => ({
+                                id: 'gcal_' + ev.id,
+                                title: ev.summary || 'Sin título',
+                                date: ev.start.dateTime || ev.start.date + 'T00:00:00',
+                                type: 'meeting',
+                                meetingType: 'gcal',
+                                status: ev.status === 'cancelled' ? 'cancelled' : 'confirmed',
+                                isGcal: true
+                            }));
+                        calEvents = calEvents.concat(gcalEvents);
+                    }
+                }
+            } catch(e) { console.warn('[Cal] GCal fetch error:', e); }
+        }
+
         // Update event count
         const countEl = document.getElementById('cal-event-count');
         if (countEl) countEl.textContent = calEvents.filter(e => e.type === 'meeting').length;
@@ -867,64 +903,135 @@ async function renderCalGrid() {
 
     // Update title
     const titleEl = document.getElementById('cal-month-title');
-    if (titleEl) titleEl.textContent = MONTH_NAMES_ES[month] + ' de ' + year;
-
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-
-    // Monday-based: getDay() returns 0=Sun → we want 0=Mon
-    let startOffset = firstDay.getDay() - 1;
-    if (startOffset < 0) startOffset = 6;
-
-    const daysInMonth = lastDay.getDate();
-    const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
 
     const today = new Date();
     const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
 
-    let html = '';
-    for (let i = 0; i < totalCells; i++) {
-        const cellDate = new Date(year, month, 1 - startOffset + i);
-        const dateStr = cellDate.getFullYear() + '-' + String(cellDate.getMonth()+1).padStart(2,'0') + '-' + String(cellDate.getDate()).padStart(2,'0');
-        const isOtherMonth = cellDate.getMonth() !== month;
+    const gridEl = document.getElementById('cal-days');
+    const headersEl = document.querySelector('.cal-grid');
+    if (!gridEl) return;
+
+    if (calMode === 'day') {
+        // --- DAY VIEW ---
+        if (titleEl) titleEl.textContent = calDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        // Hide day-of-week headers
+        document.querySelectorAll('.cal-day-header').forEach(h => h.style.display = 'none');
+        if (headersEl) headersEl.style.gridTemplateColumns = '1fr';
+        gridEl.style.gridTemplateColumns = '1fr';
+
+        const dateStr = calDate.getFullYear() + '-' + String(calDate.getMonth()+1).padStart(2,'0') + '-' + String(calDate.getDate()).padStart(2,'0');
         const isToday = dateStr === todayStr;
-
-        // Filter events for this day
-        let dayEvents = calEvents.filter(ev => {
-            const evDate = new Date(ev.date);
-            const evStr = evDate.getFullYear() + '-' + String(evDate.getMonth()+1).padStart(2,'0') + '-' + String(evDate.getDate()).padStart(2,'0');
-            return evStr === dateStr;
-        });
-
-        // Apply filter
+        let dayEvents = getEventsForDate(dateStr);
         if (calFilter === 'meetings') dayEvents = dayEvents.filter(e => e.type === 'meeting');
         if (calFilter === 'tasks') dayEvents = dayEvents.filter(e => e.type === 'task');
 
-        const maxShow = 3;
-        const overflow = dayEvents.length > maxShow ? dayEvents.length - maxShow : 0;
-
-        html += `<div class="cal-cell${isOtherMonth ? ' other-month' : ''}${isToday ? ' today' : ''}">`;
-        html += `<div class="cal-day-num">${cellDate.getDate()}</div>`;
-
-        dayEvents.slice(0, maxShow).forEach(ev => {
-            const evTime = new Date(ev.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-            let evClass = 'ev-meeting';
-            if (ev.type === 'task') evClass = 'ev-task';
-            else if (ev.meetingType === 'followup' || ev.meetingType === 'closing' || ev.meetingType === 'support') evClass = 'ev-business';
-            if (ev.status === 'done') evClass = 'ev-done';
-            const label = ev.type === 'task' ? ev.title : (evClass === 'ev-business' ? `[Negocio] ${ev.title}` : ev.title);
-            html += `<div class="cal-event ${evClass}"><span class="cal-ev-time">${evTime}</span><span class="cal-ev-badge"></span>${label}</div>`;
+        let html = `<div class="cal-cell${isToday ? ' today' : ''}" style="min-height:400px">`;
+        html += `<div class="cal-day-num">${calDate.getDate()}</div>`;
+        dayEvents.forEach(ev => {
+            html += renderCalEvent(ev);
         });
-
-        if (overflow > 0) {
-            html += `<div class="cal-more">+${overflow} más</div>`;
-        }
-
         html += '</div>';
-    }
+        gridEl.innerHTML = html;
 
-    const container = document.getElementById('cal-days');
-    if (container) container.innerHTML = html;
+    } else if (calMode === 'week') {
+        // --- WEEK VIEW ---
+        // Find Monday of current week
+        const dayOfWeek = calDate.getDay();
+        const monday = new Date(calDate);
+        monday.setDate(calDate.getDate() - ((dayOfWeek + 6) % 7));
+
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        if (titleEl) titleEl.textContent = `${monday.getDate()} ${MONTH_NAMES_ES[monday.getMonth()].substring(0,3)} - ${sunday.getDate()} ${MONTH_NAMES_ES[sunday.getMonth()].substring(0,3)} ${sunday.getFullYear()}`;
+
+        // Show day-of-week headers
+        document.querySelectorAll('.cal-day-header').forEach(h => h.style.display = '');
+        if (headersEl) headersEl.style.gridTemplateColumns = 'repeat(7, 1fr)';
+        gridEl.style.gridTemplateColumns = 'repeat(7, 1fr)';
+
+        let html = '';
+        for (let i = 0; i < 7; i++) {
+            const cellDate = new Date(monday);
+            cellDate.setDate(monday.getDate() + i);
+            const dateStr = cellDate.getFullYear() + '-' + String(cellDate.getMonth()+1).padStart(2,'0') + '-' + String(cellDate.getDate()).padStart(2,'0');
+            const isToday = dateStr === todayStr;
+            let dayEvents = getEventsForDate(dateStr);
+            if (calFilter === 'meetings') dayEvents = dayEvents.filter(e => e.type === 'meeting');
+            if (calFilter === 'tasks') dayEvents = dayEvents.filter(e => e.type === 'task');
+
+            html += `<div class="cal-cell${isToday ? ' today' : ''}" style="min-height:200px">`;
+            html += `<div class="cal-day-num">${cellDate.getDate()}</div>`;
+            dayEvents.forEach(ev => {
+                html += renderCalEvent(ev);
+            });
+            html += '</div>';
+        }
+        gridEl.innerHTML = html;
+
+    } else {
+        // --- MONTH VIEW ---
+        if (titleEl) titleEl.textContent = MONTH_NAMES_ES[month] + ' de ' + year;
+
+        // Show day-of-week headers
+        document.querySelectorAll('.cal-day-header').forEach(h => h.style.display = '');
+        if (headersEl) headersEl.style.gridTemplateColumns = 'repeat(7, 1fr)';
+        gridEl.style.gridTemplateColumns = 'repeat(7, 1fr)';
+
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        let startOffset = firstDay.getDay() - 1;
+        if (startOffset < 0) startOffset = 6;
+        const daysInMonth = lastDay.getDate();
+        const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+        let html = '';
+        for (let i = 0; i < totalCells; i++) {
+            const cellDate = new Date(year, month, 1 - startOffset + i);
+            const dateStr = cellDate.getFullYear() + '-' + String(cellDate.getMonth()+1).padStart(2,'0') + '-' + String(cellDate.getDate()).padStart(2,'0');
+            const isOtherMonth = cellDate.getMonth() !== month;
+            const isToday = dateStr === todayStr;
+
+            let dayEvents = getEventsForDate(dateStr);
+            if (calFilter === 'meetings') dayEvents = dayEvents.filter(e => e.type === 'meeting');
+            if (calFilter === 'tasks') dayEvents = dayEvents.filter(e => e.type === 'task');
+
+            const maxShow = 3;
+            const overflow = dayEvents.length > maxShow ? dayEvents.length - maxShow : 0;
+
+            html += `<div class="cal-cell${isOtherMonth ? ' other-month' : ''}${isToday ? ' today' : ''}">`;
+            html += `<div class="cal-day-num">${cellDate.getDate()}</div>`;
+
+            dayEvents.slice(0, maxShow).forEach(ev => {
+                html += renderCalEvent(ev);
+            });
+
+            if (overflow > 0) {
+                html += `<div class="cal-more">+${overflow} más</div>`;
+            }
+
+            html += '</div>';
+        }
+        gridEl.innerHTML = html;
+    }
+}
+
+function getEventsForDate(dateStr) {
+    return calEvents.filter(ev => {
+        const evDate = new Date(ev.date);
+        const evStr = evDate.getFullYear() + '-' + String(evDate.getMonth()+1).padStart(2,'0') + '-' + String(evDate.getDate()).padStart(2,'0');
+        return evStr === dateStr;
+    });
+}
+
+function renderCalEvent(ev) {
+    const evTime = new Date(ev.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    let evClass = 'ev-meeting';
+    if (ev.type === 'task') evClass = 'ev-task';
+    else if (ev.meetingType === 'gcal') evClass = 'ev-business';
+    else if (ev.meetingType === 'followup' || ev.meetingType === 'closing' || ev.meetingType === 'support') evClass = 'ev-business';
+    if (ev.status === 'done') evClass = 'ev-done';
+    const label = ev.type === 'task' ? ev.title : (ev.isGcal ? `📅 ${ev.title}` : (evClass === 'ev-business' ? `[Negocio] ${ev.title}` : ev.title));
+    return `<div class="cal-event ${evClass}"><span class="cal-ev-time">${evTime}</span><span class="cal-ev-badge"></span>${label}</div>`;
 }
 
 // 11. MEETINGS MANAGEMENT
