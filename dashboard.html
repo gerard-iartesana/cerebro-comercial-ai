@@ -690,11 +690,13 @@
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
                                 <div>
                                     <label class="mtg-label">Horas previstas</label>
-                                    <input type="number" id="task-hours-est" class="modal-input" value="0" min="0">
+                                    <input type="number" id="task-hours-est" class="modal-input" value="0" min="0" oninput="calcTaskEcon()">
+                                    <div id="task-total-est" style="font-size:0.75rem;color:var(--accent);font-weight:700;margin-top:4px">💰 Total: 0.00€</div>
                                 </div>
                                 <div>
                                     <label class="mtg-label">Horas reales</label>
-                                    <input type="number" id="task-hours-actual" class="modal-input" placeholder="—" min="0">
+                                    <input type="number" id="task-hours-actual" class="modal-input" placeholder="—" min="0" oninput="calcTaskEcon()">
+                                    <div id="task-total-actual" style="font-size:0.75rem;color:#34c759;font-weight:700;margin-top:4px">💰 Total: —</div>
                                 </div>
                             </div>
                         </div>

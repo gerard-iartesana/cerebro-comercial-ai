@@ -1561,6 +1561,27 @@ function calcTaskEcon() {
     if (el) el.innerHTML = `Precio efectivo: <strong>${effective.toFixed(2)}€/h</strong>`;
     const refEl = document.getElementById('task-ref-price');
     if (refEl) refEl.textContent = `Ref: ${rate}€/h`;
+
+    // Total previsto
+    const hoursEst = parseFloat(document.getElementById('task-hours-est')?.value) || 0;
+    const totalEst = effective * hoursEst;
+    const estEl = document.getElementById('task-total-est');
+    if (estEl) estEl.innerHTML = `💰 Total: <strong>${totalEst.toFixed(2)}€</strong>`;
+
+    // Total real
+    const hoursActual = parseFloat(document.getElementById('task-hours-actual')?.value);
+    const actualEl = document.getElementById('task-total-actual');
+    if (actualEl) {
+        if (!isNaN(hoursActual) && hoursActual > 0) {
+            const totalActual = effective * hoursActual;
+            const diff = totalActual - totalEst;
+            const diffStr = diff > 0 ? `+${diff.toFixed(2)}€` : `${diff.toFixed(2)}€`;
+            const diffColor = diff > 0 ? '#ff3b30' : '#34c759';
+            actualEl.innerHTML = `💰 Total: <strong>${totalActual.toFixed(2)}€</strong> <span style="color:${diffColor};font-size:0.7rem">(${diffStr})</span>`;
+        } else {
+            actualEl.innerHTML = '💰 Total: —';
+        }
+    }
 }
 
 function calcTaskDuration() {
