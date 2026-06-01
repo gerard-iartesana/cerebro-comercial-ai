@@ -280,7 +280,7 @@ async function loadKanbanCRM() {
     try {
         const { data: leads, error } = await _supabase
             .from('outreach_leads')
-            .select('id, first_name, company_name, status, website');
+            .select('id, first_name, company_name, status, website, email, phone, scraped_data');
 
         if (error) throw error;
 
@@ -299,19 +299,26 @@ async function loadKanbanCRM() {
             if (col.startsWith('sent_') || col.startsWith('followup_') || col === 'enriching') {
                 col = 'enriched';
             }
-            if (col === 'lost' || col === 'unsubscribed') return; // Skip in Kanban for cleanliness
+            if (col === 'lost' || col === 'unsubscribed') return;
 
             if (counts[col] !== undefined) {
                 counts[col]++;
+                const cargo = (lead.scraped_data && lead.scraped_data.position) || '';
+                const phone = lead.phone || '';
                 const card = document.createElement('div');
                 card.className = 'kanban-card';
                 card.draggable = true;
                 card.id = `lead-${lead.id}`;
                 card.setAttribute('ondragstart', 'handleDragStart(event)');
                 card.innerHTML = `
-                    <h4>${lead.first_name || 'Prospecto'}</h4>
-                    <p>${lead.company_name || 'Desconocido'}</p>
-                    <span class="card-badge status-${lead.status}">${lead.status}</span>
+                    <div class="kanban-card-header">
+                        <h4>${lead.first_name || 'Prospecto'}</h4>
+                        <span class="card-badge status-${lead.status}">${lead.status}</span>
+                    </div>
+                    <div class="kanban-card-company">🏢 ${lead.company_name || 'Sin empresa'}</div>
+                    ${lead.email ? `<div class="kanban-card-detail">📧 ${lead.email}</div>` : ''}
+                    ${phone ? `<div class="kanban-card-detail">📞 ${phone}</div>` : ''}
+                    ${cargo ? `<div class="kanban-card-detail">💼 ${cargo}</div>` : ''}
                 `;
                 document.getElementById(`column-${col}`).appendChild(card);
             }

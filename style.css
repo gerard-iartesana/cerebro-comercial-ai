@@ -842,11 +842,42 @@ html, body {
 .kanban-card h4 {
     font-size: 0.9rem;
     font-weight: 700;
-    margin-bottom: 4px;
+    margin-bottom: 0;
 }
 .kanban-card p {
     font-size: 0.75rem;
     color: var(--text-grey);
+}
+.kanban-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.kanban-card-header .card-badge {
+    font-size: 0.58rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.kanban-card-company {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 6px;
+}
+.kanban-card-detail {
+    font-size: 0.68rem;
+    color: var(--text-grey);
+    line-height: 1.6;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .kanban-card .card-badge {
     font-size: 0.62rem;
