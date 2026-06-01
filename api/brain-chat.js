@@ -274,9 +274,21 @@ OTRAS HERRAMIENTAS:
       });
     }
 
-    // Check if Gemini wants to call a function
-    const firstPart = candidate.content.parts[0];
-    const functionCall = firstPart.functionCall || null;
+    // Search ALL parts for function calls (Gemini 2.5 returns thinking + text + functionCall in separate parts)
+    const allParts = candidate.content.parts;
+    let functionCall = null;
+    let textPart = null;
+
+    for (const part of allParts) {
+      if (part.functionCall) {
+        functionCall = part.functionCall;
+      }
+      if (part.text && !part.thought) {
+        textPart = part.text;
+      }
+    }
+
+    console.log('Parts found:', allParts.length, '| functionCall:', !!functionCall, '| textPart:', !!textPart);
 
     // If Gemini decided to call a tool, execute it and feed the result back
     if (functionCall) {
@@ -350,7 +362,7 @@ OTRAS HERRAMIENTAS:
     }
 
     // No function call – return the conversational response directly
-    const directText = firstPart.text || '🤔 El Cerebro procesó tu mensaje pero no generó respuesta de texto. Intenta reformularlo.';
+    const directText = textPart || '🤔 El Cerebro procesó tu mensaje pero no generó respuesta de texto. Intenta reformularlo.';
     return res.status(200).json({
       role: 'model',
       text: directText
