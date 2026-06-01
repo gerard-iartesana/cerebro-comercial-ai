@@ -331,12 +331,13 @@ OTRAS HERRAMIENTAS:
       const geminiFinalRes = await fetch(geminiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents })
+        body: JSON.stringify({ systemInstruction, contents, tools: geminiTools })
       });
 
       if (!geminiFinalRes.ok) {
         // If Gemini fails on second call, return the raw tool result as text
-        console.error('Gemini final call failed:', geminiFinalRes.status);
+        const errText = await geminiFinalRes.text();
+        console.error('Gemini final call failed:', geminiFinalRes.status, errText.substring(0, 300));
         return res.status(200).json({
           role: 'model',
           text: `✅ Agente ${agentMap[name] || name} ejecutó "${name}" correctamente.\n\nResultado: ${JSON.stringify(toolResult, null, 2)}`,
@@ -348,9 +349,19 @@ OTRAS HERRAMIENTAS:
 
       const finalJson = await geminiFinalRes.json();
       const finalCandidate = finalJson.candidates && finalJson.candidates[0];
-      const finalText = finalCandidate && finalCandidate.content && finalCandidate.content.parts && finalCandidate.content.parts[0]
-        ? finalCandidate.content.parts[0].text
-        : `✅ Acción "${name}" ejecutada. Resultado: ${JSON.stringify(toolResult)}`;
+
+      // Search all parts for text (skip thinking parts)
+      let finalText = null;
+      if (finalCandidate && finalCandidate.content && finalCandidate.content.parts) {
+        for (const p of finalCandidate.content.parts) {
+          if (p.text && !p.thought) {
+            finalText = p.text;
+          }
+        }
+      }
+      if (!finalText) {
+        finalText = `✅ Acción "${name}" ejecutada. Resultado: ${JSON.stringify(toolResult)}`;
+      }
 
       return res.status(200).json({
         role: 'model',
