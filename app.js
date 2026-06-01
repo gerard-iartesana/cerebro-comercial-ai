@@ -836,34 +836,40 @@ async function loadCalendarEvents() {
             status: m.status
         }));
 
-        // Also load tasks with dates
+        // Also load tasks — expand multi-day tasks to appear on each day
         try {
-            const { data: taskData } = await _supabase
+            const { data: taskData, error: taskErr } = await _supabase
                 .from('tasks')
                 .select('*');
-            if (taskData) {
-                const taskEvents = taskData.map(t => {
-                    // Use start_date, then due_date, then created_at as fallback
-                    let eventDate;
-                    if (t.start_date) {
-                        eventDate = t.start_date + 'T' + (t.task_time || '09:00') + ':00';
-                    } else if (t.due_date) {
-                        eventDate = t.due_date + 'T' + (t.task_time || '09:00') + ':00';
-                    } else {
-                        eventDate = t.created_at;
+            if (taskErr) console.warn('[Cal] Tasks query error:', taskErr);
+            if (taskData && taskData.length > 0) {
+                console.log('[Cal] Tasks loaded:', taskData.length);
+                taskData.forEach(t => {
+                    const sd = t.start_date || t.due_date || (t.created_at ? t.created_at.split('T')[0] : null);
+                    const ed = t.due_date || sd;
+                    if (!sd) return;
+
+                    // Create one event per day from start to end
+                    const start = new Date(sd + 'T00:00:00');
+                    const end = new Date(ed + 'T00:00:00');
+                    const cursor = new Date(start);
+                    while (cursor <= end) {
+                        calEvents.push({
+                            id: t.id,
+                            title: t.title,
+                            date: cursor.toISOString(),
+                            type: 'task',
+                            taskType: t.task_type,
+                            status: t.status,
+                            isMultiDay: start.getTime() !== end.getTime(),
+                            startDate: sd,
+                            endDate: ed
+                        });
+                        cursor.setDate(cursor.getDate() + 1);
                     }
-                    return {
-                        id: t.id,
-                        title: t.title,
-                        date: eventDate,
-                        type: 'task',
-                        taskType: t.task_type,
-                        status: t.status
-                    };
                 });
-                calEvents = calEvents.concat(taskEvents);
             }
-        } catch(e) { /* tasks table may not exist yet */ }
+        } catch(e) { console.warn('[Cal] Tasks load error:', e); }
 
         // Also load Google Calendar events if connected
         if (_gcalConnected && _gcalToken) {
@@ -1646,10 +1652,21 @@ async function saveTask() {
             await _supabase.from('subtasks').delete().eq('task_id', taskId);
             if (taskSubtasks.length > 0) {
                 const subs = taskSubtasks.map(st => ({ ...st, task_id: taskId }));
-                // Remove any 'id' from subs to avoid conflicts
                 subs.forEach(s => delete s.id);
                 await _supabase.from('subtasks').insert(subs);
             }
+        }
+        
+        // Sync to Google Calendar
+        if (_gcalConnected && _gcalToken && taskData.start_date) {
+            try {
+                const existingTask = id ? allTasks.find(t => t.id === id) : null;
+                const gcalId = existingTask?.gcal_event_id;
+                const newGcalId = await syncTaskToGCal(taskId, taskData, gcalId);
+                if (newGcalId && !gcalId) {
+                    await _supabase.from('tasks').update({ gcal_event_id: newGcalId }).eq('id', taskId);
+                }
+            } catch(e) { console.warn('[GCal] Task sync error:', e); }
         }
         
         closeTaskModal();
@@ -1877,6 +1894,50 @@ async function createGCalEvent(name, dateISO, durationMinutes, notes, email) {
         return data.id;
     } catch(e) {
         console.error('GCal create error:', e);
+        return null;
+    }
+}
+
+async function syncTaskToGCal(taskId, taskData, existingGcalId) {
+    if (!_gcalConnected || !_gcalToken) return null;
+
+    const startDate = taskData.start_date;
+    // end_date for all-day events is exclusive in GCal, so add 1 day
+    const endDate = taskData.due_date || taskData.start_date;
+    const endPlusOne = new Date(endDate + 'T00:00:00');
+    endPlusOne.setDate(endPlusOne.getDate() + 1);
+    const endStr = endPlusOne.toISOString().split('T')[0];
+
+    const typeLabels = { business: 'Negocio', personal: 'Personal', application: 'App' };
+    const event = {
+        summary: `[${typeLabels[taskData.task_type] || 'Tarea'}] ${taskData.title}`,
+        description: (taskData.description || '') + (taskData.notes ? '\n\nNotas: ' + taskData.notes : ''),
+        start: { date: startDate },
+        end: { date: endStr },
+        transparency: 'transparent', // Shows as "available" in GCal
+        colorId: taskData.task_type === 'business' ? '9' : taskData.task_type === 'personal' ? '5' : '3'
+    };
+
+    try {
+        const url = existingGcalId
+            ? `https://www.googleapis.com/calendar/v3/calendars/primary/events/${existingGcalId}`
+            : 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+        const method = existingGcalId ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+            method,
+            headers: { 'Authorization': 'Bearer ' + _gcalToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify(event)
+        });
+        if (!res.ok) {
+            console.warn('[GCal] Task sync failed:', await res.text());
+            return null;
+        }
+        const data = await res.json();
+        console.log('[GCal] Task synced:', data.id);
+        return data.id;
+    } catch(e) {
+        console.warn('[GCal] Task sync error:', e);
         return null;
     }
 }
