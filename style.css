@@ -1023,24 +1023,61 @@ html, body {
     flex-wrap: nowrap;
 }
 .lead-action-btn {
-    background: none;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 3px 6px;
-    font-size: 0.72rem;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #ffffff;
+    font-size: 0.95rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    position: relative;
+    overflow: hidden;
     line-height: 1;
 }
+
+.lead-action-btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0));
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+/* Gradients for Buttons */
+.lead-action-btn.btn-edit { background: linear-gradient(135deg, #0A84FF 0%, #004d99 100%); }
+.lead-action-btn.btn-delete { background: linear-gradient(135deg, #FF453A 0%, #b8170f 100%); }
+.lead-action-btn.btn-email { background: linear-gradient(135deg, #FF9F0A 0%, #cc5200 100%); }
+.lead-action-btn.btn-whatsapp { background: linear-gradient(135deg, #30D158 0%, #1c7e38 100%); }
+.lead-action-btn.btn-signup { background: linear-gradient(135deg, #BF5AF2 0%, #7d1fc2 100%); }
+
+/* Hover and Active Transitions */
 .lead-action-btn:hover {
-    transform: scale(1.12);
-    background: rgba(0,122,255,0.08);
-    border-color: var(--accent);
+    transform: scale(1.18) translateY(-2px);
+    filter: brightness(1.2);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4), 0 0 10px rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.25);
 }
-.lead-action-btn.action-delete:hover {
-    background: rgba(255,69,58,0.08);
-    border-color: var(--accent-red);
+
+.lead-action-btn:active {
+    transform: scale(0.95) translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
+
+/* Specific glows */
+.lead-action-btn.btn-edit:hover { box-shadow: 0 6px 15px rgba(10, 132, 255, 0.4); }
+.lead-action-btn.btn-delete:hover { box-shadow: 0 6px 15px rgba(255, 69, 58, 0.4); }
+.lead-action-btn.btn-email:hover { box-shadow: 0 6px 15px rgba(255, 159, 10, 0.4); }
+.lead-action-btn.btn-whatsapp:hover { box-shadow: 0 6px 15px rgba(48, 209, 88, 0.4); }
+.lead-action-btn.btn-signup:hover { box-shadow: 0 6px 15px rgba(191, 90, 242, 0.4); }
 .lead-cargo-cell {
     font-size: 0.72rem;
     color: var(--text-grey);

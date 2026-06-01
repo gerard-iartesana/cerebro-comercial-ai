@@ -198,11 +198,11 @@ async function loadLeadsGrid() {
                 <td class="lead-cargo-cell">${cargo}</td>
                 <td><span class="badge-status status-${lead.status}">${lead.status}</span></td>
                 <td class="lead-actions-cell">
-                    <button class="lead-action-btn" title="Editar" onclick="editLeadModal('${lead.id}')">✏️</button>
-                    <button class="lead-action-btn action-delete" title="Borrar" onclick="deleteLead('${lead.id}')">🗑️</button>
-                    <button class="lead-action-btn" title="Enviar Email" onclick="quickEmailLead('${lead.email}', '${lead.first_name || ''}')">📧</button>
-                    <button class="lead-action-btn" title="WhatsApp" onclick="openWhatsApp('${lead.email}', '${lead.first_name || ''}', '${lead.company_name || ''}')">💬</button>
-                    <button class="lead-action-btn" title="Formulario de alta" onclick="sendSignupForm('${lead.email}', '${lead.first_name || ''}')">📋</button>
+                    <button class="lead-action-btn btn-edit" title="Editar" onclick="editLeadModal('${lead.id}')">✏️</button>
+                    <button class="lead-action-btn btn-delete action-delete" title="Borrar" onclick="deleteLead('${lead.id}')">🗑️</button>
+                    <button class="lead-action-btn btn-email" title="Enviar Email" onclick="quickEmailLead('${lead.email}', '${lead.first_name || ''}')">📧</button>
+                    <button class="lead-action-btn btn-whatsapp" title="WhatsApp" onclick="openWhatsApp('${lead.email}', '${lead.first_name || ''}', '${lead.company_name || ''}')">💬</button>
+                    <button class="lead-action-btn btn-signup" title="Formulario de alta" onclick="sendSignupForm('${lead.email}', '${lead.first_name || ''}')">📋</button>
                 </td>
             `;
             tbody.appendChild(tr);
