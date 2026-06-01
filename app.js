@@ -159,7 +159,7 @@ async function initializeDashboard() {
     }
 }
 
-// 6. Spreadsheet Datagrid Module
+// 6. Spreadsheet Module
 async function loadLeadsGrid() {
     try {
         const { data: leads, error } = await _supabase
@@ -173,20 +173,27 @@ async function loadLeadsGrid() {
         tbody.innerHTML = '';
 
         leads.forEach(lead => {
+            const cargo = (lead.scraped_data && lead.scraped_data.position) || '';
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="editable-cell" contenteditable="true" onblur="updateLeadField('${lead.id}', 'first_name', this.textContent)">${lead.first_name || ''}</td>
-                <td class="editable-cell" contenteditable="true" onblur="updateLeadField('${lead.id}', 'email', this.textContent)">${lead.email}</td>
+                <td class="lead-email-cell">${lead.email}</td>
                 <td class="editable-cell" contenteditable="true" onblur="updateLeadField('${lead.id}', 'company_name', this.textContent)">${lead.company_name || ''}</td>
-                <td class="editable-cell" contenteditable="true" onblur="updateLeadField('${lead.id}', 'website', this.textContent)">${lead.website || ''}</td>
-                <td class="editable-cell" contenteditable="true" onblur="updateLeadField('${lead.id}', 'linkedin_url', this.textContent)">${lead.linkedin_url || ''}</td>
+                <td class="lead-cargo-cell">${cargo}</td>
                 <td><span class="badge-status status-${lead.status}">${lead.status}</span></td>
+                <td class="lead-actions-cell">
+                    <button class="lead-action-btn" title="Editar" onclick="editLeadModal('${lead.id}')">✏️</button>
+                    <button class="lead-action-btn action-delete" title="Borrar" onclick="deleteLead('${lead.id}')">🗑️</button>
+                    <button class="lead-action-btn" title="Enviar Email" onclick="quickEmailLead('${lead.email}', '${lead.first_name || ''}')">📧</button>
+                    <button class="lead-action-btn" title="WhatsApp" onclick="openWhatsApp('${lead.email}', '${lead.first_name || ''}', '${lead.company_name || ''}')">💬</button>
+                    <button class="lead-action-btn" title="Formulario de alta" onclick="sendSignupForm('${lead.email}', '${lead.first_name || ''}')">📋</button>
+                </td>
             `;
             tbody.appendChild(tr);
         });
     } catch (e) {
         console.error('Error in loadLeadsGrid:', e);
-        showAlert('Error', `No se pudieron cargar los leads en la rejilla: ${e.message || JSON.stringify(e)}`);
+        showAlert('Error', `No se pudieron cargar los leads: ${e.message || JSON.stringify(e)}`);
     }
 }
 
@@ -202,6 +209,49 @@ async function updateLeadField(id, field, value) {
     } catch (e) {
         console.error('Error actualizando campo:', e);
     }
+}
+
+async function deleteLead(id) {
+    if (!confirm('¿Seguro que quieres borrar este lead?')) return;
+    try {
+        const { error } = await _supabase.from('outreach_leads').delete().eq('id', id);
+        if (error) throw error;
+        loadLeadsGrid();
+        initializeDashboard();
+        showAlert('Lead eliminado', 'El lead ha sido borrado correctamente.', '🗑️');
+    } catch (e) {
+        showAlert('Error', `No se pudo borrar: ${e.message}`);
+    }
+}
+
+function editLeadModal(id) {
+    // Quick inline edit — focus on the first editable cell in that row
+    const rows = document.querySelectorAll('#leads-table-body tr');
+    for (const row of rows) {
+        const firstCell = row.querySelector('.editable-cell');
+        if (firstCell && row.innerHTML.includes(id)) {
+            firstCell.focus();
+            return;
+        }
+    }
+}
+
+function quickEmailLead(email, name) {
+    const subject = encodeURIComponent(`Hola ${name} — Propuesta de colaboración`);
+    const body = encodeURIComponent(`Hola ${name},\n\nTe escribo desde iadebarrio.com...\n\nUn saludo.`);
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
+}
+
+function openWhatsApp(email, name, company) {
+    // Try to find phone number, fallback to WhatsApp web search
+    const msg = encodeURIComponent(`Hola ${name}! Te escribo desde iadebarrio.com. Estuve viendo la web de ${company} y me encantaría hablar contigo.`);
+    window.open(`https://wa.me/?text=${msg}`, '_blank');
+}
+
+function sendSignupForm(email, name) {
+    const subject = encodeURIComponent(`${name} — Formulario de alta como cliente`);
+    const body = encodeURIComponent(`Hola ${name},\n\nTe adjunto el formulario de alta para que puedas darte de alta como cliente.\n\nFormulario: [ENLACE]\n\nUn saludo,\niadebarrio.com`);
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
 }
 
 // 7. CRM Kanban Drag & Drop Module
@@ -430,12 +480,47 @@ async function sendToBrain() {
     chatMessages.appendChild(userDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    // Render loading indicator
+    // Render animated progress indicator
     const loadDiv = document.createElement('div');
-    loadDiv.className = 'chat-bubble model';
-    loadDiv.innerHTML = '✦ El Cerebro está orquestando...';
+    loadDiv.className = 'chat-bubble model chat-progress-bubble';
+    loadDiv.innerHTML = `
+        <div class="brain-progress">
+            <div class="brain-progress-header">
+                <span class="brain-progress-icon">🧠</span>
+                <span class="brain-progress-text">Analizando petición...</span>
+                <span class="brain-progress-pct">0%</span>
+            </div>
+            <div class="brain-progress-bar-track">
+                <div class="brain-progress-bar-fill"></div>
+            </div>
+            <div class="brain-progress-phase">Conectando con Gemini...</div>
+        </div>
+    `;
     chatMessages.appendChild(loadDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // Animate progress phases
+    const phases = [
+        { pct: 15, text: 'Analizando petición...', phase: 'Conectando con Gemini...' },
+        { pct: 35, text: 'Identificando agente...', phase: 'Evaluando herramientas disponibles...' },
+        { pct: 55, text: 'Delegando tarea...', phase: 'Ejecutando agente especializado...' },
+        { pct: 75, text: 'Procesando resultado...', phase: 'Agente trabajando...' },
+        { pct: 90, text: 'Generando respuesta...', phase: 'Interpretando resultado con IA...' }
+    ];
+    let phaseIdx = 0;
+    const progressInterval = setInterval(() => {
+        if (phaseIdx >= phases.length) return;
+        const p = phases[phaseIdx];
+        const fill = loadDiv.querySelector('.brain-progress-bar-fill');
+        const pctEl = loadDiv.querySelector('.brain-progress-pct');
+        const textEl = loadDiv.querySelector('.brain-progress-text');
+        const phaseEl = loadDiv.querySelector('.brain-progress-phase');
+        if (fill) fill.style.width = p.pct + '%';
+        if (pctEl) pctEl.textContent = p.pct + '%';
+        if (textEl) textEl.textContent = p.text;
+        if (phaseEl) phaseEl.textContent = p.phase;
+        phaseIdx++;
+    }, 1200);
 
     // Activate orchestrator node
     setAgentStatus('orchestrator', 'working', 'Analizando petición del usuario...');
@@ -450,6 +535,8 @@ async function sendToBrain() {
             })
         });
 
+        clearInterval(progressInterval);
+
         const data = await res.json();
 
         if (res.ok && data.text) {
@@ -459,6 +546,9 @@ async function sendToBrain() {
                 const actionName = data.actionExecuted || 'acción';
                 setAgentStatus(data.agentUsed, 'done', `${actionName} completado`);
                 setAgentStatus('orchestrator', 'done', `Delegado a ${agent ? agent.name : data.agentUsed}`);
+
+                // Save to agent history
+                saveAgentHistory(data.agentUsed, actionName, msg, true);
 
                 // Auto-reset agent to idle after 8 seconds
                 setTimeout(() => {
@@ -479,14 +569,16 @@ async function sendToBrain() {
             brainChatHistory.push({ role: 'user', text: msg });
             brainChatHistory.push({ role: 'model', text: data.text });
 
-            // Refresh dashboard data if an action was executed
+            // Refresh leads grid and dashboard if an action was executed
             if (data.actionExecuted) {
                 initializeDashboard();
+                loadLeadsGrid(); // Auto-refresh leads table!
             }
         } else {
             throw new Error(data.error || 'Error del Orquestador');
         }
     } catch (e) {
+        clearInterval(progressInterval);
         setAgentStatus('orchestrator', 'error', `Error: ${e.message}`);
         setTimeout(() => setAgentStatus('orchestrator', 'idle'), 8000);
 
@@ -502,6 +594,54 @@ async function sendToBrain() {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 }
+
+// Agent History System
+function saveAgentHistory(agentId, action, userQuery, success) {
+    const historyKey = 'cc_agent_history';
+    const history = JSON.parse(localStorage.getItem(historyKey) || '{}');
+    if (!history[agentId]) history[agentId] = [];
+    
+    history[agentId].unshift({
+        action,
+        query: userQuery.substring(0, 80),
+        success,
+        timestamp: new Date().toISOString(),
+        rating: null
+    });
+
+    // Keep only last 20 entries per agent
+    if (history[agentId].length > 20) history[agentId] = history[agentId].slice(0, 20);
+    
+    localStorage.setItem(historyKey, JSON.stringify(history));
+    renderAgentHistories();
+}
+
+function renderAgentHistories() {
+    const history = JSON.parse(localStorage.getItem('cc_agent_history') || '{}');
+    
+    Object.keys(AGENT_NAMES).forEach(agentId => {
+        const logEl = document.getElementById(`log-${agentId}`);
+        if (!logEl) return;
+        
+        const entries = history[agentId] || [];
+        if (entries.length === 0) return;
+
+        // Show last 3 history entries
+        logEl.innerHTML = '';
+        entries.slice(0, 3).forEach(entry => {
+            const time = new Date(entry.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            const statusClass = entry.success ? 'log-done' : 'log-error';
+            const icon = entry.success ? '✅' : '❌';
+            const div = document.createElement('div');
+            div.className = `log-entry ${statusClass}`;
+            div.innerHTML = `<span>${icon} ${entry.action}</span> <span class="log-time">${time}</span><br><span class="log-query">"${entry.query}"</span>`;
+            logEl.appendChild(div);
+        });
+    });
+}
+
+// Load histories on startup
+document.addEventListener('DOMContentLoaded', renderAgentHistories);
 
 // 9. Email Inbox / Outbox Module
 async function loadEmailsLog() {
