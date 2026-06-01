@@ -280,7 +280,7 @@ async function loadKanbanCRM() {
     try {
         const { data: leads, error } = await _supabase
             .from('outreach_leads')
-            .select('id, first_name, company_name, status, website, email, phone, scraped_data');
+            .select('*');
 
         if (error) throw error;
 
