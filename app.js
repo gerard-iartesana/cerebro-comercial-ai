@@ -1930,20 +1930,46 @@ async function syncTaskToGCal(taskId, taskData, existingGcalId) {
     if (!_gcalConnected || !_gcalToken) return null;
 
     const startDate = taskData.start_date;
-    // end_date for all-day events is exclusive in GCal, so add 1 day
     const endDate = taskData.due_date || taskData.start_date;
-    const endPlusOne = new Date(endDate + 'T00:00:00');
-    endPlusOne.setDate(endPlusOne.getDate() + 1);
-    const endStr = endPlusOne.toISOString().split('T')[0];
+    const startTime = taskData.task_time || '07:00';
+    // End time = start time + 30min on the due date
+    const endTimeParts = startTime.split(':');
+    let endH = parseInt(endTimeParts[0]);
+    let endM = parseInt(endTimeParts[1] || 0) + 30;
+    if (endM >= 60) { endH++; endM -= 60; }
+    const endTime = String(endH).padStart(2,'0') + ':' + String(endM).padStart(2,'0');
 
-    const typeLabels = { business: 'Negocio', personal: 'Personal', application: 'App' };
+    const typeLabels = { business: 'Negocio', personal: 'Personal', application: 'Aplicación' };
+    const statusLabels = { new: 'nueva', started: 'empezada', done: 'finalizada' };
+    const statusIcons = { new: '🔵', started: '🚩', done: '✅' };
+    const effective = (taskData.hourly_rate || 53) * (1 - (taskData.discount || 0) / 100);
+
+    const descLines = [
+        `📋 Tipo: ${typeLabels[taskData.task_type] || 'Negocio'}`,
+        `${statusIcons[taskData.status] || '🔵'} Estado: ${statusLabels[taskData.status] || 'nueva'}`,
+        `🟢 Inicio: ${startDate}`,
+        `🔴 Fin previsto: ${endDate}`,
+        `💰 Precio: ${effective.toFixed(2)}€/h`,
+    ];
+    if (taskData.hours_estimated) descLines.push(`⏱ Horas previstas: ${taskData.hours_estimated}h`);
+    if (taskData.hours_actual) descLines.push(`⏱ Horas reales: ${taskData.hours_actual}h`);
+    if (taskData.description) descLines.push('', taskData.description);
+    if (taskData.notes) descLines.push('', 'Notas: ' + taskData.notes);
+    descLines.push('', '— Sincronizado desde GF Gestión');
+
     const event = {
         summary: `[${typeLabels[taskData.task_type] || 'Tarea'}] ${taskData.title}`,
-        description: (taskData.description || '') + (taskData.notes ? '\n\nNotas: ' + taskData.notes : ''),
-        start: { date: startDate },
-        end: { date: endStr },
-        transparency: 'transparent', // Shows as "available" in GCal
-        colorId: taskData.task_type === 'business' ? '9' : taskData.task_type === 'personal' ? '5' : '3'
+        description: descLines.join('\n'),
+        start: { dateTime: `${startDate}T${startTime}:00`, timeZone: 'Europe/Madrid' },
+        end: { dateTime: `${endDate}T${endTime}:00`, timeZone: 'Europe/Madrid' },
+        transparency: 'transparent',
+        colorId: taskData.task_type === 'business' ? '9' : taskData.task_type === 'personal' ? '5' : '3',
+        reminders: {
+            useDefault: false,
+            overrides: [
+                { method: 'popup', minutes: 10 }
+            ]
+        }
     };
 
     try {
