@@ -1957,11 +1957,15 @@ async function syncTaskToGCal(taskId, taskData) {
 
     const startDate = taskData.start_date;
     const endDate = taskData.due_date || taskData.start_date;
-    const startTime = taskData.task_time || '07:00';
+    // Normalize time: DB may return HH:MM:SS, we need HH:MM
+    const rawTime = taskData.task_time || '07:00';
+    const timeParts = rawTime.split(':');
+    const startHH = String(parseInt(timeParts[0])).padStart(2,'0');
+    const startMM = String(parseInt(timeParts[1] || 0)).padStart(2,'0');
+    const startTime = `${startHH}:${startMM}`;
     // End time = start time + 30min on the due date
-    const endTimeParts = startTime.split(':');
-    let endH = parseInt(endTimeParts[0]);
-    let endM = parseInt(endTimeParts[1] || 0) + 30;
+    let endH = parseInt(startHH);
+    let endM = parseInt(startMM) + 30;
     if (endM >= 60) { endH++; endM -= 60; }
     const endTime = String(endH).padStart(2,'0') + ':' + String(endM).padStart(2,'0');
 
