@@ -122,24 +122,64 @@ const implementations = {
       return { success: true, message: `No se encontraron correos para ${domain}`, insertedCount: 0 };
     }
 
-    const leadsToInsert = hunterData.emails.map(emailObj => ({
-      email: emailObj.value,
-      first_name: emailObj.first_name || '',
-      company_name: hunterData.organization || domain.split('.')[0],
-      website: `https://${domain}`,
-      linkedin_url: emailObj.linkedin || '',
-      status: 'lead',
-      sequence_step: 0,
-      scraped_data: { position: emailObj.position || '', confidence: emailObj.confidence || 0, source: 'hunter.io' }
+    // Filter: only personal emails (not generic like info@, admin@, comunicacion@)
+    const personalEmails = hunterData.emails.filter(e => {
+      // Must be a personal email type (Hunter.io returns "personal" or "generic")
+      if (e.type === 'generic') return false;
+      // Must have a first name (real person)
+      if (!e.first_name || e.first_name.trim() === '') return false;
+      // Extra safety: reject common generic patterns
+      const genericPatterns = /^(info|admin|contact|hello|hola|ventas|sales|support|soporte|comunicacion|rrhh|marketing|facturacion|subvenciones|contabilidad|recepcion|prensa)@/i;
+      if (genericPatterns.test(e.value)) return false;
+      return true;
+    });
+
+    // Prioritize decision-makers by title/position
+    const decisionMakerKeywords = /\b(ceo|cto|cfo|coo|cmo|founder|fundador|director|directora|gerente|responsable|socio|socia|partner|owner|propietario|propietaria|manager|jefe|jefa|presidente|presidenta|consejero|consejera)\b/i;
+    
+    const scored = personalEmails.map(e => ({
+      ...e,
+      isDecisionMaker: decisionMakerKeywords.test(e.position || ''),
+      score: (decisionMakerKeywords.test(e.position || '') ? 100 : 0) + (e.confidence || 0)
     }));
 
-    let insertedCount = 0;
-    for (const lead of leadsToInsert) {
-      const { error } = await supabase.from('outreach_leads').upsert(lead, { onConflict: 'email', ignoreDuplicates: true });
-      if (!error) insertedCount++;
+    // Sort by score (decision-makers first, then by confidence)
+    scored.sort((a, b) => b.score - a.score);
+
+    // Take only the best lead per domain (1 person per company)
+    const bestLead = scored[0];
+
+    if (!bestLead) {
+      return { success: true, message: `Se encontraron ${hunterData.emails.length} emails en ${domain} pero ninguno personal de un decisor`, insertedCount: 0 };
     }
 
-    return { success: true, message: `Búsqueda completada para ${domain}`, foundCount: hunterData.emails.length, insertedCount };
+    const leadToInsert = {
+      email: bestLead.value,
+      first_name: bestLead.first_name || '',
+      company_name: hunterData.organization || domain.split('.')[0],
+      website: `https://${domain}`,
+      linkedin_url: bestLead.linkedin || '',
+      status: 'lead',
+      sequence_step: 0,
+      scraped_data: {
+        position: bestLead.position || '',
+        confidence: bestLead.confidence || 0,
+        is_decision_maker: bestLead.isDecisionMaker,
+        source: 'hunter.io',
+        last_name: bestLead.last_name || ''
+      }
+    };
+
+    const { error } = await supabase.from('outreach_leads').upsert(leadToInsert, { onConflict: 'email', ignoreDuplicates: true });
+
+    return {
+      success: true,
+      message: `✅ Mejor lead encontrado en ${domain}: ${bestLead.first_name} ${bestLead.last_name || ''} (${bestLead.position || 'sin cargo'}) - ${bestLead.value}`,
+      totalFound: hunterData.emails.length,
+      personalFound: personalEmails.length,
+      insertedCount: error ? 0 : 1,
+      bestLead: { name: `${bestLead.first_name} ${bestLead.last_name || ''}`, email: bestLead.value, position: bestLead.position || '', isDecisionMaker: bestLead.isDecisionMaker }
+    };
   },
 
   async enrichLead({ lead_id }) {
