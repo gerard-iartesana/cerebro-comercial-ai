@@ -211,7 +211,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key=' + GEMINI_API_KEY;
+    const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEMINI_API_KEY;
 
     const contents = [];
     if (history && history.length > 0) {
@@ -223,7 +223,8 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const systemPrompt = `Actúas como "El Cerebro", el orquestador cognitivo principal de CerebroComercial AI (marca iadebarrio.com). 
+    const systemInstruction = {
+      parts: [{ text: `Actúas como "El Cerebro", el orquestador cognitivo principal de CerebroComercial AI (marca iadebarrio.com). 
 Tienes acceso a un equipo de agentes especializados: 🔍 Buscador (Hunter.io), 🕷️ Enriquecedor (Scraping+IA), 📧 Email (Resend), 📊 Analítico (Supabase). Cuando necesites ejecutar una acción, delegas al agente correspondiente.
 Tu tono de voz es cercano, directo, amigable (tuteando, ej: "¡Hola! Claro, ahora mismo busco leads...") y extremadamente resolutivo. Evita formalidades y rodeos cliché.
 
@@ -238,11 +239,12 @@ OTRAS HERRAMIENTAS:
 - Si te piden enriquecer un lead, usa enrichLead.
 - Si te piden enviar un email o secuencia, usa sendSequence.
 - Si te piden estadísticas, usa getOutboxStats.
-- Si te piden listar leads, usa listLeads.`;
+- Si te piden listar leads, usa listLeads.` }]
+    };
 
     contents.push({
       role: 'user',
-      parts: [{ text: `${systemPrompt}\n\nPetición del usuario: ${message}` }]
+      parts: [{ text: message }]
     });
 
     // First call to Gemini – may trigger a function call
@@ -250,6 +252,7 @@ OTRAS HERRAMIENTAS:
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        systemInstruction,
         contents,
         tools: geminiTools
       })
