@@ -25,6 +25,19 @@
         </div>
     </div>
 
+    <!-- macOS Confirm Dialog -->
+    <div class="macos-modal-overlay" id="confirm-modal">
+        <div class="macos-modal-box">
+            <div class="macos-alert-icon" id="confirm-icon">🗑️</div>
+            <h3 class="macos-alert-title" id="confirm-title">Confirmar</h3>
+            <p class="macos-alert-desc" id="confirm-desc">¿Estás seguro?</p>
+            <div class="macos-alert-actions confirm-actions">
+                <button class="macos-alert-btn btn-cancel" onclick="resolveConfirm(false)">Cancelar</button>
+                <button class="macos-alert-btn btn-danger" onclick="resolveConfirm(true)">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- macOS Lock Screen Authentication (Password Protected) -->
     <div class="macos-lock-screen" id="lock-screen">
         <div class="macos-lock-card">

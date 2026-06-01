@@ -21,6 +21,21 @@ function closeAlert() {
     document.getElementById('alert-modal').classList.remove('active');
 }
 
+// macOS Confirm Dialog (Promise-based)
+let _confirmResolve = null;
+function showConfirm(title, desc, icon = '🗑️', actionText = 'Eliminar') {
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-desc').textContent = desc;
+    document.getElementById('confirm-icon').textContent = icon;
+    document.querySelector('#confirm-modal .btn-danger').textContent = actionText;
+    document.getElementById('confirm-modal').classList.add('active');
+    return new Promise(resolve => { _confirmResolve = resolve; });
+}
+function resolveConfirm(result) {
+    document.getElementById('confirm-modal').classList.remove('active');
+    if (_confirmResolve) { _confirmResolve(result); _confirmResolve = null; }
+}
+
 // 2. Lock Screen Authentication
 async function validateLock() {
     const pwdInput = document.getElementById('lock-password');
@@ -212,7 +227,13 @@ async function updateLeadField(id, field, value) {
 }
 
 async function deleteLead(id) {
-    if (!confirm('¿Seguro que quieres borrar este lead?')) return;
+    const confirmed = await showConfirm(
+        'Borrar lead',
+        '¿Seguro que quieres borrar este lead? Esta acción no se puede deshacer.',
+        '🗑️',
+        'Eliminar'
+    );
+    if (!confirmed) return;
     try {
         const { error } = await _supabase.from('outreach_leads').delete().eq('id', id);
         if (error) throw error;
