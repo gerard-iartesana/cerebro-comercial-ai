@@ -742,33 +742,19 @@ function viewEmailDetails(log) {
 let _meetingsTableReady = false;
 
 async function ensureMeetingsTable() {
+    if (_meetingsTableReady) return true;
     const { error } = await _supabase.from('meetings').select('id').limit(1);
     if (error && error.code === '42P01') {
         const list = document.getElementById('meetings-list');
         if (list) {
             list.innerHTML = `<div style="text-align:center;padding:30px">
                 <p style="font-size:0.9rem;color:#ff9500;margin-bottom:12px">⚠️ La tabla <strong>meetings</strong> no existe en Supabase.</p>
-                <p style="font-size:0.8rem;color:var(--text-grey)">Créala en Supabase con este SQL:</p>
-                <pre style="font-size:0.7rem;text-align:left;background:rgba(0,0,0,0.04);padding:12px;border-radius:10px;margin-top:8px;overflow-x:auto;white-space:pre-wrap">CREATE TABLE meetings (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  contact_name TEXT NOT NULL,
-  contact_email TEXT,
-  contact_phone TEXT,
-  meeting_date TIMESTAMPTZ NOT NULL,
-  meeting_type TEXT DEFAULT 'discovery',
-  status TEXT DEFAULT 'pending',
-  notes TEXT,
-  source TEXT DEFAULT 'manual',
-  gcal_event_id TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
-ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all" ON meetings FOR ALL USING (true);</pre>
+                <p style="font-size:0.8rem;color:var(--text-grey)">Créala en Supabase SQL Editor.</p>
             </div>`;
         }
         return false;
     }
+    // Any other error (RLS, network) — table exists, proceed anyway
     _meetingsTableReady = true;
     return true;
 }
@@ -777,11 +763,14 @@ async function loadMeetings() {
     const ready = await ensureMeetingsTable();
     if (!ready) return;
 
-    tryRestoreGCalSession();
+    // Try GCal restore — never let it block meeting loading
+    try { tryRestoreGCalSession(); } catch(e) { console.warn('GCal restore skip:', e); }
 
     const now = new Date().toISOString();
     const listEl = document.getElementById('meetings-list');
     const historyEl = document.getElementById('meetings-history');
+
+    console.log('[Meetings] Loading meetings... now =', now);
 
     try {
         const { data: upcoming, error: e1 } = await _supabase
@@ -796,6 +785,8 @@ async function loadMeetings() {
             .lt('meeting_date', now)
             .order('meeting_date', { ascending: false })
             .limit(20);
+
+        console.log('[Meetings] Upcoming:', upcoming?.length, 'Past:', past?.length, 'Errors:', e1, e2);
 
         if (e1 || e2) throw (e1 || e2);
 
@@ -812,9 +803,10 @@ async function loadMeetings() {
         }
 
         // Load Google Calendar events if connected
-        loadGCalEvents();
+        try { loadGCalEvents(); } catch(e) {}
 
     } catch (err) {
+        console.error('[Meetings] Load error:', err);
         listEl.innerHTML = '<p style="color:#ff3b30;font-size:0.85rem">Error: ' + err.message + '</p>';
     }
 }
