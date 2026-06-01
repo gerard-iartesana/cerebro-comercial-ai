@@ -1278,8 +1278,12 @@ html, body {
 .cal-event.ev-business .cal-ev-badge { background: #007AFF; }
 .cal-event.ev-meeting { background: rgba(52,199,89,0.08); color: #2d8f48; }
 .cal-event.ev-meeting .cal-ev-badge { background: #34c759; }
-.cal-event.ev-task { background: rgba(88,86,214,0.08); color: #4a49a8; }
-.cal-event.ev-task .cal-ev-badge { background: #5856d6; }
+.cal-event.ev-task-business { background: rgba(0,122,255,0.10); color: #007AFF; }
+.cal-event.ev-task-business .cal-ev-badge { background: #007AFF; }
+.cal-event.ev-task-personal { background: rgba(255,149,0,0.10); color: #e08600; }
+.cal-event.ev-task-personal .cal-ev-badge { background: #FF9500; }
+.cal-event.ev-task-app { background: rgba(88,86,214,0.10); color: #4a49a8; }
+.cal-event.ev-task-app .cal-ev-badge { background: #5856d6; }
 .cal-event.ev-done { background: rgba(52,199,89,0.08); color: #34c759; }
 .cal-event.ev-done .cal-ev-badge { background: #34c759; }
 .cal-more {

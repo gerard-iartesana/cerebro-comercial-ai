@@ -1042,11 +1042,19 @@ function getEventsForDate(dateStr) {
 function renderCalEvent(ev) {
     const evTime = new Date(ev.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     let evClass = 'ev-meeting';
-    if (ev.type === 'task') evClass = 'ev-task';
+    if (ev.type === 'task') {
+        // Color per task category
+        if (ev.taskType === 'personal') evClass = 'ev-task-personal';
+        else if (ev.taskType === 'application') evClass = 'ev-task-app';
+        else evClass = 'ev-task-business'; // default business
+    }
     else if (ev.meetingType === 'gcal') evClass = 'ev-business';
     else if (ev.meetingType === 'followup' || ev.meetingType === 'closing' || ev.meetingType === 'support') evClass = 'ev-business';
     if (ev.status === 'done') evClass = 'ev-done';
-    const label = ev.type === 'task' ? ev.title : (ev.isGcal ? `📅 ${ev.title}` : (evClass === 'ev-business' ? `[Negocio] ${ev.title}` : ev.title));
+    const typeLabels = { business: 'Negocio', personal: 'Personal', application: 'App' };
+    let label = ev.title;
+    if (ev.type === 'task') label = `[${typeLabels[ev.taskType] || 'Tarea'}] ${ev.title}`;
+    else if (ev.isGcal) label = `📅 ${ev.title}`;
     const clickAction = ev.type === 'task' ? `onclick="openTaskModal('${ev.id}')"` : (ev.isGcal ? '' : `onclick="scrollToMeeting('${ev.id}')"`);
     return `<div class="cal-event ${evClass}" ${clickAction} style="cursor:pointer"><span class="cal-ev-time">${evTime}</span><span class="cal-ev-badge"></span>${label}</div>`;
 }
