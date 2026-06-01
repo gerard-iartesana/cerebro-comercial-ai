@@ -908,9 +908,167 @@ html, body {
     cursor: pointer;
 }
 
+/* --- Two-Column Brain Layout --- */
+.brain-two-col {
+    display: grid;
+    grid-template-columns: 55% 45%;
+    gap: 20px;
+    align-items: start;
+}
+.brain-col-chat {
+    position: sticky;
+    top: 20px;
+}
+.brain-col-chat .chat-wrapper {
+    height: 70vh;
+}
+.brain-col-agents {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+.brain-col-agents::-webkit-scrollbar {
+    width: 4px;
+}
+.brain-col-agents::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+/* Vertical Tree Layout */
+.agent-tree-vertical {
+    padding: 24px 16px;
+}
+.agent-tree-vertical .agent-node-master {
+    padding: 14px 20px;
+    min-width: unset;
+    width: 100%;
+}
+.agent-tree-vertical .agent-node-master .agent-node-icon {
+    font-size: 2rem;
+}
+.agent-tree-lines-v {
+    display: flex;
+    justify-content: center;
+    height: 20px;
+}
+.tree-line-v {
+    width: 2px;
+    height: 20px;
+    background: var(--border-color);
+}
+.agent-tree-children-v {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+.agent-node-child-v {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    min-width: unset;
+    text-align: left;
+    position: relative;
+}
+.agent-node-child-v::before {
+    display: none;
+}
+.agent-node-child-v .agent-node-icon {
+    font-size: 1.4rem;
+    margin-bottom: 0;
+    flex-shrink: 0;
+}
+.agent-node-child-v .agent-node-info {
+    flex: 1;
+    min-width: 0;
+}
+.agent-node-child-v .agent-node-name {
+    font-size: 0.82rem;
+}
+.agent-node-child-v .agent-node-role {
+    margin-top: 0;
+}
+.agent-node-child-v .agent-node-status {
+    margin-top: 0;
+    margin-left: auto;
+    font-size: 0.62rem;
+}
+
+/* Vertical Activity Cards */
+.agent-cards-vertical {
+    grid-template-columns: 1fr !important;
+}
+
+/* Agent Rating Buttons */
+.agent-card-rating {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+}
+.rating-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text-grey);
+}
+.rating-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1;
+}
+.rating-btn:hover {
+    transform: scale(1.15);
+}
+.rating-btn.rating-up:hover {
+    border-color: rgba(52, 199, 89, 0.5);
+    background: rgba(52, 199, 89, 0.1);
+}
+.rating-btn.rating-down:hover {
+    border-color: rgba(255, 69, 58, 0.5);
+    background: rgba(255, 69, 58, 0.1);
+}
+.rating-btn.rating-selected {
+    transform: scale(1.1);
+}
+.rating-btn.rating-up.rating-selected {
+    border-color: #34c759;
+    background: rgba(52, 199, 89, 0.15);
+}
+.rating-btn.rating-down.rating-selected {
+    border-color: #ff453a;
+    background: rgba(255, 69, 58, 0.15);
+}
+.rating-score {
+    margin-left: auto;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-grey);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.rating-score .score-positive {
+    color: #34c759;
+}
+.rating-score .score-negative {
+    color: #ff453a;
+}
+
 /* --- Multi-Agent Architecture Tree --- */
 .agent-tree-section {
-    margin-top: 30px;
+    margin-top: 0;
 }
 .agent-tree-title {
     font-size: 1.25rem;

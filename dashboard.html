@@ -230,132 +230,170 @@
                     <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Gemini 3/3.1 Agentic Orchestrator</span>
                 </div>
 
-                <div class="chat-wrapper">
-                    <div class="chat-messages" id="brain-messages">
-                        <div class="chat-bubble model">
-                            👋 ¡Hola! Soy "El Cerebro", el orquestador cognitivo comercial de <strong>iadebarrio.com</strong>.
-                            Puedo ayudarte a gestionar leads, lanzar enriquecimientos automáticos y comprobar estadísticas. 
-                            ¿Qué quieres que hagamos hoy?
+                <div class="brain-two-col">
+                    <!-- LEFT: Chat -->
+                    <div class="brain-col-chat">
+                        <div class="chat-wrapper">
+                            <div class="chat-messages" id="brain-messages">
+                                <div class="chat-bubble model">
+                                    👋 ¡Hola! Soy "El Cerebro", el orquestador cognitivo comercial de <strong>iadebarrio.com</strong>.
+                                    Tengo un equipo de 4 agentes especializados a mi cargo. Dime qué necesitas y delego en el agente adecuado.
+                                    ¿Qué quieres que hagamos hoy?
+                                </div>
+                            </div>
+                            <div class="chat-input-bar">
+                                <input type="text" class="chat-input" id="brain-chat-input" placeholder="Ej: Busca leads de gestorías en España..." onkeydown="if(event.key==='Enter')sendToBrain()">
+                                <button class="chat-btn" onclick="sendToBrain()">Enviar</button>
+                            </div>
                         </div>
                     </div>
-                    <div class="chat-input-bar">
-                        <input type="text" class="chat-input" id="brain-chat-input" placeholder="Escribe al Cerebro... (Ej: Busca leads de stripe.com o muestra las estadísticas)" onkeydown="if(event.key==='Enter')sendToBrain()">
-                        <button class="chat-btn" onclick="sendToBrain()">Enviar</button>
+
+                    <!-- RIGHT: Agent Architecture + Activity -->
+                    <div class="brain-col-agents">
+                        <!-- Agent Architecture Tree (Vertical) -->
+                        <div class="agent-tree-section">
+                            <h2 class="agent-tree-title">Arquitectura Multi-Agente</h2>
+                            <div class="agent-tree agent-tree-vertical">
+                                <div class="agent-node agent-node-master" id="node-orchestrator">
+                                    <div class="agent-node-icon">🧠</div>
+                                    <div class="agent-node-name">El Cerebro</div>
+                                    <div class="agent-node-role">Orquestador</div>
+                                    <div class="agent-node-status" id="status-orchestrator">
+                                        <span class="status-dot status-idle"></span> Esperando
+                                    </div>
+                                </div>
+                                <div class="agent-tree-lines-v">
+                                    <div class="tree-line-v"></div>
+                                </div>
+                                <div class="agent-tree-children-v">
+                                    <div class="agent-node agent-node-child-v" id="node-searcher">
+                                        <div class="agent-node-icon">🔍</div>
+                                        <div class="agent-node-info">
+                                            <div class="agent-node-name">Buscador</div>
+                                            <div class="agent-node-role">Hunter.io</div>
+                                        </div>
+                                        <div class="agent-node-status" id="status-searcher">
+                                            <span class="status-dot status-idle"></span> Inactivo
+                                        </div>
+                                    </div>
+                                    <div class="agent-node agent-node-child-v" id="node-enricher">
+                                        <div class="agent-node-icon">🕷️</div>
+                                        <div class="agent-node-info">
+                                            <div class="agent-node-name">Enriquecedor</div>
+                                            <div class="agent-node-role">Scraping + IA</div>
+                                        </div>
+                                        <div class="agent-node-status" id="status-enricher">
+                                            <span class="status-dot status-idle"></span> Inactivo
+                                        </div>
+                                    </div>
+                                    <div class="agent-node agent-node-child-v" id="node-emailer">
+                                        <div class="agent-node-icon">📧</div>
+                                        <div class="agent-node-info">
+                                            <div class="agent-node-name">Email</div>
+                                            <div class="agent-node-role">Resend</div>
+                                        </div>
+                                        <div class="agent-node-status" id="status-emailer">
+                                            <span class="status-dot status-idle"></span> Inactivo
+                                        </div>
+                                    </div>
+                                    <div class="agent-node agent-node-child-v" id="node-analytics">
+                                        <div class="agent-node-icon">📊</div>
+                                        <div class="agent-node-info">
+                                            <div class="agent-node-name">Analítico</div>
+                                            <div class="agent-node-role">Supabase</div>
+                                        </div>
+                                        <div class="agent-node-status" id="status-analytics">
+                                            <span class="status-dot status-idle"></span> Inactivo
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Agent Activity Cards with Rating -->
+                        <div class="agent-activity-section">
+                            <h2 class="agent-tree-title">Actividad de Agentes</h2>
+                            <div class="agent-cards-grid agent-cards-vertical">
+                                <div class="agent-card" id="card-searcher">
+                                    <div class="agent-card-header">
+                                        <span class="agent-card-icon">🔍</span>
+                                        <div>
+                                            <div class="agent-card-name">Agente Buscador</div>
+                                            <div class="agent-card-tech">Hunter.io API</div>
+                                        </div>
+                                        <span class="agent-card-badge badge-idle" id="badge-searcher">💤 Inactivo</span>
+                                    </div>
+                                    <div class="agent-card-log" id="log-searcher">
+                                        <div class="log-entry log-empty">Sin actividad reciente</div>
+                                    </div>
+                                    <div class="agent-card-rating">
+                                        <span class="rating-label">Valorar:</span>
+                                        <button class="rating-btn rating-up" onclick="rateAgent('searcher', 'up')" title="Buen trabajo">👍</button>
+                                        <button class="rating-btn rating-down" onclick="rateAgent('searcher', 'down')" title="Puede mejorar">👎</button>
+                                        <span class="rating-score" id="score-searcher">—</span>
+                                    </div>
+                                </div>
+                                <div class="agent-card" id="card-enricher">
+                                    <div class="agent-card-header">
+                                        <span class="agent-card-icon">🕷️</span>
+                                        <div>
+                                            <div class="agent-card-name">Agente Enriquecedor</div>
+                                            <div class="agent-card-tech">Web Scraping + Gemini IA</div>
+                                        </div>
+                                        <span class="agent-card-badge badge-idle" id="badge-enricher">💤 Inactivo</span>
+                                    </div>
+                                    <div class="agent-card-log" id="log-enricher">
+                                        <div class="log-entry log-empty">Sin actividad reciente</div>
+                                    </div>
+                                    <div class="agent-card-rating">
+                                        <span class="rating-label">Valorar:</span>
+                                        <button class="rating-btn rating-up" onclick="rateAgent('enricher', 'up')" title="Buen trabajo">👍</button>
+                                        <button class="rating-btn rating-down" onclick="rateAgent('enricher', 'down')" title="Puede mejorar">👎</button>
+                                        <span class="rating-score" id="score-enricher">—</span>
+                                    </div>
+                                </div>
+                                <div class="agent-card" id="card-emailer">
+                                    <div class="agent-card-header">
+                                        <span class="agent-card-icon">📧</span>
+                                        <div>
+                                            <div class="agent-card-name">Agente Email</div>
+                                            <div class="agent-card-tech">Resend API</div>
+                                        </div>
+                                        <span class="agent-card-badge badge-idle" id="badge-emailer">💤 Inactivo</span>
+                                    </div>
+                                    <div class="agent-card-log" id="log-emailer">
+                                        <div class="log-entry log-empty">Sin actividad reciente</div>
+                                    </div>
+                                    <div class="agent-card-rating">
+                                        <span class="rating-label">Valorar:</span>
+                                        <button class="rating-btn rating-up" onclick="rateAgent('emailer', 'up')" title="Buen trabajo">👍</button>
+                                        <button class="rating-btn rating-down" onclick="rateAgent('emailer', 'down')" title="Puede mejorar">👎</button>
+                                        <span class="rating-score" id="score-emailer">—</span>
+                                    </div>
+                                </div>
+                                <div class="agent-card" id="card-analytics">
+                                    <div class="agent-card-header">
+                                        <span class="agent-card-icon">📊</span>
+                                        <div>
+                                            <div class="agent-card-name">Agente Analítico</div>
+                                            <div class="agent-card-tech">Supabase Realtime</div>
+                                        </div>
+                                        <span class="agent-card-badge badge-idle" id="badge-analytics">💤 Inactivo</span>
+                                    </div>
+                                    <div class="agent-card-log" id="log-analytics">
+                                        <div class="log-entry log-empty">Sin actividad reciente</div>
+                                    </div>
+                                    <div class="agent-card-rating">
+                                        <span class="rating-label">Valorar:</span>
+                                        <button class="rating-btn rating-up" onclick="rateAgent('analytics', 'up')" title="Buen trabajo">👍</button>
+                                        <button class="rating-btn rating-down" onclick="rateAgent('analytics', 'down')" title="Puede mejorar">👎</button>
+                                        <span class="rating-score" id="score-analytics">—</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                <!-- Agent Architecture Tree -->
-                <div class="agent-tree-section">
-                    <h2 class="agent-tree-title">Arquitectura Multi-Agente</h2>
-                    <div class="agent-tree">
-                        <div class="agent-node agent-node-master" id="node-orchestrator">
-                            <div class="agent-node-icon">🧠</div>
-                            <div class="agent-node-name">El Cerebro</div>
-                            <div class="agent-node-role">Orquestador</div>
-                            <div class="agent-node-status" id="status-orchestrator">
-                                <span class="status-dot status-idle"></span> Esperando
-                            </div>
-                        </div>
-                        <div class="agent-tree-lines">
-                            <div class="tree-line"></div>
-                            <div class="tree-horizontal"></div>
-                        </div>
-                        <div class="agent-tree-children">
-                            <div class="agent-node agent-node-child" id="node-searcher">
-                                <div class="agent-node-icon">🔍</div>
-                                <div class="agent-node-name">Buscador</div>
-                                <div class="agent-node-role">Hunter.io</div>
-                                <div class="agent-node-status" id="status-searcher">
-                                    <span class="status-dot status-idle"></span> Inactivo
-                                </div>
-                            </div>
-                            <div class="agent-node agent-node-child" id="node-enricher">
-                                <div class="agent-node-icon">🕷️</div>
-                                <div class="agent-node-name">Enriquecedor</div>
-                                <div class="agent-node-role">Scraping + IA</div>
-                                <div class="agent-node-status" id="status-enricher">
-                                    <span class="status-dot status-idle"></span> Inactivo
-                                </div>
-                            </div>
-                            <div class="agent-node agent-node-child" id="node-emailer">
-                                <div class="agent-node-icon">📧</div>
-                                <div class="agent-node-name">Email</div>
-                                <div class="agent-node-role">Resend</div>
-                                <div class="agent-node-status" id="status-emailer">
-                                    <span class="status-dot status-idle"></span> Inactivo
-                                </div>
-                            </div>
-                            <div class="agent-node agent-node-child" id="node-analytics">
-                                <div class="agent-node-icon">📊</div>
-                                <div class="agent-node-name">Analítico</div>
-                                <div class="agent-node-role">Supabase</div>
-                                <div class="agent-node-status" id="status-analytics">
-                                    <span class="status-dot status-idle"></span> Inactivo
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Agent Activity Panel -->
-                <div class="agent-activity-section">
-                    <h2 class="agent-tree-title">Actividad de Agentes</h2>
-                    <div class="agent-cards-grid">
-                        <div class="agent-card" id="card-searcher">
-                            <div class="agent-card-header">
-                                <span class="agent-card-icon">🔍</span>
-                                <div>
-                                    <div class="agent-card-name">Agente Buscador</div>
-                                    <div class="agent-card-tech">Hunter.io API</div>
-                                </div>
-                                <span class="agent-card-badge badge-idle" id="badge-searcher">💤 Inactivo</span>
-                            </div>
-                            <div class="agent-card-log" id="log-searcher">
-                                <div class="log-entry log-empty">Sin actividad reciente</div>
-                            </div>
-                        </div>
-                        <div class="agent-card" id="card-enricher">
-                            <div class="agent-card-header">
-                                <span class="agent-card-icon">🕷️</span>
-                                <div>
-                                    <div class="agent-card-name">Agente Enriquecedor</div>
-                                    <div class="agent-card-tech">Web Scraping + Gemini IA</div>
-                                </div>
-                                <span class="agent-card-badge badge-idle" id="badge-enricher">💤 Inactivo</span>
-                            </div>
-                            <div class="agent-card-log" id="log-enricher">
-                                <div class="log-entry log-empty">Sin actividad reciente</div>
-                            </div>
-                        </div>
-                        <div class="agent-card" id="card-emailer">
-                            <div class="agent-card-header">
-                                <span class="agent-card-icon">📧</span>
-                                <div>
-                                    <div class="agent-card-name">Agente Email</div>
-                                    <div class="agent-card-tech">Resend API</div>
-                                </div>
-                                <span class="agent-card-badge badge-idle" id="badge-emailer">💤 Inactivo</span>
-                            </div>
-                            <div class="agent-card-log" id="log-emailer">
-                                <div class="log-entry log-empty">Sin actividad reciente</div>
-                            </div>
-                        </div>
-                        <div class="agent-card" id="card-analytics">
-                            <div class="agent-card-header">
-                                <span class="agent-card-icon">📊</span>
-                                <div>
-                                    <div class="agent-card-name">Agente Analítico</div>
-                                    <div class="agent-card-tech">Supabase Realtime</div>
-                                </div>
-                                <span class="agent-card-badge badge-idle" id="badge-analytics">💤 Inactivo</span>
-                            </div>
-                            <div class="agent-card-log" id="log-analytics">
-                                <div class="log-entry log-empty">Sin actividad reciente</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
             </div>
 
             <!-- SECTION: Email Inbox / Outbox -->

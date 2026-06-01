@@ -357,7 +357,63 @@ function resetAllAgents() {
     setAgentStatus('orchestrator', 'idle');
 }
 
-// 9. Chat interactivo con "El Cerebro" (Multi-Agent Orchestrator)
+// 9. Agent Rating / Feedback System
+let agentScores = JSON.parse(localStorage.getItem('cc_agent_scores') || '{}');
+
+function loadAgentScores() {
+    Object.keys(AGENT_NAMES).forEach(id => {
+        const score = agentScores[id] || { up: 0, down: 0 };
+        updateScoreDisplay(id, score);
+    });
+}
+
+function updateScoreDisplay(agentId, score) {
+    const el = document.getElementById(`score-${agentId}`);
+    if (!el) return;
+    const total = score.up - score.down;
+    const trustLevel = total >= 5 ? '🟢 Alta' : total >= 2 ? '🟡 Media' : total <= -2 ? '🔴 Baja' : '⚪ Nueva';
+    el.innerHTML = `<span class="${total >= 0 ? 'score-positive' : 'score-negative'}">${total >= 0 ? '+' : ''}${total}</span> · ${trustLevel}`;
+}
+
+async function rateAgent(agentId, rating) {
+    // Update local scores
+    if (!agentScores[agentId]) agentScores[agentId] = { up: 0, down: 0 };
+    agentScores[agentId][rating]++;
+    localStorage.setItem('cc_agent_scores', JSON.stringify(agentScores));
+    updateScoreDisplay(agentId, agentScores[agentId]);
+
+    // Visual feedback on buttons
+    const card = document.getElementById(`card-${agentId}`);
+    if (card) {
+        const btns = card.querySelectorAll('.rating-btn');
+        btns.forEach(b => b.classList.remove('rating-selected'));
+        const selectedBtn = card.querySelector(`.rating-${rating}`);
+        if (selectedBtn) {
+            selectedBtn.classList.add('rating-selected');
+            setTimeout(() => selectedBtn.classList.remove('rating-selected'), 1500);
+        }
+    }
+
+    // Log the feedback
+    addAgentLog(agentId, `Valoración: ${rating === 'up' ? '👍 Positiva' : '👎 Negativa'}`, rating === 'up' ? 'done' : 'error');
+
+    // Try to persist in Supabase (non-blocking)
+    try {
+        await _supabase.from('agent_feedback').insert({
+            agent_id: agentId,
+            rating: rating,
+            agent_name: AGENT_NAMES[agentId]?.name || agentId,
+            created_at: new Date().toISOString()
+        });
+    } catch (e) {
+        console.warn('No se pudo guardar feedback en Supabase (tabla agent_feedback puede no existir):', e);
+    }
+}
+
+// Load scores on startup
+document.addEventListener('DOMContentLoaded', loadAgentScores);
+
+// 10. Chat interactivo con "El Cerebro" (Multi-Agent Orchestrator)
 async function sendToBrain() {
     const input = document.getElementById('brain-chat-input');
     const msg = input.value.trim();
