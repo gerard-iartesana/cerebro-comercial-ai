@@ -260,20 +260,46 @@ OTRAS HERRAMIENTAS:
     }
 
     const geminiJson = await geminiRes.json();
+    console.log('Gemini raw response keys:', Object.keys(geminiJson));
+
     const candidate = geminiJson.candidates && geminiJson.candidates[0];
-    const functionCalls = candidate && candidate.content && candidate.content.parts[0] && candidate.content.parts[0].functionCall;
+    if (!candidate || !candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+      console.error('Gemini returned empty/invalid candidate:', JSON.stringify(geminiJson).substring(0, 500));
+      return res.status(200).json({
+        role: 'model',
+        text: '⚠️ El Cerebro no pudo procesar la respuesta de Gemini. Intenta reformular tu petición.'
+      });
+    }
+
+    // Check if Gemini wants to call a function
+    const firstPart = candidate.content.parts[0];
+    const functionCall = firstPart.functionCall || null;
 
     // If Gemini decided to call a tool, execute it and feed the result back
-    if (functionCalls) {
-      const { name, args } = functionCalls;
+    if (functionCall) {
+      const { name, args } = functionCall;
       console.log(`El Cerebro delegó al agente [${agentMap[name]}] → ${name}`, args);
 
       const implementation = implementations[name];
       if (!implementation) {
-        throw new Error(`La función ${name} no está implementada.`);
+        return res.status(200).json({
+          role: 'model',
+          text: `⚠️ La función "${name}" no está implementada. Intenta con otra petición.`
+        });
       }
 
-      const toolResult = await implementation(args);
+      let toolResult;
+      try {
+        toolResult = await implementation(args || {});
+      } catch (implErr) {
+        console.error(`Error ejecutando ${name}:`, implErr);
+        return res.status(200).json({
+          role: 'model',
+          text: `❌ Error del agente ${agentMap[name] || name}: ${implErr.message}`,
+          agentUsed: agentMap[name] || null,
+          actionExecuted: name
+        });
+      }
 
       // Send tool result back to Gemini for the final natural-language response
       contents.push(candidate.content);
@@ -294,15 +320,26 @@ OTRAS HERRAMIENTAS:
       });
 
       if (!geminiFinalRes.ok) {
-        throw new Error(`Error final en el API de Gemini: ${geminiFinalRes.status} - ${await geminiFinalRes.text()}`);
+        // If Gemini fails on second call, return the raw tool result as text
+        console.error('Gemini final call failed:', geminiFinalRes.status);
+        return res.status(200).json({
+          role: 'model',
+          text: `✅ Agente ${agentMap[name] || name} ejecutó "${name}" correctamente.\n\nResultado: ${JSON.stringify(toolResult, null, 2)}`,
+          actionExecuted: name,
+          agentUsed: agentMap[name] || null,
+          toolResult
+        });
       }
 
       const finalJson = await geminiFinalRes.json();
-      const finalResponseText = finalJson.candidates[0].content.parts[0].text;
+      const finalCandidate = finalJson.candidates && finalJson.candidates[0];
+      const finalText = finalCandidate && finalCandidate.content && finalCandidate.content.parts && finalCandidate.content.parts[0]
+        ? finalCandidate.content.parts[0].text
+        : `✅ Acción "${name}" ejecutada. Resultado: ${JSON.stringify(toolResult)}`;
 
       return res.status(200).json({
         role: 'model',
-        text: finalResponseText,
+        text: finalText,
         actionExecuted: name,
         agentUsed: agentMap[name] || null,
         toolResult
@@ -310,10 +347,10 @@ OTRAS HERRAMIENTAS:
     }
 
     // No function call – return the conversational response directly
-    const directResponseText = candidate.content.parts[0].text;
+    const directText = firstPart.text || '🤔 El Cerebro procesó tu mensaje pero no generó respuesta de texto. Intenta reformularlo.';
     return res.status(200).json({
       role: 'model',
-      text: directResponseText
+      text: directText
     });
 
   } catch (error) {
