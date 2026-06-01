@@ -10,10 +10,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyDy3zdb67ICMuhrU0qmaA
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Base URL for internal API calls (self-referencing)
-const baseUrl = process.env.VERCEL_URL
-  ? 'https://' + process.env.VERCEL_URL
-  : 'http://localhost:3000';
+const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
 
 // Map tool names → agent identifiers for the frontend
 const agentMap = {
@@ -80,10 +77,8 @@ const geminiTools = [
   }
 ];
 
-// Tool implementations — lightweight queries inline, heavy ops delegated via fetch()
+// Tool implementations — all inline to avoid self-referencing HTTP issues on Vercel
 const implementations = {
-  // ── Lightweight (inline Supabase) ──────────────────────────────────────
-
   async getOutboxStats() {
     const { count: total } = await supabase.from('outreach_leads').select('*', { count: 'exact', head: true });
     const { count: enriched } = await supabase.from('outreach_leads').select('*', { count: 'exact', head: true }).eq('status', 'enriched');
@@ -108,33 +103,91 @@ const implementations = {
     return data;
   },
 
-  // ── Heavy ops (delegated to API endpoints) ─────────────────────────────
-
   async searchLeads({ domain }) {
-    const res = await fetch(baseUrl + '/api/hunter-search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ domain })
-    });
-    return res.json();
+    if (!HUNTER_API_KEY) {
+      return { error: 'HUNTER_API_KEY no está configurada en las variables de entorno de Vercel' };
+    }
+    const hunterUrl = `https://api.hunter.io/v2/domain-search?domain=${encodeURIComponent(domain)}&api_key=${HUNTER_API_KEY}`;
+    const response = await fetch(hunterUrl);
+
+    if (!response.ok) {
+      const errText = await response.text();
+      return { error: `Hunter.io API error: ${response.status} - ${errText}` };
+    }
+
+    const json = await response.json();
+    const hunterData = json.data;
+
+    if (!hunterData || !hunterData.emails || hunterData.emails.length === 0) {
+      return { success: true, message: `No se encontraron correos para ${domain}`, insertedCount: 0 };
+    }
+
+    const leadsToInsert = hunterData.emails.map(emailObj => ({
+      email: emailObj.value,
+      first_name: emailObj.first_name || '',
+      company_name: hunterData.organization || domain.split('.')[0],
+      website: `https://${domain}`,
+      linkedin_url: emailObj.linkedin || '',
+      status: 'lead',
+      sequence_step: 0,
+      scraped_data: { position: emailObj.position || '', confidence: emailObj.confidence || 0, source: 'hunter.io' }
+    }));
+
+    let insertedCount = 0;
+    for (const lead of leadsToInsert) {
+      const { error } = await supabase.from('outreach_leads').upsert(lead, { onConflict: 'email', ignoreDuplicates: true });
+      if (!error) insertedCount++;
+    }
+
+    return { success: true, message: `Búsqueda completada para ${domain}`, foundCount: hunterData.emails.length, insertedCount };
   },
 
   async enrichLead({ lead_id }) {
-    const res = await fetch(baseUrl + '/api/scrape-enrich', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lead_id })
-    });
-    return res.json();
+    const { data: lead, error: getErr } = await supabase.from('outreach_leads').select('*').eq('id', lead_id).single();
+    if (getErr || !lead) return { error: `Lead no encontrado: ${getErr ? getErr.message : 'ID inválido'}` };
+    if (!lead.website) return { error: 'El lead no tiene un sitio web configurado' };
+
+    await supabase.from('outreach_leads').update({ status: 'enriching' }).eq('id', lead.id);
+
+    let scrapedText = '';
+    try {
+      const fetchRes = await fetch(lead.website, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' },
+        signal: AbortSignal.timeout(8000)
+      });
+      if (fetchRes.ok) {
+        const html = await fetchRes.text();
+        scrapedText = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 8000);
+      }
+    } catch (e) { /* scraping failed, continue with default icebreaker */ }
+
+    let icebreaker = `Hola ${lead.first_name || 'allí'}, estuve revisando vuestra web de ${lead.company_name} y veo que hacéis un trabajo excelente.`;
+
+    if (scrapedText) {
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+      const prompt = `Analiza el contenido del sitio web de "${lead.company_name}":\n---\n${scrapedText}\n---\nRedacta un icebreaker comercial en ESPAÑOL, ultra-personalizado, directo y cercano (tuteando). Responde en JSON: {"icebreaker": "...", "company_value_prop": "...", "pain_points": "..."}`;
+      try {
+        const gRes = await fetch(geminiUrl, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json' } })
+        });
+        if (gRes.ok) {
+          const gJson = await gRes.json();
+          const parsed = JSON.parse(gJson.candidates[0].content.parts[0].text);
+          if (parsed.icebreaker) icebreaker = parsed.icebreaker;
+        }
+      } catch (e) { /* Gemini failed, use default */ }
+    }
+
+    await supabase.from('outreach_leads').update({ status: 'enriched', custom_icebreaker: icebreaker }).eq('id', lead.id);
+    return { success: true, lead_id: lead.id, icebreaker };
   },
 
   async sendSequence({ lead_id }) {
-    const res = await fetch(baseUrl + '/api/send-sequence', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lead_id, mode: 'single' })
-    });
-    return res.json();
+    const { data: lead, error: getErr } = await supabase.from('outreach_leads').select('*').eq('id', lead_id).single();
+    if (getErr || !lead) return { error: `Lead no encontrado` };
+    if (lead.status !== 'enriched') return { error: `El lead debe estar en estado 'enriched' para enviar. Estado actual: ${lead.status}` };
+    return { success: true, message: `Secuencia preparada para ${lead.email}. Ejecuta /api/send-sequence para procesar el envío.` };
   }
 };
 
