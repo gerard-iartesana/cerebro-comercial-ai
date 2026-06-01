@@ -657,6 +657,47 @@ html, body {
 .sidebar-nav-item.active svg {
     color: white;
 }
+
+/* --- Brain Chat Highlight Button --- */
+.sidebar-nav-brain {
+    background: linear-gradient(135deg, #7c3aed, #6366f1, #0ea5e9) !important;
+    color: white !important;
+    font-weight: 700 !important;
+    border-radius: 14px !important;
+    padding: 12px 14px !important;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.sidebar-nav-brain svg {
+    color: white !important;
+    filter: drop-shadow(0 0 3px rgba(255,255,255,0.3));
+}
+.sidebar-nav-brain:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 28px rgba(99, 102, 241, 0.5) !important;
+    background: linear-gradient(135deg, #8b5cf6, #818cf8, #38bdf8) !important;
+}
+.sidebar-nav-brain::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 60%);
+    animation: brainShimmer 3s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes brainShimmer {
+    0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
+    50% { transform: translate(10%, 10%) scale(1.1); opacity: 1; }
+}
+
+.sidebar-separator {
+    height: 1px;
+    background: var(--border-color);
+    margin: 6px 12px;
+}
 .sidebar-footer {
     display: flex;
     flex-direction: column;
