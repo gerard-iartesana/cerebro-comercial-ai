@@ -747,14 +747,18 @@ const MONTH_NAMES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio'
 
 function switchCalTab(tab) {
     document.querySelectorAll('.cal-tab').forEach(t => t.classList.remove('active'));
+    const newBtn = document.getElementById('btn-new-meeting');
     if (tab === 'calendar') {
         document.getElementById('cal-view-calendar').style.display = '';
         document.getElementById('cal-view-tasks').style.display = 'none';
         document.querySelector('.cal-tab:first-child').classList.add('active');
+        if (newBtn) { newBtn.textContent = '+ Nueva reunión'; newBtn.onclick = openNewMeetingModal; }
     } else {
         document.getElementById('cal-view-calendar').style.display = 'none';
         document.getElementById('cal-view-tasks').style.display = '';
         document.getElementById('cal-tab-tasks').classList.add('active');
+        if (newBtn) { newBtn.textContent = '+ Nueva tarea'; newBtn.onclick = () => openTaskModal(); }
+        loadTasks();
     }
 }
 
@@ -786,6 +790,21 @@ function setCalMode(m) {
     // Only month view implemented for now
 }
 
+function calGoToDate(val) {
+    if (!val) return;
+    calDate = new Date(val + 'T12:00:00');
+    renderCalGrid();
+}
+
+async function syncCalendarData() {
+    const btn = document.querySelector('.cal-sync-btn');
+    if (btn) { btn.style.animation = 'spin 1s linear infinite'; }
+    await renderCalGrid();
+    if (typeof loadTasks === 'function') await loadTasks();
+    if (btn) { btn.style.animation = ''; }
+    showAlert('Sincronizado', 'Calendario actualizado', '↻');
+}
+
 async function loadCalendarEvents() {
     try {
         const year = calDate.getFullYear();
@@ -809,6 +828,30 @@ async function loadCalendarEvents() {
             meetingType: m.meeting_type,
             status: m.status
         }));
+
+        // Also load tasks with dates
+        try {
+            const { data: taskData } = await _supabase
+                .from('tasks')
+                .select('*')
+                .or(`start_date.gte.${from.split('T')[0]},due_date.lte.${to.split('T')[0]}`);
+            if (taskData) {
+                const taskEvents = taskData.map(t => ({
+                    id: t.id,
+                    title: t.title,
+                    date: t.start_date ? t.start_date + 'T' + (t.task_time || '09:00') + ':00' : t.created_at,
+                    type: 'task',
+                    taskType: t.task_type,
+                    status: t.status
+                }));
+                calEvents = calEvents.concat(taskEvents);
+            }
+        } catch(e) { /* tasks table may not exist yet */ }
+
+        // Update event count
+        const countEl = document.getElementById('cal-event-count');
+        if (countEl) countEl.textContent = calEvents.filter(e => e.type === 'meeting').length;
+
         console.log('[Cal] Loaded', calEvents.length, 'events');
     } catch(e) {
         console.warn('[Cal] Load error:', e);
@@ -865,8 +908,12 @@ async function renderCalGrid() {
 
         dayEvents.slice(0, maxShow).forEach(ev => {
             const evTime = new Date(ev.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-            const icon = ev.type === 'meeting' ? '🟢' : '🟣';
-            html += `<div class="cal-event ${ev.type}" title="${ev.title} — ${evTime}">${icon} ${ev.title}</div>`;
+            let evClass = 'ev-meeting';
+            if (ev.type === 'task') evClass = 'ev-task';
+            else if (ev.meetingType === 'followup' || ev.meetingType === 'closing' || ev.meetingType === 'support') evClass = 'ev-business';
+            if (ev.status === 'done') evClass = 'ev-done';
+            const label = ev.type === 'task' ? ev.title : (evClass === 'ev-business' ? `[Negocio] ${ev.title}` : ev.title);
+            html += `<div class="cal-event ${evClass}"><span class="cal-ev-time">${evTime}</span><span class="cal-ev-badge"></span>${label}</div>`;
         });
 
         if (overflow > 0) {
@@ -1073,6 +1120,7 @@ async function addMeeting() {
         document.getElementById('mtg-status').value = 'pending';
 
         showAlert('Reunión registrada', `${name} — ${new Date(dateISO).toLocaleDateString('es-ES')}`, '📅');
+        closeNewMeetingModal();
         renderCalGrid();
         loadMeetings();
     } catch (err) {
@@ -1133,7 +1181,459 @@ async function deleteMeetingItem(id) {
 }
 
 // =============================================
-// 12. GOOGLE CALENDAR INTEGRATION
+// 12. TASKS MANAGEMENT
+// =============================================
+
+let allTasks = [];
+let taskSubtasks = [];
+
+async function loadTasks() {
+    try {
+        const { data, error } = await _supabase
+            .from('tasks')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (error) { console.warn('[Tasks] Error:', error); allTasks = []; }
+        else allTasks = data || [];
+        
+        const activeCount = allTasks.filter(t => t.status !== 'done').length;
+        const badge = document.getElementById('tasks-badge');
+        if (badge) badge.textContent = activeCount;
+        const countEl = document.getElementById('cal-task-count');
+        if (countEl) countEl.textContent = activeCount;
+        
+        filterTasks();
+        loadTomorrowMeetings();
+    } catch(e) {
+        console.warn('[Tasks] Load error:', e);
+        allTasks = [];
+    }
+}
+
+function filterTasks() {
+    const search = (document.getElementById('task-search-input')?.value || '').toLowerCase();
+    const status = document.getElementById('task-filter-status')?.value || '';
+    const type = document.getElementById('task-filter-type')?.value || '';
+    const priority = document.getElementById('task-filter-priority')?.value || '';
+    const assigned = document.getElementById('task-filter-assigned')?.value || '';
+    const hideDone = document.getElementById('task-hide-done')?.checked || false;
+    
+    let filtered = [...allTasks];
+    if (search) filtered = filtered.filter(t => (t.title||'').toLowerCase().includes(search) || (t.description||'').toLowerCase().includes(search));
+    if (status) filtered = filtered.filter(t => t.status === status);
+    if (type) filtered = filtered.filter(t => t.task_type === type);
+    if (priority) filtered = filtered.filter(t => t.priority === priority);
+    if (assigned) filtered = filtered.filter(t => t.responsible === assigned);
+    if (hideDone) filtered = filtered.filter(t => t.status !== 'done');
+    
+    const countRow = document.getElementById('tasks-count-row');
+    if (countRow) countRow.textContent = `Mostrando ${filtered.length} de ${allTasks.length} tareas`;
+    
+    renderTaskCards(filtered);
+}
+
+function renderTaskCards(tasks) {
+    const container = document.getElementById('tasks-card-list');
+    if (!container) return;
+    
+    if (tasks.length === 0) {
+        container.innerHTML = '<p style="text-align:center;color:var(--text-grey);padding:40px;font-size:0.9rem">No hay tareas que mostrar</p>';
+        return;
+    }
+    
+    const typeLabels = { business: 'Negocio', personal: 'Personal', application: 'Aplicación' };
+    const typeColors = { business: 'blue', personal: 'orange', application: 'purple' };
+    const prioLabels = { none: '', day: '📌 Día', week: '📅 Semana', '15days': '🗓️ 15 días', month: '📆 Mes', quarter: '📅 Trimestre' };
+    
+    container.innerHTML = tasks.map(t => {
+        const dotColor = typeColors[t.task_type] || 'blue';
+        const typeBadge = `<span class="task-card-type-badge ${t.task_type||'business'}">${typeLabels[t.task_type]||'Negocio'}</span>`;
+        
+        let statusBadge = '';
+        if (t.due_date && t.status !== 'done') {
+            const due = new Date(t.due_date);
+            if (due < new Date()) statusBadge = '<span class="task-card-status-badge vencida">⚠ VENCIDA</span>';
+        }
+        
+        let metaHtml = '';
+        if (t.contact_email) metaHtml += `<span class="task-card-tag grey">📧 ${t.contact_email}</span>`;
+        if (t.priority && t.priority !== 'none') metaHtml += `<span class="task-card-tag red">${prioLabels[t.priority]}</span>`;
+        if (t.start_date) metaHtml += `<span class="task-card-tag green">🟢 ${formatDateShort(t.start_date)}</span>`;
+        if (t.due_date) metaHtml += `<span class="task-card-tag orange">🔴 ${formatDateShort(t.due_date)}</span>`;
+        if (t.hourly_rate && t.hours_estimated) {
+            const eff = t.hourly_rate * (1 - (t.discount||0)/100);
+            metaHtml += `<span class="task-card-tag blue">💰 ${eff}€/h · ${t.hours_estimated}h prev</span>`;
+            if (t.hours_actual) {
+                const margin = ((t.hours_estimated - t.hours_actual) / t.hours_estimated * 100).toFixed(0);
+                metaHtml += `<span class="task-card-tag purple">📊 Margen: ${margin>0?'+':''}${margin}%</span>`;
+            }
+        }
+        if (t.source === 'meeting_import' || t.source === 'google') metaHtml += `<span class="task-card-tag blue">📅 Google</span>`;
+        
+        const createdDate = t.created_at ? `creada ${formatDateShort(t.created_at)}` : '';
+        
+        return `
+        <div class="task-card">
+            <div class="task-card-dot ${dotColor}"></div>
+            <div class="task-card-body">
+                <div class="task-card-top">
+                    ${typeBadge} ${statusBadge}
+                    <span class="task-card-title">${t.title || 'Sin título'}</span>
+                </div>
+                <div class="task-card-meta">
+                    ${metaHtml}
+                    <span class="task-card-created">${createdDate}</span>
+                </div>
+            </div>
+            <div class="task-card-actions">
+                <select class="task-card-status-select" onchange="updateTaskStatus('${t.id}', this.value)">
+                    <option value="new" ${t.status==='new'?'selected':''}>🔵 Nuevo</option>
+                    <option value="started" ${t.status==='started'?'selected':''}>🟡 Empezada</option>
+                    <option value="done" ${t.status==='done'?'selected':''}>✅ Finalizada</option>
+                </select>
+                <button class="task-card-expand" onclick="openTaskModal('${t.id}')" title="Editar">∨</button>
+                <button class="task-card-delete" onclick="deleteTask('${t.id}')" title="Eliminar">🗑️</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function formatDateShort(dateStr) {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+}
+
+async function updateTaskStatus(id, status) {
+    try {
+        await _supabase.from('tasks').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+        await loadTasks();
+    } catch(e) { showAlert('Error', e.message, '❌'); }
+}
+
+async function deleteTask(id) {
+    if (!confirm('¿Eliminar esta tarea?')) return;
+    try {
+        await _supabase.from('subtasks').delete().eq('task_id', id);
+        await _supabase.from('tasks').delete().eq('id', id);
+        await loadTasks();
+        showAlert('Tarea eliminada', '', '🗑️');
+    } catch(e) { showAlert('Error', e.message, '❌'); }
+}
+
+// --- Modal Helpers ---
+function openNewMeetingModal() {
+    document.getElementById('modal-new-meeting').style.display = 'flex';
+}
+function closeNewMeetingModal() {
+    document.getElementById('modal-new-meeting').style.display = 'none';
+}
+
+function openNewTaskModal() {
+    document.getElementById('task-edit-id').value = '';
+    document.getElementById('task-modal-title-label').textContent = 'NUEVA TAREA';
+    document.getElementById('task-modal-sub').textContent = 'Tarea manual';
+    document.getElementById('task-title').value = '';
+    document.getElementById('task-description').value = '';
+    setTaskType('business');
+    document.getElementById('task-responsible').value = 'Gerard';
+    document.getElementById('task-hourly-rate').value = 53;
+    document.getElementById('task-discount').value = 0;
+    document.getElementById('task-hours-est').value = 0;
+    document.getElementById('task-hours-actual').value = '';
+    document.getElementById('task-status').value = 'new';
+    document.getElementById('task-time').value = '';
+    setTaskPriority('month');
+    document.getElementById('task-start-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('task-due-date').value = '';
+    document.getElementById('task-notes').value = '';
+    taskSubtasks = [];
+    renderSubtasks();
+    calcTaskEcon();
+    calcTaskDuration();
+    document.getElementById('task-gcal-sync').style.display = 'none';
+    document.getElementById('modal-task').style.display = 'flex';
+}
+
+async function openTaskModal(id) {
+    if (!id) { openNewTaskModal(); return; }
+    const task = allTasks.find(t => t.id === id);
+    if (!task) return;
+    
+    document.getElementById('task-edit-id').value = id;
+    document.getElementById('task-modal-title-label').textContent = 'EDITAR TAREA';
+    document.getElementById('task-modal-sub').textContent = task.source === 'meeting_import' ? 'Tarea generada desde reunión' : 'Tarea manual';
+    document.getElementById('task-title').value = task.title || '';
+    document.getElementById('task-description').value = task.description || '';
+    setTaskType(task.task_type || 'business');
+    document.getElementById('task-responsible').value = task.responsible || 'Gerard';
+    document.getElementById('task-hourly-rate').value = task.hourly_rate || 53;
+    document.getElementById('task-discount').value = task.discount || 0;
+    document.getElementById('task-hours-est').value = task.hours_estimated || 0;
+    document.getElementById('task-hours-actual').value = task.hours_actual || '';
+    document.getElementById('task-status').value = task.status || 'new';
+    document.getElementById('task-time').value = task.task_time || '';
+    setTaskPriority(task.priority || 'month');
+    document.getElementById('task-start-date').value = task.start_date || '';
+    document.getElementById('task-due-date').value = task.due_date || '';
+    document.getElementById('task-notes').value = task.notes || '';
+    document.getElementById('task-gcal-sync').style.display = task.gcal_event_id ? '' : 'none';
+    
+    try {
+        const { data } = await _supabase.from('subtasks').select('*').eq('task_id', id).order('created_at');
+        taskSubtasks = data || [];
+    } catch(e) { taskSubtasks = []; }
+    renderSubtasks();
+    calcTaskEcon();
+    calcTaskDuration();
+    document.getElementById('modal-task').style.display = 'flex';
+}
+
+function closeTaskModal() {
+    document.getElementById('modal-task').style.display = 'none';
+}
+
+function setTaskType(type) {
+    document.querySelectorAll('.task-type-pill').forEach(p => p.classList.remove('active'));
+    const el = document.querySelector(`.task-type-pill[data-type="${type}"]`);
+    if (el) el.classList.add('active');
+}
+function getTaskType() {
+    const active = document.querySelector('.task-type-pill.active');
+    return active ? active.dataset.type : 'business';
+}
+
+function setTaskPriority(prio) {
+    document.querySelectorAll('.task-prio-pill').forEach(p => p.classList.remove('active'));
+    const el = document.querySelector(`.task-prio-pill[data-prio="${prio}"]`);
+    if (el) el.classList.add('active');
+    calcTaskDueFromPriority(prio);
+}
+function getTaskPriority() {
+    const active = document.querySelector('.task-prio-pill.active');
+    return active ? active.dataset.prio : 'month';
+}
+
+function calcTaskDueFromPriority(prio) {
+    const daysMap = { none: 0, day: 1, week: 7, '15days': 15, month: 30, quarter: 90 };
+    const days = daysMap[prio] || 0;
+    const dueInfo = document.getElementById('task-due-info');
+    if (!dueInfo) return;
+    if (days > 0) {
+        const start = document.getElementById('task-start-date')?.value;
+        const startDate = start ? new Date(start) : new Date();
+        const due = new Date(startDate);
+        due.setDate(due.getDate() + days);
+        dueInfo.textContent = `📅 Vence: ${due.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}`;
+        dueInfo.style.display = '';
+    } else {
+        dueInfo.style.display = 'none';
+    }
+}
+
+function calcTaskEcon() {
+    const rate = parseFloat(document.getElementById('task-hourly-rate')?.value) || 0;
+    const discount = parseFloat(document.getElementById('task-discount')?.value) || 0;
+    const effective = rate * (1 - discount / 100);
+    const el = document.getElementById('task-effective-price');
+    if (el) el.innerHTML = `Precio efectivo: <strong>${effective.toFixed(2)}€/h</strong>`;
+    const refEl = document.getElementById('task-ref-price');
+    if (refEl) refEl.textContent = `Ref: ${rate}€/h`;
+}
+
+function calcTaskDuration() {
+    const start = document.getElementById('task-start-date')?.value;
+    const end = document.getElementById('task-due-date')?.value;
+    const el = document.getElementById('task-duration-info');
+    if (!el) return;
+    if (start && end) {
+        const s = new Date(start);
+        const e = new Date(end);
+        const diff = Math.ceil((e - s) / (1000 * 60 * 60 * 24));
+        const sStr = s.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+        const eStr = e.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+        el.textContent = `📅 Duración: ${diff} días · ${sStr} → ${eStr}`;
+        el.style.display = '';
+    } else {
+        el.style.display = 'none';
+    }
+}
+
+// --- Subtasks ---
+function renderSubtasks() {
+    const list = document.getElementById('subtasks-list');
+    const count = document.getElementById('subtask-count');
+    if (!list) return;
+    if (count) count.textContent = taskSubtasks.length;
+    
+    list.innerHTML = taskSubtasks.map((st, i) => `
+        <div class="subtask-row">
+            <input type="checkbox" ${st.status==='done'?'checked':''} onchange="toggleSubtask(${i})">
+            <span class="subtask-text">${st.title}</span>
+            <select onchange="updateSubtaskField(${i},'status',this.value)">
+                <option value="new" ${st.status==='new'?'selected':''}>Nueva</option>
+                <option value="started" ${st.status==='started'?'selected':''}>Empezada</option>
+                <option value="done" ${st.status==='done'?'selected':''}>Hecha</option>
+            </select>
+            <input type="date" value="${st.due_date||''}" onchange="updateSubtaskField(${i},'due_date',this.value)" style="padding:3px 6px;border-radius:6px;border:1px solid var(--border-color);font-size:0.72rem">
+            <span style="font-size:0.7rem;color:var(--text-grey)">${st.assigned_to||'Gerard'}</span>
+            <button class="subtask-remove" onclick="removeSubtask(${i})">✕</button>
+        </div>
+    `).join('');
+}
+
+function addSubtask() {
+    const input = document.getElementById('new-subtask-input');
+    if (!input || !input.value.trim()) return;
+    taskSubtasks.push({ title: input.value.trim(), status: 'new', due_date: '', assigned_to: 'Gerard' });
+    input.value = '';
+    renderSubtasks();
+}
+function removeSubtask(i) { taskSubtasks.splice(i, 1); renderSubtasks(); }
+function toggleSubtask(i) { taskSubtasks[i].status = taskSubtasks[i].status === 'done' ? 'new' : 'done'; renderSubtasks(); }
+function updateSubtaskField(i, field, val) { taskSubtasks[i][field] = val; }
+
+// --- Save Task ---
+async function saveTask() {
+    const id = document.getElementById('task-edit-id').value;
+    const taskData = {
+        title: document.getElementById('task-title').value.trim(),
+        description: document.getElementById('task-description').value.trim(),
+        task_type: getTaskType(),
+        responsible: document.getElementById('task-responsible').value,
+        hourly_rate: parseFloat(document.getElementById('task-hourly-rate').value) || 53,
+        discount: parseFloat(document.getElementById('task-discount').value) || 0,
+        hours_estimated: parseFloat(document.getElementById('task-hours-est').value) || 0,
+        hours_actual: parseFloat(document.getElementById('task-hours-actual').value) || null,
+        status: document.getElementById('task-status').value,
+        task_time: document.getElementById('task-time').value || null,
+        priority: getTaskPriority(),
+        start_date: document.getElementById('task-start-date').value || null,
+        due_date: document.getElementById('task-due-date').value || null,
+        notes: document.getElementById('task-notes').value.trim(),
+        updated_at: new Date().toISOString()
+    };
+    
+    if (!taskData.title) { alert('El título es obligatorio'); return; }
+    
+    try {
+        let taskId = id;
+        if (id) {
+            await _supabase.from('tasks').update(taskData).eq('id', id);
+        } else {
+            const { data, error } = await _supabase.from('tasks').insert([taskData]).select();
+            if (error) throw error;
+            taskId = data[0].id;
+        }
+        
+        if (taskId) {
+            await _supabase.from('subtasks').delete().eq('task_id', taskId);
+            if (taskSubtasks.length > 0) {
+                const subs = taskSubtasks.map(st => ({ ...st, task_id: taskId }));
+                // Remove any 'id' from subs to avoid conflicts
+                subs.forEach(s => delete s.id);
+                await _supabase.from('subtasks').insert(subs);
+            }
+        }
+        
+        closeTaskModal();
+        await loadTasks();
+        await renderCalGrid();
+        showAlert(id ? 'Tarea actualizada' : 'Tarea creada', taskData.title, '✅');
+    } catch(e) {
+        showAlert('Error guardando tarea', e.message, '❌');
+    }
+}
+
+// --- Tomorrow's Meetings ---
+async function loadTomorrowMeetings() {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tStr = tomorrow.toISOString().split('T')[0];
+    const dayAfter = new Date(tomorrow);
+    dayAfter.setDate(dayAfter.getDate() + 1);
+    
+    try {
+        const { data } = await _supabase
+            .from('meetings')
+            .select('*')
+            .gte('meeting_date', tStr)
+            .lt('meeting_date', dayAfter.toISOString().split('T')[0])
+            .order('meeting_date');
+        
+        const box = document.getElementById('tasks-tomorrow-box');
+        const list = document.getElementById('tasks-tomorrow-list');
+        const sub = document.getElementById('tasks-tomorrow-sub');
+        if (!box || !data || data.length === 0) { if (box) box.style.display = 'none'; return; }
+        
+        box.style.display = '';
+        const unimported = data.filter(m => !allTasks.some(t => t.meeting_id === m.id));
+        if (sub) sub.textContent = `${data.length} reuniones · ${unimported.length} sin importar · ${tomorrow.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' })}`;
+        
+        list.innerHTML = data.map(m => {
+            const time = new Date(m.meeting_date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            const imported = allTasks.some(t => t.meeting_id === m.id);
+            return `
+                <div class="tomorrow-meeting-row">
+                    <span class="tomorrow-meeting-time">${time}</span>
+                    <span class="tomorrow-meeting-name">${m.contact_name}</span>
+                    <button class="btn-import-one" onclick="importMeetingAsTask('${m.id}')" ${imported?'disabled style="opacity:0.4"':''}>${imported?'Importada':'Importar'}</button>
+                </div>`;
+        }).join('');
+    } catch(e) {
+        console.warn('[Tomorrow]', e);
+    }
+}
+
+async function importMeetingAsTask(meetingId) {
+    const meeting = await _supabase.from('meetings').select('*').eq('id', meetingId).single();
+    if (!meeting.data) return;
+    const m = meeting.data;
+    
+    const taskData = {
+        title: `${m.contact_name} - reunión`,
+        description: m.notes || '',
+        task_type: 'business',
+        responsible: 'Gerard',
+        hourly_rate: 53,
+        discount: 0,
+        hours_estimated: 1,
+        status: 'new',
+        priority: 'day',
+        start_date: m.meeting_date ? m.meeting_date.split('T')[0] : null,
+        due_date: m.meeting_date ? m.meeting_date.split('T')[0] : null,
+        task_time: m.meeting_date ? new Date(m.meeting_date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : null,
+        source: 'meeting_import',
+        meeting_id: meetingId,
+        contact_email: m.contact_email || ''
+    };
+    
+    try {
+        await _supabase.from('tasks').insert([taskData]);
+        await loadTasks();
+        showAlert('Reunión importada', m.contact_name, '⬇');
+    } catch(e) { showAlert('Error importando', e.message, '❌'); }
+}
+
+async function importAllTomorrowMeetings() {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tStr = tomorrow.toISOString().split('T')[0];
+    const dayAfter = new Date(tomorrow);
+    dayAfter.setDate(dayAfter.getDate() + 1);
+    
+    const { data } = await _supabase.from('meetings').select('*').gte('meeting_date', tStr).lt('meeting_date', dayAfter.toISOString().split('T')[0]);
+    if (!data) return;
+    
+    for (const m of data) {
+        if (!allTasks.some(t => t.meeting_id === m.id)) {
+            await importMeetingAsTask(m.id);
+        }
+    }
+    showAlert('Todas importadas', `${data.length} reuniones`, '✅');
+}
+
+// =============================================
+// 13. GOOGLE CALENDAR INTEGRATION
 // =============================================
 
 let _gcalToken = null;

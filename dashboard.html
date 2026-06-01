@@ -450,26 +450,39 @@
 
             <!-- SECTION: Calendar / Reuniones -->
             <div class="dashboard-section" id="sec-calendar">
-                <!-- Calendar Tabs -->
-                <div class="cal-tabs">
-                    <button class="cal-tab active" onclick="switchCalTab('calendar')">📅 Calendario</button>
-                    <button class="cal-tab" onclick="switchCalTab('tasks')" id="cal-tab-tasks">✅ Tareas <span class="cal-tab-badge" id="tasks-count">0</span></button>
+                <!-- Header -->
+                <div class="cal-header">
+                    <div>
+                        <h1 style="margin:0;font-size:1.8rem;font-weight:800">Calendario</h1>
+                        <p class="cal-subtitle">Reuniones y tareas · <span id="cal-event-count">0</span> eventos · <span id="cal-task-count">0</span> tareas activas</p>
+                    </div>
+                    <div class="cal-header-actions">
+                        <button class="cal-sync-btn" onclick="syncCalendarData()" title="Sincronizar">↻</button>
+                        <button class="btn-primary cal-new-btn" id="btn-new-meeting" onclick="openNewMeetingModal()">+ Nueva reunión</button>
+                    </div>
                 </div>
 
-                <!-- Calendar View -->
+                <!-- Tabs -->
+                <div class="cal-tabs">
+                    <button class="cal-tab active" onclick="switchCalTab('calendar')">📅 Calendario</button>
+                    <button class="cal-tab" onclick="switchCalTab('tasks')" id="cal-tab-tasks">✅ Tareas <span class="cal-tab-badge" id="tasks-badge">0</span></button>
+                </div>
+
+                <!-- ========== CALENDAR VIEW ========== -->
                 <div id="cal-view-calendar">
                     <div class="cal-nav">
                         <div class="cal-nav-left">
                             <button class="cal-nav-btn" onclick="calPrev()">‹</button>
                             <button class="cal-nav-btn" onclick="calNext()">›</button>
                             <button class="cal-nav-today" onclick="calToday()">Hoy</button>
-                            <span class="cal-month-title" id="cal-month-title">Junio de 2026</span>
+                            <span class="cal-month-title" id="cal-month-title"></span>
                         </div>
                         <div class="cal-nav-right">
+                            <input type="date" id="cal-date-picker" class="cal-date-input" onchange="calGoToDate(this.value)">
                             <div class="cal-filters">
                                 <button class="cal-filter active" data-filter="all" onclick="setCalFilter('all')">Todo</button>
-                                <button class="cal-filter" data-filter="meetings" onclick="setCalFilter('meetings')">🟢 Reuniones</button>
-                                <button class="cal-filter" data-filter="tasks" onclick="setCalFilter('tasks')">🟣 Tareas</button>
+                                <button class="cal-filter" data-filter="meetings" onclick="setCalFilter('meetings')"><span class="cal-check-box blue">✓</span> Reuniones</button>
+                                <button class="cal-filter" data-filter="tasks" onclick="setCalFilter('tasks')"><span class="cal-check-box green">✓</span> Tareas</button>
                             </div>
                             <div class="cal-view-modes">
                                 <button class="cal-mode" data-mode="day" onclick="setCalMode('day')">Día</button>
@@ -478,7 +491,6 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="cal-grid cal-header-row">
                         <div class="cal-day-header">LUN</div>
                         <div class="cal-day-header">MAR</div>
@@ -491,123 +503,265 @@
                     <div class="cal-grid cal-days" id="cal-days"></div>
                 </div>
 
-                <!-- Tasks View -->
+                <!-- ========== TASKS VIEW ========== -->
                 <div id="cal-view-tasks" style="display:none">
-                    <div style="padding:40px 20px;text-align:center">
-                        <div style="font-size:2.5rem;margin-bottom:12px">✅</div>
-                        <p style="color:var(--text-grey);font-size:0.9rem">Sección de tareas (próximamente)</p>
-                    </div>
-                </div>
-
-                <!-- Divider -->
-                <hr style="border:none;border-top:1px solid var(--border-color);margin:30px 0">
-
-                <!-- Google Calendar & Config -->
-                <div style="display:flex;gap:10px;align-items:center;margin-bottom:20px">
-                    <button onclick="connectGoogleCalendar()" id="btn-gcal-connect" style="padding:10px 20px;border-radius:14px;border:none;background:linear-gradient(135deg,#4285F4,#34A853);color:white;font-weight:700;font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.3s">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M19.5 22h-15A2.5 2.5 0 0 1 2 19.5v-15A2.5 2.5 0 0 1 4.5 2H8v2H4.5a.5.5 0 0 0-.5.5v15a.5.5 0 0 0 .5.5h15a.5.5 0 0 0 .5-.5V16h2v3.5a2.5 2.5 0 0 1-2.5 2.5z"/><path d="M16 2v2h3.59l-9.3 9.29 1.42 1.42L21 5.41V9h2V2h-7z"/></svg>
-                        Conectar Google Calendar
-                    </button>
-                    <a href="https://calendar.app.google/QMiJY3UbKChYgEcu6" target="_blank" style="padding:10px 20px;border-radius:14px;border:none;background:linear-gradient(135deg,#007AFF,#5856d6);color:white;font-weight:700;font-size:0.85rem;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:8px">
-                        📅 Booking Page
-                    </a>
-                </div>
-
-                <div id="gcal-config" style="display:none;padding:16px 20px;border-radius:14px;background:rgba(66,133,244,0.06);border:1px solid rgba(66,133,244,0.2);margin-bottom:20px">
-                    <p style="margin:0 0 10px;font-size:0.85rem;font-weight:600;color:#4285F4">🔑 Configura tu Google Calendar API</p>
-                    <p style="margin:0 0 10px;font-size:0.78rem;color:var(--text-grey)">Necesitas un Client ID de OAuth 2.0 de Google Cloud Console. <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:#4285F4">Crear credenciales →</a></p>
-                    <div style="display:flex;gap:10px">
-                        <input type="text" id="gcal-client-id" class="chat-input" placeholder="Tu Client ID (xxxx.apps.googleusercontent.com)" style="flex:1">
-                        <button onclick="saveGCalClientId()" class="btn-primary" style="padding:10px 20px;font-size:0.8rem">Guardar</button>
-                    </div>
-                </div>
-                <div id="gcal-status" style="display:none;padding:12px 20px;border-radius:14px;margin-bottom:20px;font-size:0.85rem;font-weight:600;align-items:center;gap:8px"></div>
-
-                <!-- Meeting Tracker: Form + Upcoming -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
-                    <!-- Add Meeting Form -->
-                    <div class="stat-card-glass" style="padding:24px">
-                        <h2 style="font-size:1.1rem;margin:0 0 20px;display:flex;align-items:center;gap:8px">
-                            <span style="font-size:1.3rem">➕</span> Registrar Reunión
-                        </h2>
-                        <div style="display:flex;flex-direction:column;gap:14px">
+                    <!-- Tomorrow's meetings -->
+                    <div class="tasks-tomorrow-box" id="tasks-tomorrow-box" style="display:none">
+                        <div class="tasks-tomorrow-header">
                             <div>
-                                <label class="mtg-label">Nombre del contacto</label>
-                                <input type="text" id="mtg-name" class="chat-input" placeholder="Nombre completo">
+                                <strong>📅 Reuniones de mañana</strong>
+                                <span class="tasks-tomorrow-sub" id="tasks-tomorrow-sub"></span>
                             </div>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                                <div>
-                                    <label class="mtg-label">Email</label>
-                                    <input type="email" id="mtg-email" class="chat-input" placeholder="email@ejemplo.com">
-                                </div>
-                                <div>
-                                    <label class="mtg-label">Teléfono</label>
-                                    <input type="tel" id="mtg-phone" class="chat-input" placeholder="+34 600 000 000">
-                                </div>
-                            </div>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                                <div>
-                                    <label class="mtg-label">Fecha y hora</label>
-                                    <input type="datetime-local" id="mtg-date" class="chat-input">
-                                </div>
-                                <div>
-                                    <label class="mtg-label">Tipo</label>
-                                    <select id="mtg-type" class="chat-input" style="padding:10px 14px">
-                                        <option value="discovery">📅 Reunión</option>
-                                        <option value="followup">🔄 Follow-up</option>
-                                        <option value="closing">🤝 Cierre</option>
-                                        <option value="support">🛠️ Soporte</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                                <div>
-                                    <label class="mtg-label">Estado</label>
-                                    <select id="mtg-status" class="chat-input" style="padding:10px 14px">
-                                        <option value="pending">⏳ Pendiente</option>
-                                        <option value="confirmed">✅ Confirmada</option>
-                                        <option value="done">✔️ Realizada</option>
-                                        <option value="cancelled">❌ Cancelada</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="mtg-label">Origen</label>
-                                    <select id="mtg-source" class="chat-input" style="padding:10px 14px">
-                                        <option value="manual">✍️ Manual</option>
-                                        <option value="web">🌐 Web</option>
-                                        <option value="cerebro">🧠 Cerebro AI</option>
-                                    </select>
-                                </div>
+                            <button class="btn-import-all" onclick="importAllTomorrowMeetings()">⬇ Importar como tareas</button>
+                        </div>
+                        <div id="tasks-tomorrow-list"></div>
+                    </div>
+
+                    <!-- Search -->
+                    <div class="tasks-search-bar">
+                        <input type="text" id="task-search-input" class="tasks-search-input" placeholder="🔍 Buscar por título o descripción..." oninput="filterTasks()">
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="tasks-filter-row">
+                        <select id="task-filter-status" class="tasks-filter-select" onchange="filterTasks()">
+                            <option value="">Estado: Todas</option>
+                            <option value="new">Nueva</option>
+                            <option value="started">Empezada</option>
+                            <option value="done">Finalizada</option>
+                        </select>
+                        <select id="task-filter-type" class="tasks-filter-select" onchange="filterTasks()">
+                            <option value="">Tipo: Todos</option>
+                            <option value="business">Negocio</option>
+                            <option value="personal">Personal</option>
+                            <option value="application">Aplicación</option>
+                        </select>
+                        <select id="task-filter-priority" class="tasks-filter-select" onchange="filterTasks()">
+                            <option value="">Prioridad: Todos</option>
+                            <option value="none">Sin prioridad</option>
+                            <option value="day">Día</option>
+                            <option value="week">Semana</option>
+                            <option value="15days">15 días</option>
+                            <option value="month">Mes</option>
+                            <option value="quarter">Trimestre</option>
+                        </select>
+                        <select id="task-filter-assigned" class="tasks-filter-select" onchange="filterTasks()">
+                            <option value="">Asignado: Todos</option>
+                            <option value="Gerard">Gerard</option>
+                        </select>
+                        <label class="tasks-hide-done-label">
+                            <input type="checkbox" id="task-hide-done" onchange="filterTasks()"> Ocultar finalizadas
+                        </label>
+                    </div>
+
+                    <!-- Count -->
+                    <div class="tasks-count-row" id="tasks-count-row">Mostrando 0 de 0 tareas</div>
+
+                    <!-- Task Cards -->
+                    <div id="tasks-card-list" class="tasks-card-list"></div>
+                </div>
+            </div>
+
+            <!-- ========== MODAL: NUEVA REUNIÓN ========== -->
+            <div class="modal-overlay" id="modal-new-meeting" style="display:none" onclick="if(event.target===this)closeNewMeetingModal()">
+                <div class="modal-box" style="max-width:520px">
+                    <div class="modal-header">
+                        <h2>📅 Nueva Reunión</h2>
+                        <button class="modal-close" onclick="closeNewMeetingModal()">✕</button>
+                    </div>
+                    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+                        <div>
+                            <label class="mtg-label">Nombre del contacto</label>
+                            <input type="text" id="mtg-name" class="modal-input" placeholder="Nombre completo">
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                            <div>
+                                <label class="mtg-label">Email</label>
+                                <input type="email" id="mtg-email" class="modal-input" placeholder="email@ejemplo.com">
                             </div>
                             <div>
-                                <label class="mtg-label">Notas</label>
-                                <textarea id="mtg-notes" class="chat-input" rows="2" placeholder="Notas sobre la reunión..." style="resize:vertical"></textarea>
+                                <label class="mtg-label">Teléfono</label>
+                                <input type="tel" id="mtg-phone" class="modal-input" placeholder="+34 600 000 000">
                             </div>
-                            <button onclick="addMeeting()" class="btn-primary" style="padding:12px;font-size:0.85rem">
-                                ➕ Añadir Reunión
-                            </button>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                            <div>
+                                <label class="mtg-label">Fecha y hora</label>
+                                <input type="datetime-local" id="mtg-date" class="modal-input">
+                            </div>
+                            <div>
+                                <label class="mtg-label">Tipo</label>
+                                <select id="mtg-type" class="modal-input">
+                                    <option value="discovery">📅 Reunión</option>
+                                    <option value="followup">🔄 Follow-up</option>
+                                    <option value="closing">🤝 Cierre</option>
+                                    <option value="support">🛠️ Soporte</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                            <div>
+                                <label class="mtg-label">Estado</label>
+                                <select id="mtg-status" class="modal-input">
+                                    <option value="pending">⏳ Pendiente</option>
+                                    <option value="confirmed">✅ Confirmada</option>
+                                    <option value="done">✔️ Realizada</option>
+                                    <option value="cancelled">❌ Cancelada</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="mtg-label">Origen</label>
+                                <select id="mtg-source" class="modal-input">
+                                    <option value="manual">✍️ Manual</option>
+                                    <option value="web">🌐 Web</option>
+                                    <option value="cerebro">🧠 Cerebro AI</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="mtg-label">Notas</label>
+                            <textarea id="mtg-notes" class="modal-input" rows="2" placeholder="Notas sobre la reunión..." style="resize:vertical"></textarea>
                         </div>
                     </div>
-
-                    <!-- Upcoming Meetings -->
-                    <div class="stat-card-glass" style="padding:24px">
-                        <h2 style="font-size:1.1rem;margin:0 0 20px;display:flex;align-items:center;gap:8px">
-                            <span style="font-size:1.3rem">📋</span> Próximas Reuniones
-                        </h2>
-                        <div id="meetings-list" style="display:flex;flex-direction:column;gap:10px">
-                            <p style="color:var(--text-grey);font-size:0.85rem;text-align:center;padding:30px 0">Cargando reuniones...</p>
-                        </div>
+                    <div class="modal-footer">
+                        <button class="modal-cancel-btn" onclick="closeNewMeetingModal()">Cancelar</button>
+                        <button class="btn-primary" onclick="addMeeting()" style="padding:10px 24px">✓ Guardar reunión</button>
                     </div>
                 </div>
+            </div>
 
-                <!-- Past Meetings -->
-                <div class="stat-card-glass" style="padding:24px;margin-top:24px">
-                    <h2 style="font-size:1.1rem;margin:0 0 20px;display:flex;align-items:center;gap:8px">
-                        <span style="font-size:1.3rem">📜</span> Historial de Reuniones
-                    </h2>
-                    <div id="meetings-history" style="display:flex;flex-direction:column;gap:8px">
-                        <p style="color:var(--text-grey);font-size:0.85rem;text-align:center;padding:20px 0">Sin reuniones pasadas</p>
+            <!-- ========== MODAL: CREAR / EDITAR TAREA ========== -->
+            <div class="modal-overlay" id="modal-task" style="display:none" onclick="if(event.target===this)closeTaskModal()">
+                <div class="modal-box task-modal-box">
+                    <div class="modal-header">
+                        <div style="display:flex;align-items:center;gap:12px">
+                            <div class="task-modal-icon" id="task-modal-icon">📋</div>
+                            <div>
+                                <h2 id="task-modal-title-label">NUEVA TAREA</h2>
+                                <span class="task-modal-sub" id="task-modal-sub">Tarea manual</span>
+                            </div>
+                        </div>
+                        <button class="modal-close" onclick="closeTaskModal()">✕</button>
                     </div>
+                    <div class="modal-body task-modal-body">
+                        <!-- Title -->
+                        <div>
+                            <label class="task-field-label">📝 TÍTULO</label>
+                            <input type="text" id="task-title" class="modal-input" placeholder="Título de la tarea...">
+                        </div>
+                        <!-- Description -->
+                        <div>
+                            <label class="task-field-label">📄 DESCRIPCIÓN</label>
+                            <textarea id="task-description" class="modal-input" rows="3" placeholder="Describe la tarea..." style="resize:vertical"></textarea>
+                        </div>
+                        <!-- Type pills -->
+                        <div>
+                            <label class="task-field-label">💼 TIPO DE TAREA</label>
+                            <div class="task-type-pills">
+                                <button class="task-type-pill active" data-type="business" onclick="setTaskType('business')">💼 Negocio</button>
+                                <button class="task-type-pill" data-type="personal" onclick="setTaskType('personal')">👤 Personal</button>
+                                <button class="task-type-pill" data-type="application" onclick="setTaskType('application')">💻 Aplicación</button>
+                            </div>
+                        </div>
+                        <!-- Email action -->
+                        <div class="task-email-action">📧 Enviar email sobre esta tarea</div>
+                        <!-- Responsible -->
+                        <div>
+                            <label class="task-field-label">👥 RESPONSABLE DEL PROYECTO</label>
+                            <select id="task-responsible" class="modal-input">
+                                <option value="Gerard">Gerard</option>
+                            </select>
+                        </div>
+                        <!-- Economic valuation -->
+                        <div class="task-econ-section">
+                            <label class="task-field-label">💰 VALORACIÓN ECONÓMICA</label>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                                <div>
+                                    <label class="mtg-label">Precio/hora (€)</label>
+                                    <input type="number" id="task-hourly-rate" class="modal-input" value="53" oninput="calcTaskEcon()">
+                                    <small class="task-ref-price" id="task-ref-price">Ref: 53€/h</small>
+                                </div>
+                                <div>
+                                    <label class="mtg-label">Descuento (%)</label>
+                                    <input type="number" id="task-discount" class="modal-input" value="0" min="0" max="100" oninput="calcTaskEcon()">
+                                </div>
+                            </div>
+                            <div class="task-effective-price" id="task-effective-price">Precio efectivo: <strong>53.00€/h</strong></div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                                <div>
+                                    <label class="mtg-label">Horas previstas</label>
+                                    <input type="number" id="task-hours-est" class="modal-input" value="0" min="0">
+                                </div>
+                                <div>
+                                    <label class="mtg-label">Horas reales</label>
+                                    <input type="number" id="task-hours-actual" class="modal-input" placeholder="—" min="0">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Status + Time -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                            <div>
+                                <label class="task-field-label">ESTADO</label>
+                                <select id="task-status" class="modal-input">
+                                    <option value="new">🔵 Nueva</option>
+                                    <option value="started">🟡 Empezada</option>
+                                    <option value="done">✅ Finalizada</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="task-field-label">HORA</label>
+                                <input type="time" id="task-time" class="modal-input">
+                            </div>
+                        </div>
+                        <!-- Priority pills -->
+                        <div>
+                            <label class="task-field-label">📌 PRIORIDAD</label>
+                            <div class="task-priority-pills">
+                                <button class="task-prio-pill" data-prio="none" onclick="setTaskPriority('none')">Sin prioridad</button>
+                                <button class="task-prio-pill" data-prio="day" onclick="setTaskPriority('day')">📌 Día</button>
+                                <button class="task-prio-pill" data-prio="week" onclick="setTaskPriority('week')">📅 Semana</button>
+                                <button class="task-prio-pill" data-prio="15days" onclick="setTaskPriority('15days')">🗓️ 15 días</button>
+                                <button class="task-prio-pill active" data-prio="month" onclick="setTaskPriority('month')">📆 Mes</button>
+                                <button class="task-prio-pill" data-prio="quarter" onclick="setTaskPriority('quarter')">📅 Trimestre</button>
+                            </div>
+                        </div>
+                        <!-- Due info -->
+                        <div class="task-due-info" id="task-due-info" style="display:none"></div>
+                        <!-- Dates -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                            <div>
+                                <label class="task-field-label">🟢 FECHA DE INICIO</label>
+                                <input type="date" id="task-start-date" class="modal-input" onchange="calcTaskDuration()">
+                            </div>
+                            <div>
+                                <label class="task-field-label">🔴 PREVISIÓN DE FINALIZACIÓN</label>
+                                <input type="date" id="task-due-date" class="modal-input" onchange="calcTaskDuration()">
+                            </div>
+                        </div>
+                        <!-- Duration info -->
+                        <div class="task-duration-info" id="task-duration-info" style="display:none"></div>
+                        <!-- Notes -->
+                        <div>
+                            <label class="task-field-label">📝 NOTAS</label>
+                            <textarea id="task-notes" class="modal-input" rows="4" placeholder="Añade notas, apuntes, ideas..." style="resize:vertical"></textarea>
+                        </div>
+                        <!-- Subtasks -->
+                        <div>
+                            <label class="task-field-label">📋 SUBTAREAS (<span id="subtask-count">0</span>)</label>
+                            <div id="subtasks-list" class="subtasks-list"></div>
+                            <div class="subtask-add-row">
+                                <input type="text" id="new-subtask-input" class="modal-input" placeholder="Nueva subtarea..." style="flex:1" onkeypress="if(event.key==='Enter')addSubtask()">
+                                <button class="btn-primary" onclick="addSubtask()" style="padding:8px 16px;font-size:0.8rem">+ Añadir</button>
+                            </div>
+                        </div>
+                        <!-- GCal sync -->
+                        <div class="task-gcal-sync" id="task-gcal-sync">🔄 Sincronizada con Google Calendar</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="modal-cancel-btn" onclick="closeTaskModal()">Cancelar</button>
+                        <button class="btn-primary" onclick="saveTask()" style="padding:10px 24px">✓ Guardar + Sync</button>
+                    </div>
+                    <input type="hidden" id="task-edit-id" value="">
                 </div>
             </div>
 
@@ -656,6 +810,21 @@
                     <div class="form-group">
                         <label>Google AI Studio Gemini Key</label>
                         <input type="password" value="••••••••••••••••••••" readonly class="form-input" style="max-width:400px">
+                    </div>
+                    <hr style="border:none;border-top:1px solid var(--border-color);margin:8px 0">
+                    <div class="form-group">
+                        <label style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="#4285F4"><path d="M19.5 22h-15A2.5 2.5 0 0 1 2 19.5v-15A2.5 2.5 0 0 1 4.5 2H8v2H4.5a.5.5 0 0 0-.5.5v15a.5.5 0 0 0 .5.5h15a.5.5 0 0 0 .5-.5V16h2v3.5a2.5 2.5 0 0 1-2.5 2.5z"/><path d="M16 2v2h3.59l-9.3 9.29 1.42 1.42L21 5.41V9h2V2h-7z"/></svg> Google Calendar OAuth Client ID</label>
+                        <div style="display:flex;gap:10px;max-width:600px">
+                            <input type="text" id="gcal-client-id" class="form-input" placeholder="Tu Client ID (xxxx.apps.googleusercontent.com)" style="flex:1">
+                            <button onclick="saveGCalClientId()" class="btn-primary" style="padding:8px 16px;font-size:0.8rem">Guardar</button>
+                        </div>
+                        <small style="color:var(--text-grey);font-size:0.75rem;margin-top:4px;display:block"><a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:#4285F4">Crear credenciales en Google Cloud Console →</a></small>
+                        <div id="gcal-config" style="display:none"></div>
+                        <div id="gcal-status" style="display:none;padding:8px 12px;border-radius:10px;margin-top:8px;font-size:0.8rem;font-weight:600"></div>
+                        <div style="margin-top:10px;display:flex;gap:10px">
+                            <button onclick="connectGoogleCalendar()" id="btn-gcal-connect" style="padding:8px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,#4285F4,#34A853);color:white;font-weight:600;font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:6px">Conectar Google Calendar</button>
+                            <a href="https://calendar.app.google/QMiJY3UbKChYgEcu6" target="_blank" style="padding:8px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,#007AFF,#5856d6);color:white;font-weight:600;font-size:0.8rem;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:6px">📅 Booking Page</a>
+                        </div>
                     </div>
                 </div>
             </div>
