@@ -692,6 +692,23 @@ html, body {
     overflow-y: auto;
     flex: 1;
 }
+.sidebar-group-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-grey);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 14px 0 4px 14px;
+    user-select: none;
+}
+.sidebar-subnav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.sidebar-subnav .sidebar-nav-item {
+    padding-left: 24px;
+}
 .sidebar-nav-item {
     display: flex;
     align-items: center;

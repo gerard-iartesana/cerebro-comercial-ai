@@ -5438,3 +5438,36 @@ ${p.contenido_ia ? `<div class="ai nb"><div class="st">📋 DETALLE</div><div cl
     setTimeout(() => w.print(), 400);
 }
 
+
+window.sendAppChatMessage = function() {
+    const input = document.getElementById('app-chat-input');
+    if (!input) return;
+    const msg = input.value.trim();
+    if (!msg) return;
+    input.value = '';
+    
+    const container = document.getElementById('app-chat-messages');
+    if (!container) return;
+    const time = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    
+    const userDiv = document.createElement('div');
+    userDiv.style.display = 'flex';
+    userDiv.style.gap = '12px';
+    userDiv.style.alignItems = 'flex-start';
+    userDiv.innerHTML = `
+        <div style="width:36px; height:36px; border-radius:50%; background:var(--accent-purple); color:white; display:flex; align-items:center; justify-content: center; font-weight:700; font-size:0.85rem">G</div>
+        <div>
+            <div style="display:flex; align-items:center; gap:8px">
+                <span style="font-weight:600; font-size:0.85rem; color:var(--text-main)">Gerard</span>
+                <span style="font-size:0.7rem; color:var(--text-grey)">${time}</span>
+            </div>
+            <p style="font-size:0.88rem; color:var(--text-main); margin-top:4px; background:var(--bg-secondary); padding:10px 14px; border-radius:12px; border:1px solid var(--card-border); max-width:500px">
+                ${msg}
+            </p>
+        </div>
+    `;
+    container.appendChild(userDiv);
+    container.scrollTop = container.scrollHeight;
+    
+    logToSystemSupport(`[Chat App] Enviado mensaje de chat interno: "${msg}"`);
+};
