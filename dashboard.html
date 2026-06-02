@@ -40,6 +40,23 @@
         </div>
     </div>
 
+    <!-- macOS Prompt Dialog -->
+    <div class="macos-modal-overlay" id="prompt-modal">
+        <div class="macos-modal-box">
+            <div class="macos-alert-icon" id="prompt-icon">📝</div>
+            <h3 class="macos-alert-title" id="prompt-title">Escribe un valor</h3>
+            <p class="macos-alert-desc" id="prompt-desc">Introduce la información requerida:</p>
+            <div class="macos-prompt-input-wrapper">
+                <input type="text" class="macos-prompt-input" id="prompt-input" placeholder="" onkeydown="if(event.key==='Enter')resolvePrompt(true)">
+            </div>
+            <div class="macos-alert-actions confirm-actions">
+                <button class="macos-alert-btn btn-cancel-purple" onclick="resolvePrompt(false)">Cancelar</button>
+                <button class="macos-alert-btn btn-primary-purple" onclick="resolvePrompt(true)">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+
     <!-- macOS Lock Screen Authentication (Password Protected) -->
     <div class="macos-lock-screen" id="lock-screen">
         <div class="macos-lock-card">

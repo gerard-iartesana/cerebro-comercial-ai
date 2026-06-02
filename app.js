@@ -36,6 +36,33 @@ function resolveConfirm(result) {
     if (_confirmResolve) { _confirmResolve(result); _confirmResolve = null; }
 }
 
+// macOS Prompt Dialog (Promise-based)
+let _promptResolve = null;
+function showPrompt(title, desc, icon = '📝', defaultValue = '', placeholder = '') {
+    document.getElementById('prompt-title').textContent = title;
+    document.getElementById('prompt-desc').textContent = desc;
+    document.getElementById('prompt-icon').textContent = icon;
+    const input = document.getElementById('prompt-input');
+    input.value = defaultValue;
+    input.placeholder = placeholder;
+    document.getElementById('prompt-modal').classList.add('active');
+    setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 150); // focus & select the input when shown
+    return new Promise(resolve => { _promptResolve = resolve; });
+}
+function resolvePrompt(result) {
+    const input = document.getElementById('prompt-input');
+    const value = input.value;
+    document.getElementById('prompt-modal').classList.remove('active');
+    if (_promptResolve) {
+        _promptResolve(result ? value : null);
+        _promptResolve = null;
+    }
+}
+
+
 // 2. Lock Screen Authentication
 async function validateLock() {
     const pwdInput = document.getElementById('lock-password');
@@ -1455,7 +1482,7 @@ async function updateTaskStatus(id, status) {
 }
 
 async function deleteTask(id) {
-    if (!confirm('¿Eliminar esta tarea?')) return;
+    if (!(await showConfirm('Eliminar Tarea', '¿Estás seguro de que deseas eliminar esta tarea de forma permanente?', '🗑️', 'Eliminar'))) return;
     try {
         await _supabase.from('subtasks').delete().eq('task_id', id);
         await _supabase.from('tasks').delete().eq('id', id);
@@ -1678,7 +1705,7 @@ async function saveTask() {
         updated_at: new Date().toISOString()
     };
     
-    if (!taskData.title) { alert('El título es obligatorio'); return; }
+    if (!taskData.title) { showAlert('Título Requerido', 'El título de la tarea es obligatorio para poder guardarla.', '⚠️'); return; }
     
     try {
         let taskId = id;
@@ -2932,9 +2959,9 @@ window.populateCategoryDropdown = function() {
 };
 
 // Selector handler for new custom category creation
-window.handleCategorySelection = function(select) {
+window.handleCategorySelection = async function(select) {
     if (select.value === '__NEW__') {
-        const catName = prompt('Escribe el nombre de la nueva categoría (ej: Ecosistemas B2B):');
+        const catName = await showPrompt('Nueva Categoría', 'Escribe el nombre de la nueva categoría (ej: Ecosistemas B2B):', '📁', '', 'Nombre de la categoría...');
         if (!catName || catName.trim() === '') {
             select.value = 'personalizada';
             return;

@@ -165,6 +165,51 @@ html, body {
     background: #e0392e;
 }
 
+/* Prompt Modal Specifics */
+.macos-prompt-input-wrapper {
+    margin: 18px 0 24px 0;
+    text-align: left;
+    width: 100%;
+}
+.macos-prompt-input {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 14px;
+    border: 2px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.03);
+    color: var(--text-main);
+    font-size: 0.95rem;
+    font-family: var(--font-stack);
+    outline: none;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-theme="dark"] .macos-prompt-input {
+    background: rgba(255, 255, 255, 0.03);
+}
+.macos-prompt-input:focus {
+    border-color: var(--accent-purple);
+    background: var(--bg-secondary);
+    box-shadow: 0 0 0 4px rgba(88, 86, 214, 0.15);
+}
+.macos-alert-btn.btn-cancel-purple {
+    background: rgba(88, 86, 214, 0.08);
+    color: var(--accent-purple);
+    box-shadow: none;
+}
+.macos-alert-btn.btn-cancel-purple:hover {
+    background: rgba(88, 86, 214, 0.15);
+}
+.macos-alert-btn.btn-primary-purple {
+    background: var(--accent-purple);
+    color: white;
+    box-shadow: 0 4px 12px rgba(88, 86, 214, 0.3);
+}
+.macos-alert-btn.btn-primary-purple:hover {
+    background: #4644bf;
+    transform: translateY(-1px);
+}
+
+
 @keyframes alertPulse {
     from { transform: scale(1); opacity: 0.9; }
     to { transform: scale(1.05); opacity: 1; }
