@@ -191,6 +191,22 @@ const implementations = {
     const insertedLeads = [];
 
     for (const lead of topLeads) {
+      // Check if email already exists in Supabase to determine true novelty
+      try {
+        const { data: alreadyExists, error: emailCheckError } = await supabase
+          .from('outreach_leads')
+          .select('id')
+          .eq('email', lead.value)
+          .maybeSingle();
+
+        if (!emailCheckError && alreadyExists) {
+          console.log(`[Duplicate Lead] Lead email ${lead.value} ya existe en Supabase. Omitiendo de nuevos registros.`);
+          continue; // Skip counting this as a new insert
+        }
+      } catch (checkErr) {
+        console.error('Error verificando email duplicado:', checkErr);
+      }
+
       const leadToInsert = {
         email: lead.value,
         first_name: lead.first_name || '',
@@ -223,7 +239,7 @@ const implementations = {
     const firstLead = insertedLeads[0] || {};
     const message = insertedCount > 0
       ? `✅ Se encontraron e insertaron ${insertedCount} leads en ${cleanDomain} (ej: ${firstLead.name || ''} - ${firstLead.email || ''})`
-      : `⚠️ Se encontraron ${topLeads.length} leads en ${cleanDomain} pero ya existían en la base de datos.`;
+      : `⚠️ Se encontraron leads en ${cleanDomain} pero ya existían en la base de datos (0 nuevos registrados).`;
 
     return {
       success: true,
@@ -324,8 +340,9 @@ Tu tono de voz es cercano, directo, amigable (tuteando, ej: "¡Hola! Claro, ahor
 REGLAS CRÍTICAS PARA BÚSQUEDA DE LEADS:
 - La herramienta searchLeads busca en Hunter.io por DOMINIO WEB concreto (ej: stripe.com, gestoriaperez.com).
 - Si el usuario te pide leads de una INDUSTRIA, SECTOR o TIPO DE NEGOCIO (ej: "gestorías", "baloncesto", "abogados", "dentistas"):
-  - Tu objetivo absoluto es encontrar y registrar un total de **9 leads** en la base de datos (seleccionando e inyectando hasta 3 decisores personales por cada club o negocio).
-  - Para garantizar que completas la cuota de 9 leads en una sola interacción (evitando esperas y demoras), **debes identificar y buscar en al menos 5 o 6 dominios diferentes en paralelo desde tu primera llamada a herramientas**.
+  - Tu objetivo absoluto es encontrar, registrar y acumular un total de **9 NUEVOS leads** en la base de datos (es decir, leads cuyo `insertedCount` en la respuesta de la herramienta `searchLeads` sea mayor que 0).
+  - Los leads recuperados que ya existían o que eran duplicados devuelven `insertedCount: 0` en la herramienta. **Estos leads con insertedCount de 0 NO cuentan para tu cuota de 9 nuevos leads.**
+  - Para garantizar que completas la cuota de 9 leads nuevos en una sola interacción, **debes identificar y buscar en al menos 5 o 6 dominios diferentes en paralelo desde tu primera llamada a herramientas**.
   - Si el usuario especifica una comunidad autónoma, provincia o región de España (ej: "en Galicia", "en Cataluña", "en Madrid", "de Andalucía", etc.), debes seleccionar dominios reales localizados en esa comunidad autónoma o región. Aquí tienes la lista de referencia de dominios reales por comunidad autónoma para clubs de baloncesto:
     * **Cataluña / Catalunya:** "joventutbadalona.com", "basquetgirona.com", "basquetmanresa.com", "basquetcatala.cat", "barcabasket.cat" (o "fcbarcelona.cat")
     * **Galicia:** "obradoirocab.com", "cbbreogan.com", "leycoruna.com", "basquetcoruna.com", "celtabaloncesto.com"
@@ -336,8 +353,8 @@ REGLAS CRÍTICAS PARA BÚSQUEDA DE LEADS:
     * **Canarias:** "cbgrancanaria.net", "cbcanarias.net", "rcnautico.es"
     * **Aragón:** "casademontzaragoza.es", "cbpenas.com"
   - Si te piden un sector genérico (ej: "gestorías" o "abogados") y especifican una comunidad, usa dominios reales locales de ese sector en esa región, o bien busca colegios profesionales oficiales de ese sector en esa comunidad (ej: "colegioabogadosmadrid.com", "gestoresmadrid.org", "colegiodigestores.com", "icab.cat", etc.).
-  - Si en los primeros resultados de las herramientas ves que no has logrado acumular al menos 9 leads insertados en total, **tú debes seguir buscando de forma automática con dominios alternativos adicionales sin parar ni preguntar al usuario**, hasta que logres registrar los 9 leads exitosamente.
-  - NUNCA hagas preguntas al usuario ni sugieras acciones intermedias (como "¿quieres que siga buscando?" o "¿quieres enriquecer?") hasta que no hayas completado exitosamente el registro de los 9 leads. Solo cuando tengas los 9 leads confirmados en los resultados de las herramientas, puedes dar tu respuesta final enlistando todos los resultados y preguntar qué hacer a continuación.
+  - Si tras recibir las respuestas de las herramientas ves que la suma total de `insertedCount` de todas las búsquedas es menor que 9, **tú debes seleccionar de forma automática nuevos dominios alternativos adicionales y ejecutar más búsquedas en paralelo inmediatamente sin parar ni preguntar al usuario**, repitiendo este ciclo hasta que logres registrar los 9 nuevos leads exitosamente.
+  - NUNCA hagas preguntas al usuario ni sugieras acciones intermedias (como "¿quieres que siga buscando?" o "¿quieres enriquecer?") hasta que no hayas completado exitosamente la cuota de 9 nuevos leads (`sum(insertedCount) >= 9`). Solo cuando lo consigas, darás tu respuesta final enlistando detalladamente todos los nuevos leads y preguntarás qué hacer a continuación.
   - NUNCA digas "necesito un dominio concreto". SIEMPRE identifica dominios reales tú mismo y ejecuta la búsqueda directamente.
 
 OTRAS HERRAMIENTAS:
