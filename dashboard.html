@@ -801,7 +801,7 @@
                         </div>
                         
                         <!-- Categories selector -->
-                        <div class="category-pills-bar" style="display: flex; gap: 6px; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 4px; border: 1px solid var(--card-border); flex-wrap: wrap;">
+                        <div class="category-pills-bar" id="pres-category-pills-bar" style="display: flex; gap: 6px; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 4px; border: 1px solid var(--card-border); flex-wrap: wrap;">
                             <button class="cat-pill active" data-cat="all" onclick="filterTemplatesByCategory('all')">Todos</button>
                             <button class="cat-pill" data-cat="consultoria" onclick="filterTemplatesByCategory('consultoria')">Consultoría</button>
                             <button class="cat-pill" data-cat="agentes_ia" onclick="filterTemplatesByCategory('agentes_ia')">Agentes IA</button>
@@ -1184,6 +1184,9 @@
                                     <button type="button" class="pay-method-btn" data-value="efectivo" onclick="togglePayMethodBtn(this)">💵 Efectivo</button>
                                     <button type="button" class="pay-method-btn" data-value="sin_iva" onclick="togglePayMethodBtn(this)">🇺🇸 Sin IVA</button>
                                 </div>
+                                
+                                <!-- Contenedor dinámico de instrucciones visuales de pago -->
+                                <div id="pay-methods-instructions-container" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px; width: 100%;"></div>
                             </div>
                         </div>
 
@@ -1193,7 +1196,7 @@
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                                 <div>
                                     <label class="mtg-label">Categoría para filtros</label>
-                                    <select id="edit-pres-categoria" class="modal-input">
+                                    <select id="edit-pres-categoria" class="modal-input" onchange="handleCategorySelection(this)">
                                         <option value="consultoria">🎯 Consultoría</option>
                                         <option value="agentes_ia">🤖 Agentes de IA</option>
                                         <option value="apps_web">🌐 Apps Web</option>

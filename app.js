@@ -155,7 +155,7 @@ async function initializeDashboard() {
         // Fetch raw leads count
         const { data: leads, error } = await _supabase
             .from('outreach_leads')
-            .select('status');
+            .select('*');
         
         if (error) throw error;
         leadsList = leads || [];
@@ -2293,13 +2293,24 @@ const PRES_SEQUENCES = [
     }
 ];
 
-const ALL_CATEGORIES_METADATA = {
+let ALL_CATEGORIES_METADATA = {
     consultoria: { label: 'Consultoría', bg: 'rgba(232,133,10,0.08)', border: '1px solid rgba(232,133,10,0.2)', accent: '#e8850a', icon: '🎯' },
     agentes_ia: { label: 'Agentes de IA', bg: 'rgba(10,132,255,0.08)', border: '1px solid rgba(10,132,255,0.2)', accent: '#0a84ff', icon: '🤖' },
     apps_web: { label: 'Apps Web', bg: 'rgba(52,199,89,0.08)', border: '1px solid rgba(52,199,89,0.2)', accent: '#34c759', icon: '🌐' },
     automatizacion: { label: 'Automatización', bg: 'rgba(88,86,214,0.08)', border: '1px solid rgba(88,86,214,0.2)', accent: '#5856d6', icon: '⚡' },
     personalizada: { label: 'Propuesta Personalizada', bg: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', accent: '#aeaeb2', icon: '📋' }
 };
+
+let customCategories = {};
+try {
+    const s = localStorage.getItem('cc_custom_categories');
+    if (s) {
+        customCategories = JSON.parse(s);
+        Object.assign(ALL_CATEGORIES_METADATA, customCategories);
+    }
+} catch (e) {
+    console.error('Error loading custom categories:', e);
+}
 
 // --- 2. Global State ---
 let presupuestos = [];
@@ -2616,6 +2627,7 @@ function filterTemplates() {
 }
 
 function renderPresupuestos() {
+    renderCategoryPills();
     const searchVal = document.getElementById('pres-search').value.toLowerCase().trim();
     const container = document.getElementById('pres-templates-container');
     container.innerHTML = '';
@@ -2901,7 +2913,195 @@ window.addEventListener('click', function(e) {
 // Pay methods toggle buttons handler
 function togglePayMethodBtn(btn) {
     btn.classList.toggle('selected');
+    renderPayMethodsInstructions();
 }
+
+// Helper: Populate modal select dropdown dynamically
+window.populateCategoryDropdown = function() {
+    const select = document.getElementById('edit-pres-categoria');
+    if (!select) return;
+    
+    let html = '';
+    Object.keys(ALL_CATEGORIES_METADATA).forEach(catKey => {
+        const meta = ALL_CATEGORIES_METADATA[catKey];
+        html += `<option value="${catKey}">${meta.icon} ${meta.label}</option>`;
+    });
+    html += `<option value="__NEW__">➕ Crear nueva categoría...</option>`;
+    
+    select.innerHTML = html;
+};
+
+// Selector handler for new custom category creation
+window.handleCategorySelection = function(select) {
+    if (select.value === '__NEW__') {
+        const catName = prompt('Escribe el nombre de la nueva categoría (ej: Ecosistemas B2B):');
+        if (!catName || catName.trim() === '') {
+            select.value = 'personalizada';
+            return;
+        }
+        
+        const cleanName = catName.trim();
+        const slug = 'cat_' + cleanName.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+        
+        // Add to metadata
+        const randomEmojis = ['🎯', '🤖', '🌐', '⚡', '📋', '🚀', '📈', '💡', '💎', '🔥', '⚙️', '🎨', '💼'];
+        const randomEmoji = randomEmojis[Math.floor(Math.random() * randomEmojis.length)];
+        
+        ALL_CATEGORIES_METADATA[slug] = {
+            label: cleanName,
+            bg: 'rgba(10, 132, 255, 0.08)',
+            border: '1px solid rgba(10, 132, 255, 0.2)',
+            accent: '#0a84ff',
+            icon: randomEmoji
+        };
+        
+        // Save to customCategories
+        customCategories[slug] = ALL_CATEGORIES_METADATA[slug];
+        localStorage.setItem('cc_custom_categories', JSON.stringify(customCategories));
+        
+        // Add option and select
+        const option = document.createElement('option');
+        option.value = slug;
+        option.textContent = randomEmoji + ' ' + cleanName;
+        select.insertBefore(option, select.lastElementChild);
+        select.value = slug;
+        
+        // Redraw pills bar
+        renderCategoryPills();
+        showToast(`Nueva categoría "${cleanName}" creada con éxito`);
+    }
+};
+
+// Render Category filter pills dynamically
+window.renderCategoryPills = function() {
+    const bar = document.getElementById('pres-category-pills-bar');
+    if (!bar) return;
+    
+    let html = `<button class="cat-pill ${presCat === 'all' ? 'active' : ''}" data-cat="all" onclick="filterTemplatesByCategory('all')">Todos</button>`;
+    
+    Object.keys(ALL_CATEGORIES_METADATA).forEach(catKey => {
+        const meta = ALL_CATEGORIES_METADATA[catKey];
+        html += `<button class="cat-pill ${presCat === catKey ? 'active' : ''}" data-cat="${catKey}" onclick="filterTemplatesByCategory('${catKey}')">${meta.label}</button>`;
+    });
+    
+    bar.innerHTML = html;
+};
+
+// Render payment methods instructions dynamically below pay methods grid
+window.renderPayMethodsInstructions = function() {
+    const container = document.getElementById('pay-methods-instructions-container');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    const selectedButtons = document.querySelectorAll('.pay-method-btn.selected');
+    if (selectedButtons.length === 0) {
+        container.innerHTML = `
+            <div style="font-size:0.75rem; color:var(--text-grey); padding:10px; border:1px dashed var(--card-border); border-radius:10px; text-align:center; background:rgba(255,255,255,0.01);">
+                No hay formas de pago seleccionadas. Activa alguna para previsualizar sus instrucciones de pago.
+            </div>`;
+        return;
+    }
+    
+    const instructions = {
+        transferencia: {
+            title: '🏦 Instrucciones de Transferencia Bancaria',
+            color: '#0a84ff',
+            bg: 'rgba(10, 132, 255, 0.04)',
+            border: 'rgba(10, 132, 255, 0.15)',
+            html: `
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.78rem;">
+                    <div><span style="color:var(--text-grey);">Banco:</span> <strong style="color:var(--text-main);">Banco Sabadell</strong></div>
+                    <div><span style="color:var(--text-grey);">Titular:</span> <strong style="color:var(--text-main);">iArtesana B2B Solutions S.L.</strong></div>
+                    <div style="grid-column: span 2;"><span style="color:var(--text-grey);">IBAN:</span> <strong style="color:var(--text-main); font-family:monospace; letter-spacing:0.02em;">ES21 0081 1029 3847 5610 2938</strong></div>
+                    <div style="grid-column: span 2;"><span style="color:var(--text-grey);">BIC/SWIFT:</span> <strong style="color:var(--text-main); font-family:monospace;">BSABESBBXXX</strong></div>
+                </div>
+            `
+        },
+        giro: {
+            title: '🏢 Instrucciones de Giro Bancario',
+            color: '#34c759',
+            bg: 'rgba(52, 199, 89, 0.04)',
+            border: 'rgba(52, 199, 89, 0.15)',
+            html: `
+                <div style="font-size:0.78rem; line-height:1.4; color:var(--text-grey);">
+                    <p style="margin:0 0 6px;">El cobro se realizará mediante domiciliación de recibos directamente a la cuenta del cliente en la fecha acordada.</p>
+                    <div><span style="color:var(--text-grey);">Mandato:</span> <strong style="color:var(--text-main);">Requiere firma previa de autorización SEPA CORE.</strong></div>
+                </div>
+            `
+        },
+        bizum: {
+            title: '📱 Instrucciones de Pago por Bizum',
+            color: '#ff9f0a',
+            bg: 'rgba(255, 159, 10, 0.04)',
+            border: 'rgba(255, 159, 10, 0.15)',
+            html: `
+                <div style="font-size:0.78rem;">
+                    <div><span style="color:var(--text-grey);">Teléfono Bizum:</span> <strong style="color:var(--text-main);">+34 612 345 678</strong></div>
+                    <div style="margin-top:4px;"><span style="color:var(--text-grey);">Concepto obligatorio:</span> <strong style="color:var(--text-main);">CC- [Número de Propuesta]</strong></div>
+                </div>
+            `
+        },
+        stripe: {
+            title: '💳 Pago Online con Tarjeta (Stripe)',
+            color: '#bf5af2',
+            bg: 'rgba(191, 90, 242, 0.04)',
+            border: 'rgba(191, 90, 242, 0.15)',
+            html: `
+                <div style="font-size:0.78rem; line-height:1.4; color:var(--text-grey);">
+                    <p style="margin:0 0 4px;">Se autogenerará un botón seguro en el PDF final para que el cliente pueda abonar con tarjeta (Crédito/Débito) de forma instantánea.</p>
+                </div>
+            `
+        },
+        efectivo: {
+            title: '💵 Pago en Efectivo',
+            color: '#ff375f',
+            bg: 'rgba(255, 55, 95, 0.04)',
+            border: 'rgba(255, 55, 95, 0.15)',
+            html: `
+                <div style="font-size:0.78rem; line-height:1.4; color:var(--text-grey);">
+                    <p style="margin:0 0 4px;">Cobro directo en metálico contra firma del recibo físico en las oficinas. Sujeto al límite legal aplicable.</p>
+                </div>
+            `
+        },
+        sin_iva: {
+            title: '🇺🇸 Pago Exento de IVA (Internacional)',
+            color: '#00c7be',
+            bg: 'rgba(0, 199, 190, 0.04)',
+            border: 'rgba(0, 199, 190, 0.15)',
+            html: `
+                <div style="font-size:0.78rem; line-height:1.4; color:var(--text-grey);">
+                    <p style="margin:0 0 4px;">Facturación intracomunitaria (VIES) o extracomunitaria exenta de IVA según normativa europea/nacional de exportación de servicios.</p>
+                </div>
+            `
+        }
+    };
+    
+    selectedButtons.forEach(btn => {
+        const val = btn.dataset.value;
+        const info = instructions[val];
+        if (info) {
+            const block = document.createElement('div');
+            block.style.background = info.bg;
+            block.style.border = `1px solid ${info.border}`;
+            block.style.borderRadius = '12px';
+            block.style.padding = '12px';
+            block.style.display = 'flex';
+            block.style.flexDirection = 'column';
+            block.style.gap = '6px';
+            
+            block.innerHTML = `
+                <div style="font-size:0.8rem; font-weight:800; color:${info.color}; display:flex; align-items:center; gap:5px;">
+                    <span>👉</span> ${info.title}
+                </div>
+                <div style="border-top:1px dashed ${info.border}; padding-top:6px; margin-top:2px;">
+                    ${info.html}
+                </div>
+            `;
+            container.appendChild(block);
+        }
+    });
+};
 
 // Option A, B, C selection handler
 function selectPaymentOptionAction(opt) {
@@ -2918,7 +3118,11 @@ function openCreateTemplateModal(defaultCat = 'consultoria') {
     document.getElementById('edit-pres-titulo').value = '';
     document.getElementById('edit-pres-subtitulo').value = '';
     document.getElementById('edit-pres-descripcion').value = '';
+    
+    // Populate dropdown and select category
+    populateCategoryDropdown();
     document.getElementById('edit-pres-categoria').value = defaultCat;
+    
     document.getElementById('edit-pres-badge').value = '';
     document.getElementById('edit-pres-orden').value = '1';
     
@@ -2952,6 +3156,7 @@ function openCreateTemplateModal(defaultCat = 'consultoria') {
 
     recalcPaymentOptionsInModal();
     renderEditPresLineas();
+    renderPayMethodsInstructions();
     
     document.getElementById('modal-edit-presupuesto').classList.add('active');
     document.getElementById('modal-edit-presupuesto').style.display = 'flex';
@@ -2968,7 +3173,11 @@ function openEditPresupuestoModal(id) {
     document.getElementById('edit-pres-titulo').value = p.titulo || '';
     document.getElementById('edit-pres-subtitulo').value = p.subtitulo || '';
     document.getElementById('edit-pres-descripcion').value = p.descripcion || '';
+    
+    // Populate dropdown and select category
+    populateCategoryDropdown();
     document.getElementById('edit-pres-categoria').value = p.categoria || 'consultoria';
+    
     document.getElementById('edit-pres-badge').value = p.badge || '';
     document.getElementById('edit-pres-orden').value = p.orden || '1';
 
@@ -3007,6 +3216,7 @@ function openEditPresupuestoModal(id) {
 
     recalcPaymentOptionsInModal();
     renderEditPresLineas();
+    renderPayMethodsInstructions();
 
     document.getElementById('modal-edit-presupuesto').classList.add('active');
     document.getElementById('modal-edit-presupuesto').style.display = 'flex';
