@@ -1011,6 +1011,16 @@ html, body {
     cursor: pointer;
 }
 
+.chat-fav-btn {
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.chat-fav-btn:hover {
+    background: var(--bg-secondary) !important;
+    transform: scale(1.06);
+    box-shadow: 0 4px 12px rgba(232, 133, 10, 0.15);
+}
+
+
 /* --- Premium Voice Chat Microphone --- */
 .chat-mic-btn {
     display: flex;

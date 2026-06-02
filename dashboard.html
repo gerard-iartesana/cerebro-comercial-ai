@@ -288,12 +288,36 @@
                                 </div>
                             </div>
                             <div class="chat-input-bar">
+                                <button class="chat-fav-btn" id="brain-save-fav-btn" onclick="saveCurrentAsFavorite()" title="Guardar petición en favoritos" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border-color); background: var(--bg-primary); color: #e8850a; cursor: pointer; transition: all 0.2s; flex-shrink: 0; outline: none;">
+                                    ★
+                                </button>
                                 <input type="text" class="chat-input" id="brain-chat-input" placeholder="Ej: Busca leads de gestorías en España..." onkeydown="if(event.key==='Enter')sendToBrain()">
                                 <button class="chat-mic-btn" id="brain-mic-btn" onclick="toggleSpeechRecognition()" title="Hablar con el Cerebro">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px; height:20px;"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                                     <span class="mic-pulse" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 50%; border: 2px solid var(--accent-red); animation: micPulse 1.2s infinite ease-out;"></span>
                                 </button>
                                 <button class="chat-btn" onclick="sendToBrain()">Enviar</button>
+                            </div>
+                        </div>
+
+                        <!-- Panel de Peticiones y Favoritos -->
+                        <div class="brain-prompts-container" style="margin-top: 16px; display: flex; flex-direction: column; gap: 14px; background: var(--bg-card); backdrop-filter: var(--glass-blur); border: 1px solid var(--card-border); border-radius: 20px; padding: 18px; box-shadow: var(--glass-shadow);">
+                            <div>
+                                <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 2px;">💡 Peticiones de Ejemplo</h3>
+                                <p style="color: var(--text-grey); font-size: 0.78rem; margin-bottom: 10px;">Haz clic en cualquier ejemplo para rellenar el chat de inmediato</p>
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="brain-example-pills">
+                                    <button class="cat-pill" onclick="loadPromptIntoInput('Busca tres leads que sean directores técnicos deportivos de clubs de baloncesto')" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 10px; cursor: pointer;">🏀 Directores Baloncesto</button>
+                                    <button class="cat-pill" onclick="loadPromptIntoInput('Busca leads de empresas de marketing y tecnología en Barcelona')" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 10px; cursor: pointer;">💻 Agencias Barcelona</button>
+                                    <button class="cat-pill" onclick="loadPromptIntoInput('Dame las estadísticas de prospección en tiempo real')" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 10px; cursor: pointer;">📊 Estadísticas Outreach</button>
+                                </div>
+                            </div>
+                            
+                            <div style="border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 4px;">
+                                <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 2px;">⭐ Mis Peticiones Guardadas</h3>
+                                <p style="color: var(--text-grey); font-size: 0.78rem; margin-bottom: 10px;">Accede rápidamente a tus dictados personalizados preferidos</p>
+                                <div style="display: flex; flex-direction: column; gap: 8px;" id="brain-favorites-list">
+                                    <!-- Populated dynamically in app.js -->
+                                </div>
                             </div>
                         </div>
                     </div>

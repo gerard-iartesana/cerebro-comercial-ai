@@ -608,6 +608,80 @@ function cleanupRecognition() {
     recognition = null;
 }
 
+// --- Brain Favorites & Prompts Management ---
+let brainFavoritesList = [];
+try {
+    const f = localStorage.getItem('cc_brain_favorites');
+    if (f) {
+        brainFavoritesList = JSON.parse(f);
+    }
+} catch(e) {}
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderBrainFavorites();
+});
+
+window.renderBrainFavorites = function() {
+    const list = document.getElementById('brain-favorites-list');
+    if (!list) return;
+    
+    if (brainFavoritesList.length === 0) {
+        list.innerHTML = `<div style="font-size: 0.8rem; color: var(--text-grey); font-style: italic; padding: 4px 0;">No tienes peticiones guardadas. Escribe un texto en el chat y pulsa ★ para guardarla aquí.</div>`;
+        return;
+    }
+    
+    let html = '';
+    brainFavoritesList.forEach((promptText, idx) => {
+        html += `
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--bg-primary); border-radius: 12px; padding: 8px 12px; border: 1px solid var(--card-border);">
+                <div style="font-size: 0.82rem; color: var(--text-main); font-weight: 500; cursor: pointer; flex: 1; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" onclick="loadPromptIntoInput(\`${promptText.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`)" title="Cargar petición">
+                    📝 ${promptText}
+                </div>
+                <button onclick="deleteFavoritePrompt(${idx})" style="background: none; border: none; color: var(--accent-red); cursor: pointer; padding: 4px; font-size: 1.1rem; display: flex; align-items: center; line-height: 1;" title="Eliminar favorito">✕</button>
+            </div>
+        `;
+    });
+    
+    list.innerHTML = html;
+};
+
+window.saveCurrentAsFavorite = function() {
+    const input = document.getElementById('brain-chat-input');
+    if (!input) return;
+    const text = input.value.trim();
+    
+    if (!text) {
+        showAlert('Campo Vacío', 'Escribe algo en el cuadro de chat antes de pulsar ★ para guardarlo.', '⚠️');
+        return;
+    }
+    
+    if (brainFavoritesList.includes(text)) {
+        showAlert('Ya Guardado', 'Esta petición ya se encuentra guardada en tus favoritos.', '⚠️');
+        return;
+    }
+    
+    brainFavoritesList.push(text);
+    localStorage.setItem('cc_brain_favorites', JSON.stringify(brainFavoritesList));
+    renderBrainFavorites();
+    showToast('Petición guardada en favoritos ⭐', 'success');
+};
+
+window.loadPromptIntoInput = function(text) {
+    const input = document.getElementById('brain-chat-input');
+    if (input) {
+        input.value = text;
+        input.focus();
+        showToast('Petición cargada', '💡');
+    }
+};
+
+window.deleteFavoritePrompt = function(index) {
+    brainFavoritesList.splice(index, 1);
+    localStorage.setItem('cc_brain_favorites', JSON.stringify(brainFavoritesList));
+    renderBrainFavorites();
+    showToast('Petición eliminada', '🗑️');
+};
+
 // 10. Chat interactivo con "El Cerebro" (Multi-Agent Orchestrator)
 async function sendToBrain() {
     const input = document.getElementById('brain-chat-input');

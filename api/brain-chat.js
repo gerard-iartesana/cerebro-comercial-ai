@@ -146,39 +146,58 @@ const implementations = {
     // Sort by score (decision-makers first, then by confidence)
     scored.sort((a, b) => b.score - a.score);
 
-    // Take only the best lead per domain (1 person per company)
-    const bestLead = scored[0];
+    // Take up to 3 best personal leads (decision-makers first)
+    const topLeads = scored.slice(0, 3);
 
-    if (!bestLead) {
+    if (topLeads.length === 0) {
       return { success: true, message: `Se encontraron ${hunterData.emails.length} emails en ${domain} pero ninguno personal de un decisor`, insertedCount: 0 };
     }
 
-    const leadToInsert = {
-      email: bestLead.value,
-      first_name: bestLead.first_name || '',
-      company_name: hunterData.organization || domain.split('.')[0],
-      website: `https://${domain}`,
-      linkedin_url: bestLead.linkedin || '',
-      status: 'lead',
-      sequence_step: 0,
-      scraped_data: {
-        position: bestLead.position || '',
-        confidence: bestLead.confidence || 0,
-        is_decision_maker: bestLead.isDecisionMaker,
-        source: 'hunter.io',
-        last_name: bestLead.last_name || ''
-      }
-    };
+    let insertedCount = 0;
+    const insertedLeads = [];
 
-    const { error } = await supabase.from('outreach_leads').upsert(leadToInsert, { onConflict: 'email', ignoreDuplicates: true });
+    for (const lead of topLeads) {
+      const leadToInsert = {
+        email: lead.value,
+        first_name: lead.first_name || '',
+        company_name: hunterData.organization || domain.split('.')[0],
+        website: `https://${domain}`,
+        linkedin_url: lead.linkedin || '',
+        status: 'lead',
+        sequence_step: 0,
+        scraped_data: {
+          position: lead.position || '',
+          confidence: lead.confidence || 0,
+          is_decision_maker: lead.isDecisionMaker,
+          source: 'hunter.io',
+          last_name: lead.last_name || ''
+        }
+      };
+
+      const { error } = await supabase.from('outreach_leads').upsert(leadToInsert, { onConflict: 'email', ignoreDuplicates: true });
+      if (!error) {
+        insertedCount++;
+        insertedLeads.push({
+          name: `${lead.first_name} ${lead.last_name || ''}`,
+          email: lead.value,
+          position: lead.position || '',
+          isDecisionMaker: lead.isDecisionMaker
+        });
+      }
+    }
+
+    const firstLead = insertedLeads[0] || {};
+    const message = insertedCount > 0
+      ? `✅ Se encontraron e insertaron ${insertedCount} leads en ${domain} (ej: ${firstLead.name || ''} - ${firstLead.email || ''})`
+      : `⚠️ Se encontraron ${topLeads.length} leads en ${domain} pero ya existían en la base de datos.`;
 
     return {
       success: true,
-      message: `✅ Mejor lead encontrado en ${domain}: ${bestLead.first_name} ${bestLead.last_name || ''} (${bestLead.position || 'sin cargo'}) - ${bestLead.value}`,
+      message,
       totalFound: hunterData.emails.length,
       personalFound: personalEmails.length,
-      insertedCount: error ? 0 : 1,
-      bestLead: { name: `${bestLead.first_name} ${bestLead.last_name || ''}`, email: bestLead.value, position: bestLead.position || '', isDecisionMaker: bestLead.isDecisionMaker }
+      insertedCount,
+      leads: insertedLeads
     };
   },
 
@@ -316,56 +335,51 @@ OTRAS HERRAMIENTAS:
 
     // Search ALL parts for function calls (Gemini 2.5 returns thinking + text + functionCall in separate parts)
     const allParts = candidate.content.parts;
-    let functionCall = null;
+    const functionCalls = allParts.filter(p => p.functionCall).map(p => p.functionCall);
     let textPart = null;
 
     for (const part of allParts) {
-      if (part.functionCall) {
-        functionCall = part.functionCall;
-      }
       if (part.text && !part.thought) {
         textPart = part.text;
       }
     }
 
-    console.log('Parts found:', allParts.length, '| functionCall:', !!functionCall, '| textPart:', !!textPart);
+    console.log('Parts found:', allParts.length, '| functionCalls:', functionCalls.length, '| textPart:', !!textPart);
 
-    // If Gemini decided to call a tool, execute it and feed the result back
-    if (functionCall) {
-      const { name, args } = functionCall;
-      console.log(`El Cerebro delegó al agente [${agentMap[name]}] → ${name}`, args);
-
-      const implementation = implementations[name];
-      if (!implementation) {
-        return res.status(200).json({
-          role: 'model',
-          text: `⚠️ La función "${name}" no está implementada. Intenta con otra petición.`
-        });
-      }
-
-      let toolResult;
-      try {
-        toolResult = await implementation(args || {});
-      } catch (implErr) {
-        console.error(`Error ejecutando ${name}:`, implErr);
-        return res.status(200).json({
-          role: 'model',
-          text: `❌ Error del agente ${agentMap[name] || name}: ${implErr.message}`,
-          agentUsed: agentMap[name] || null,
-          actionExecuted: name
-        });
-      }
-
-      // Send tool result back to Gemini for the final natural-language response
-      contents.push(candidate.content);
-      contents.push({
-        role: 'user',
-        parts: [{
+    // If Gemini decided to call one or more tools, execute them in parallel and feed the results back
+    if (functionCalls.length > 0) {
+      console.log(`El Cerebro detectó ${functionCalls.length} llamadas paralelas.`);
+      
+      const functionResponseParts = await Promise.all(functionCalls.map(async (fCall) => {
+        const { name, args } = fCall;
+        console.log(`Delegando al agente [${agentMap[name] || 'unknown'}] → ${name}`, args);
+        
+        const implementation = implementations[name];
+        let toolResult;
+        if (!implementation) {
+          toolResult = { error: `La función "${name}" no está implementada.` };
+        } else {
+          try {
+            toolResult = await implementation(args || {});
+          } catch (implErr) {
+            console.error(`Error ejecutando ${name}:`, implErr);
+            toolResult = { error: implErr.message };
+          }
+        }
+        
+        return {
           functionResponse: {
             name,
             response: { result: toolResult }
           }
-        }]
+        };
+      }));
+
+      // Send all tool results back to Gemini for the final natural-language response
+      contents.push(candidate.content);
+      contents.push({
+        role: 'user',
+        parts: functionResponseParts
       });
 
       const geminiFinalRes = await fetch(geminiUrl, {
@@ -374,16 +388,17 @@ OTRAS HERRAMIENTAS:
         body: JSON.stringify({ systemInstruction, contents, tools: geminiTools })
       });
 
+      const firstCall = functionCalls[0];
+      const primaryAgent = agentMap[firstCall.name] || null;
+
       if (!geminiFinalRes.ok) {
-        // If Gemini fails on second call, return the raw tool result as text
         const errText = await geminiFinalRes.text();
-        console.error('Gemini final call failed:', geminiFinalRes.status, errText.substring(0, 300));
+        console.error('Gemini final parallel call failed:', geminiFinalRes.status, errText.substring(0, 300));
         return res.status(200).json({
           role: 'model',
-          text: `✅ Agente ${agentMap[name] || name} ejecutó "${name}" correctamente.\n\nResultado: ${JSON.stringify(toolResult, null, 2)}`,
-          actionExecuted: name,
-          agentUsed: agentMap[name] || null,
-          toolResult
+          text: `✅ Ejecutadas ${functionCalls.length} acciones correctamente.`,
+          actionExecuted: firstCall.name,
+          agentUsed: primaryAgent
         });
       }
 
@@ -400,15 +415,14 @@ OTRAS HERRAMIENTAS:
         }
       }
       if (!finalText) {
-        finalText = `✅ Acción "${name}" ejecutada. Resultado: ${JSON.stringify(toolResult)}`;
+        finalText = `✅ Se ejecutaron ${functionCalls.length} acciones correctamente.`;
       }
 
       return res.status(200).json({
         role: 'model',
         text: finalText,
-        actionExecuted: name,
-        agentUsed: agentMap[name] || null,
-        toolResult
+        actionExecuted: firstCall.name,
+        agentUsed: primaryAgent
       });
     }
 
