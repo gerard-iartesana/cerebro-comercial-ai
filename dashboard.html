@@ -57,16 +57,51 @@
     </div>
 
 
-    <!-- macOS Lock Screen Authentication (Password Protected) -->
+    <!-- macOS Lock Screen Authentication (Multi-User) -->
     <div class="macos-lock-screen" id="lock-screen">
-        <div class="macos-lock-card">
-            <div class="macos-avatar">🧠</div>
-            <div class="macos-lock-user">CerebroComercial AI</div>
-            <div class="macos-password-wrapper">
-                <input type="password" class="macos-lock-input" id="lock-password" placeholder="Contraseña del Sistema" onkeydown="if(event.key==='Enter')validateLock()">
-                <button class="macos-lock-submit" onclick="validateLock()">➔</button>
+        <div class="macos-lock-card" style="min-width: 320px; transition: all 0.3s ease;">
+            <!-- User selection header -->
+            <div id="user-select-title" style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 24px;">Selecciona tu perfil de acceso</div>
+            
+            <!-- User grid -->
+            <div class="login-user-grid" id="login-user-grid" style="display: flex; justify-content: center; gap: 20px; margin-bottom: 8px; flex-wrap: wrap;">
+                <div class="login-user-item" onclick="selectLoginUser('admin')" style="display: flex; flex-direction: column; align-items: center; cursor: pointer; width: 85px;">
+                    <div style="width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(135deg, #ff9500, #ff5e3a); display: flex; align-items: center; justify-content: center; font-size: 1.6rem; box-shadow: 0 4px 12px rgba(255,149,0,0.25); margin-bottom: 10px;">🛠️</div>
+                    <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-main); text-align: center;">Administrador</span>
+                </div>
+                <div class="login-user-item" onclick="selectLoginUser('client')" style="display: flex; flex-direction: column; align-items: center; cursor: pointer; width: 85px;">
+                    <div style="width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(135deg, #007aff, #5856d6); display: flex; align-items: center; justify-content: center; font-size: 1.6rem; box-shadow: 0 4px 12px rgba(0,122,255,0.25); margin-bottom: 10px;">💼</div>
+                    <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-main); text-align: center;">Cliente</span>
+                </div>
+                <div class="login-user-item" onclick="selectLoginUser('guest')" style="display: flex; flex-direction: column; align-items: center; cursor: pointer; width: 85px;">
+                    <div style="width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(135deg, #34c759, #00c7b1); display: flex; align-items: center; justify-content: center; font-size: 1.6rem; box-shadow: 0 4px 12px rgba(52,199,89,0.25); margin-bottom: 10px;">👤</div>
+                    <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-main); text-align: center;">Invitado</span>
+                </div>
             </div>
-            <p class="macos-lock-error" id="lock-error">Clave del panel incorrecta</p>
+
+            <!-- Active User Section (hidden initially) -->
+            <div id="active-user-area" style="display: none; flex-direction: column; align-items: center; width: 100%;">
+                <button onclick="goBackToUserSelect()" style="background: none; border: none; color: var(--accent); font-size: 0.8rem; font-weight: 700; cursor: pointer; margin-bottom: 20px; display: flex; align-items: center; gap: 4px;">
+                    ← Cambiar perfil
+                </button>
+                <div id="active-user-avatar" style="width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);">🧠</div>
+                <div id="active-user-name" style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 16px;">Usuario</div>
+                
+                <div class="macos-password-wrapper" style="width: 100%; max-width: 220px;">
+                    <input type="password" class="macos-lock-input" id="lock-password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')validateLock()">
+                    <button class="macos-lock-submit" onclick="validateLock()">➔</button>
+                </div>
+            </div>
+            
+            <p class="macos-lock-error" id="lock-error" style="margin-top: 10px; display: none;">Contraseña incorrecta</p>
+
+            <!-- Test Credentials Info -->
+            <div id="credentials-tip" style="margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--card-border); font-size: 0.72rem; color: var(--text-grey); text-align: center; line-height: 1.5; width: 100%;">
+                🔑 <strong>Credenciales de prueba:</strong><br>
+                Admin: <code style="background:rgba(255,255,255,0.06); padding:2px 4px; border-radius:4px; font-family:monospace;">admin123</code> | 
+                Cliente: <code style="background:rgba(255,255,255,0.06); padding:2px 4px; border-radius:4px; font-family:monospace;">cliente123</code><br>
+                Invitado: <code style="background:rgba(255,255,255,0.06); padding:2px 4px; border-radius:4px; font-family:monospace;">invitado123</code>
+            </div>
         </div>
     </div>
 

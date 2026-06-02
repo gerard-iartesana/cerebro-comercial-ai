@@ -63,10 +63,63 @@ function resolvePrompt(result) {
 }
 
 
-// 2. Lock Screen Authentication
+// 2. Lock Screen Authentication (Multi-User & Role-Based Permissions)
+let selectedRole = 'admin';
+
+window.selectLoginUser = function(role) {
+    selectedRole = role;
+    const title = document.getElementById('user-select-title');
+    const grid = document.getElementById('login-user-grid');
+    const area = document.getElementById('active-user-area');
+    const avatar = document.getElementById('active-user-avatar');
+    const name = document.getElementById('active-user-name');
+    const pwdInput = document.getElementById('lock-password');
+    const errorText = document.getElementById('lock-error');
+
+    if (errorText) errorText.style.display = 'none';
+    if (pwdInput) pwdInput.value = '';
+
+    if (title) title.style.display = 'none';
+    if (grid) grid.style.display = 'none';
+    if (area) area.style.display = 'flex';
+
+    if (avatar) {
+        if (role === 'admin') {
+            avatar.innerHTML = '🛠️';
+            avatar.style.background = 'linear-gradient(135deg, #ff9500, #ff5e3a)';
+        } else if (role === 'client') {
+            avatar.innerHTML = '💼';
+            avatar.style.background = 'linear-gradient(135deg, #007aff, #5856d6)';
+        } else if (role === 'guest') {
+            avatar.innerHTML = '👤';
+            avatar.style.background = 'linear-gradient(135deg, #34c759, #00c7b1)';
+        }
+    }
+
+    if (name) {
+        if (role === 'admin') name.textContent = 'Administrador';
+        if (role === 'client') name.textContent = 'Cliente';
+        if (role === 'guest') name.textContent = 'Invitado';
+    }
+
+    setTimeout(() => { if (pwdInput) pwdInput.focus(); }, 100);
+};
+
+window.goBackToUserSelect = function() {
+    const title = document.getElementById('user-select-title');
+    const grid = document.getElementById('login-user-grid');
+    const area = document.getElementById('active-user-area');
+    const errorText = document.getElementById('lock-error');
+
+    if (errorText) errorText.style.display = 'none';
+    if (title) title.style.display = 'block';
+    if (grid) grid.style.display = 'flex';
+    if (area) area.style.display = 'none';
+};
+
 async function validateLock() {
     const pwdInput = document.getElementById('lock-password');
-    const pwd = pwdInput.value;
+    const pwd = pwdInput ? pwdInput.value : '';
     const errorText = document.getElementById('lock-error');
 
     if (!pwd) return;
@@ -83,26 +136,98 @@ async function validateLock() {
         if (res.ok && data.success) {
             sessionStorage.setItem('cc_unlocked', 'true');
             sessionStorage.setItem('cc_token', pwd); // guardamos de forma segura localmente
+            sessionStorage.setItem('cc_role', data.role);
+            sessionStorage.setItem('cc_modules', JSON.stringify(data.modules || 'all'));
+            if (data.except) {
+                sessionStorage.setItem('cc_except_modules', JSON.stringify(data.except));
+            } else {
+                sessionStorage.removeItem('cc_except_modules');
+            }
             unlockDashboard();
         } else {
-            errorText.textContent = data.error || 'Clave incorrecta';
-            errorText.classList.add('active');
-            pwdInput.value = '';
+            if (errorText) {
+                errorText.textContent = data.error || 'Clave incorrecta';
+                errorText.style.display = 'block';
+            }
+            if (pwdInput) pwdInput.value = '';
             shakeElement(document.querySelector('.macos-lock-card'));
         }
     } catch (e) {
-        errorText.textContent = 'Error de red al autenticar';
-        errorText.classList.add('active');
+        if (errorText) {
+            errorText.textContent = 'Error de red al autenticar';
+            errorText.style.display = 'block';
+        }
     }
 }
 
 function shakeElement(el) {
+    if (!el) return;
     el.style.transform = 'translateX(-10px)';
     setTimeout(() => el.style.transform = 'translateX(10px)', 80);
     setTimeout(() => el.style.transform = 'translateX(-8px)', 160);
     setTimeout(() => el.style.transform = 'translateX(8px)', 240);
     setTimeout(() => el.style.transform = 'translateX(0)', 320);
 }
+
+window.applyRolePermissions = function() {
+    const role = sessionStorage.getItem('cc_role') || 'admin';
+    let modules = 'all';
+    try {
+        const m = sessionStorage.getItem('cc_modules');
+        if (m) modules = JSON.parse(m);
+    } catch(e) {}
+    
+    let exceptModules = [];
+    try {
+        const ex = sessionStorage.getItem('cc_except_modules');
+        if (ex) exceptModules = JSON.parse(ex);
+    } catch(e) {}
+
+    // 1. Recorrer botones de navegación del menú lateral
+    document.querySelectorAll('.sidebar-nav-item[data-section]').forEach(btn => {
+        const sec = btn.dataset.section;
+        let isAllowed = true;
+
+        if (modules !== 'all') {
+            isAllowed = modules.includes(sec);
+        }
+        if (exceptModules.length > 0 && exceptModules.includes(sec)) {
+            isAllowed = false;
+        }
+
+        if (!isAllowed) {
+            btn.classList.add('disabled-module');
+            btn.setAttribute('title', 'Módulo no contratado / Restringido');
+        } else {
+            btn.classList.remove('disabled-module');
+            btn.removeAttribute('title');
+        }
+    });
+
+    // 2. Actualizar la tarjeta del usuario conectado en el pie del sidebar
+    const nameEl = document.querySelector('.connected-user-card div div div') || document.querySelector('.connected-user-card div[title="gerard@iartesana.es"]');
+    if (nameEl) {
+        let roleLabel = 'Admin';
+        if (role === 'client') roleLabel = 'Cliente';
+        if (role === 'guest') roleLabel = 'Invitado';
+        
+        nameEl.innerHTML = `gerard@iartesana.es <span style="font-size:0.65rem; padding: 1px 5px; border-radius: 4px; background: var(--bg-secondary); border: 1px solid var(--card-border); font-weight:700; color:var(--text-grey); margin-left: 2px;">${roleLabel}</span>`;
+    }
+
+    const avatarEl = document.querySelector('.connected-user-card .user-avatar');
+    if (avatarEl) {
+        if (role === 'admin') {
+            avatarEl.textContent = 'A';
+            avatarEl.style.background = 'linear-gradient(135deg, #ff9500, #ff5e3a)';
+        } else if (role === 'client') {
+            avatarEl.textContent = 'C';
+            avatarEl.style.background = 'linear-gradient(135deg, #007aff, #5856d6)';
+        } else if (role === 'guest') {
+            avatarEl.textContent = 'I';
+            avatarEl.style.background = 'linear-gradient(135deg, #34c759, #00c7b1)';
+        }
+    }
+};
 
 async function unlockDashboard() {
     try {
@@ -120,6 +245,7 @@ async function unlockDashboard() {
     setTimeout(() => {
         document.getElementById('lock-screen').style.display = 'none';
         document.getElementById('dashboard-wrapper').style.display = 'flex';
+        applyRolePermissions();
         initializeDashboard();
     }, 400);
 }
@@ -127,6 +253,9 @@ async function unlockDashboard() {
 function lockPanel() {
     sessionStorage.removeItem('cc_unlocked');
     sessionStorage.removeItem('cc_token');
+    sessionStorage.removeItem('cc_role');
+    sessionStorage.removeItem('cc_modules');
+    sessionStorage.removeItem('cc_except_modules');
     window.location.reload();
 }
 
@@ -135,6 +264,7 @@ function lockPanel() {
     const isUnlocked = sessionStorage.getItem('cc_unlocked') === 'true';
     window.addEventListener('DOMContentLoaded', () => {
         if (isUnlocked) {
+            applyRolePermissions();
             unlockDashboard();
         }
     });

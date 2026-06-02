@@ -741,6 +741,21 @@ html, body {
     opacity: 0;
     pointer-events: none;
 }
+.sidebar-nav-item.disabled-module {
+    opacity: 0.3 !important;
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+    filter: grayscale(80%);
+}
+.login-user-item {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+}
+.login-user-item:hover {
+    transform: scale(1.08);
+}
+.login-user-item:active {
+    transform: scale(0.95);
+}
 .sidebar-subnav .sidebar-nav-item {
     padding-left: 24px;
 }
