@@ -5498,7 +5498,9 @@ window.initializeSidebarCollapse = function() {
         const subnav = document.getElementById(`subnav-${groupId}`);
         if (!header || !subnav) return;
 
-        const isCollapsed = localStorage.getItem(`cc_sidebar_collapsed_${groupId}`) === 'true';
+        const saved = localStorage.getItem(`cc_sidebar_collapsed_${groupId}`);
+        const isCollapsed = saved === null ? true : (saved === 'true');
+        
         if (isCollapsed) {
             header.classList.remove('expanded');
             subnav.classList.add('collapsed');
