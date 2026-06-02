@@ -803,6 +803,9 @@
                         <button class="tab-btn" id="pres-tab-enviadas" onclick="switchPresTab('enviadas')">
                             📨 Enviadas (<span id="count-sent-badge">0</span>)
                         </button>
+                        <button class="tab-btn" id="pres-tab-categorias" onclick="switchPresTab('categorias')">
+                            ⚙️ Categorías
+                        </button>
                     </div>
                 </div>
 
@@ -970,6 +973,40 @@
                                 <!-- Populated dynamically in app.js -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- ================== SUB-TAB: CATEGORIAS ================== -->
+                <div id="pres-sub-categorias" class="proposals-sub-section" style="display: none;">
+                    <div style="background: var(--bg-card); backdrop-filter: var(--glass-blur); border: 1px solid var(--card-border); border-radius: 20px; padding: 24px; box-shadow: var(--glass-shadow); margin-bottom: 24px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+                            <div>
+                                <h3 style="font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em;">Categorías Activas</h3>
+                                <p style="color: var(--text-grey); font-size: 0.85rem;">Organiza tus propuestas comerciales en bloques temáticos</p>
+                            </div>
+                            <button class="btn-primary" onclick="createNewCategoryFromManager()" style="padding: 8px 18px; display: flex; align-items: center; gap: 6px; border-radius: 12px;">
+                                ➕ Crear Categoría
+                            </button>
+                        </div>
+
+                        <!-- Categorías Grid/List -->
+                        <div class="table-wrapper">
+                            <table class="spreadsheet-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 60px; text-align: center;">Icono</th>
+                                        <th>Nombre</th>
+                                        <th>Clave (Slug)</th>
+                                        <th>Tipo</th>
+                                        <th style="text-align: center;">Plantillas Asociadas</th>
+                                        <th style="width: 100px; text-align: center;">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="categories-tbody">
+                                    <!-- Populated dynamically in app.js -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -2329,14 +2329,22 @@ let ALL_CATEGORIES_METADATA = {
 };
 
 let customCategories = {};
+let deletedDefaultCategories = [];
 try {
     const s = localStorage.getItem('cc_custom_categories');
     if (s) {
         customCategories = JSON.parse(s);
         Object.assign(ALL_CATEGORIES_METADATA, customCategories);
     }
+    const d = localStorage.getItem('cc_deleted_default_categories');
+    if (d) {
+        deletedDefaultCategories = JSON.parse(d);
+        deletedDefaultCategories.forEach(catKey => {
+            delete ALL_CATEGORIES_METADATA[catKey];
+        });
+    }
 } catch (e) {
-    console.error('Error loading custom categories:', e);
+    console.error('Error loading categories:', e);
 }
 
 // --- 2. Global State ---
@@ -2382,6 +2390,7 @@ function switchPresTab(tab) {
     if (tab === 'plantillas') renderPresupuestos();
     if (tab === 'emails') switchSegEmailSubTab(segEmailSubTab);
     if (tab === 'enviadas') renderPropuestasEnviadas();
+    if (tab === 'categorias') renderCategoriasManagement();
 }
 
 function switchSegEmailSubTab(subtab) {
@@ -3013,6 +3022,155 @@ window.renderCategoryPills = function() {
     
     bar.innerHTML = html;
 };
+
+// --- Category Management Sub-Tab Controller ---
+window.renderCategoriasManagement = function() {
+    const tbody = document.getElementById('categories-tbody');
+    if (!tbody) return;
+    
+    let html = '';
+    Object.keys(ALL_CATEGORIES_METADATA).forEach(catKey => {
+        const meta = ALL_CATEGORIES_METADATA[catKey];
+        
+        // Count templates/proposals associated with this category
+        const associatedCount = presupuestos.filter(p => p.categoria === catKey).length;
+        
+        // Check if custom or default
+        const isCustom = customCategories.hasOwnProperty(catKey);
+        const typeLabel = isCustom ? '🧩 Personalizada' : '⚙️ Sistema';
+        
+        // Deletable flag (keep 'personalizada' protected to guarantee a fallback category exists)
+        const canDelete = catKey !== 'personalizada';
+        
+        html += `
+            <tr>
+                <td style="text-align: center; font-size: 1.5rem;">${meta.icon}</td>
+                <td style="font-weight: 600;">${meta.label}</td>
+                <td style="font-family: monospace; font-size: 0.85rem; color: var(--text-grey);">${catKey}</td>
+                <td>
+                    <span class="status-badge" style="background: ${isCustom ? 'rgba(88, 86, 214, 0.1)' : 'rgba(0, 113, 227, 0.1)'}; color: ${isCustom ? 'var(--accent-purple)' : 'var(--accent)'}; font-size: 0.8rem; font-weight: 600; padding: 4px 10px; border-radius: 8px;">
+                        ${typeLabel}
+                    </span>
+                </td>
+                <td style="text-align: center; font-weight: 700; color: ${associatedCount > 0 ? 'var(--accent)' : 'var(--text-grey)'};">
+                    ${associatedCount}
+                </td>
+                <td style="text-align: center;">
+                    ${canDelete ? `
+                        <button class="macos-alert-btn btn-danger" onclick="deleteCategoryFromManager('${catKey}')" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; box-shadow: none;">
+                            🗑️ Borrar
+                        </button>
+                    ` : `
+                        <span style="color: var(--text-grey); font-size: 0.8rem; font-style: italic;">Protegido</span>
+                    `}
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+};
+
+window.createNewCategoryFromManager = async function() {
+    const catName = await showPrompt('Nueva Categoría', 'Escribe el nombre de la nueva categoría (ej: Ecosistemas B2B):', '📁', '', 'Nombre de la categoría...');
+    if (!catName || catName.trim() === '') return;
+    
+    const cleanName = catName.trim();
+    const slug = 'cat_' + cleanName.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+    
+    if (ALL_CATEGORIES_METADATA.hasOwnProperty(slug)) {
+        showAlert('Categoría Existente', `Ya existe una categoría llamada "${cleanName}".`, '⚠️');
+        return;
+    }
+    
+    // Add to metadata
+    const randomEmojis = ['🎯', '🤖', '🌐', '⚡', '📋', '🚀', '📈', '💡', '💎', '🔥', '⚙️', '🎨', '💼'];
+    const randomEmoji = randomEmojis[Math.floor(Math.random() * randomEmojis.length)];
+    
+    ALL_CATEGORIES_METADATA[slug] = {
+        label: cleanName,
+        bg: 'rgba(10, 132, 255, 0.08)',
+        border: '1px solid rgba(10, 132, 255, 0.2)',
+        accent: '#0a84ff',
+        icon: randomEmoji
+    };
+    
+    // Save to customCategories
+    customCategories[slug] = ALL_CATEGORIES_METADATA[slug];
+    localStorage.setItem('cc_custom_categories', JSON.stringify(customCategories));
+    
+    // Refresh interfaces
+    renderCategoryPills();
+    renderCategoriasManagement();
+    if (window.populateCategoryDropdown) window.populateCategoryDropdown();
+    showToast(`Nueva categoría "${cleanName}" creada con éxito`, '📁');
+};
+
+window.deleteCategoryFromManager = async function(catKey) {
+    const meta = ALL_CATEGORIES_METADATA[catKey];
+    if (!meta) return;
+    
+    const associatedCount = presupuestos.filter(p => p.categoria === catKey).length;
+    
+    let warningMsg = `¿Estás seguro de que deseas eliminar la categoría "${meta.icon} ${meta.label}"?`;
+    if (associatedCount > 0) {
+        warningMsg += ` Esto eliminará de forma PERMANENTE las ${associatedCount} plantillas y propuestas asociadas a esta categoría. Esta acción no se puede deshacer.`;
+    } else {
+        warningMsg += ` Esta acción no se puede deshacer.`;
+    }
+    
+    const confirmed = await showConfirm(
+        '¿Eliminar Categoría?',
+        warningMsg,
+        '⚠️',
+        associatedCount > 0 ? 'Eliminar Todo' : 'Eliminar'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+        // Cascade delete in Database (Supabase)
+        const { error } = await _supabase
+            .from('presupuestos')
+            .delete()
+            .eq('categoria', catKey);
+            
+        if (error) throw error;
+        
+        // Remove locally from in-memory array & local cache
+        presupuestos = presupuestos.filter(p => p.categoria !== catKey);
+        localStorage.setItem('gf_presupuestos', JSON.stringify(presupuestos));
+        
+        // Delete from metadata and custom categories
+        if (customCategories.hasOwnProperty(catKey)) {
+            delete customCategories[catKey];
+            localStorage.setItem('cc_custom_categories', JSON.stringify(customCategories));
+        } else {
+            // It's a system category, track it as deleted
+            if (!deletedDefaultCategories.includes(catKey)) {
+                deletedDefaultCategories.push(catKey);
+                localStorage.setItem('cc_deleted_default_categories', JSON.stringify(deletedDefaultCategories));
+            }
+        }
+        
+        delete ALL_CATEGORIES_METADATA[catKey];
+        
+        // Update UI
+        renderCategoryPills();
+        renderCategoriasManagement();
+        if (window.populateCategoryDropdown) window.populateCategoryDropdown();
+        
+        // Update proposals tab count badge
+        const templatesCount = presupuestos.filter(p => p.es_plantilla !== false).length;
+        const countBadge = document.getElementById('count-templates-badge');
+        if (countBadge) countBadge.textContent = templatesCount;
+        
+        showToast(`Categoría "${meta.label}" eliminada con éxito`, '🗑️');
+    } catch (e) {
+        showAlert('Error al Eliminar', `No se pudo eliminar la categoría: ${e.message}`, '❌');
+    }
+};
+
 
 // Render payment methods instructions dynamically below pay methods grid
 window.renderPayMethodsInstructions = function() {
