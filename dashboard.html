@@ -289,6 +289,10 @@
                             </div>
                             <div class="chat-input-bar">
                                 <input type="text" class="chat-input" id="brain-chat-input" placeholder="Ej: Busca leads de gestorías en España..." onkeydown="if(event.key==='Enter')sendToBrain()">
+                                <button class="chat-mic-btn" id="brain-mic-btn" onclick="toggleSpeechRecognition()" title="Hablar con el Cerebro">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px; height:20px;"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                                    <span class="mic-pulse" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 50%; border: 2px solid var(--accent-red); animation: micPulse 1.2s infinite ease-out;"></span>
+                                </button>
                                 <button class="chat-btn" onclick="sendToBrain()">Enviar</button>
                             </div>
                         </div>

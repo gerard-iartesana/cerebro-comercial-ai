@@ -520,6 +520,94 @@ async function rateAgent(agentId, rating) {
 // Load scores on startup
 document.addEventListener('DOMContentLoaded', loadAgentScores);
 
+// --- Web Speech API: Voice Input for Brain Chat ---
+let recognition = null;
+let isRecording = false;
+
+window.toggleSpeechRecognition = function() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        showAlert('No Soportado', 'Tu navegador no soporta el reconocimiento de voz (Web Speech API). Te recomendamos usar Google Chrome o Safari.', '⚠️');
+        return;
+    }
+
+    const micBtn = document.getElementById('brain-mic-btn');
+    const input = document.getElementById('brain-chat-input');
+    if (!micBtn || !input) return;
+
+    if (isRecording) {
+        if (recognition) recognition.stop();
+        return;
+    }
+
+    try {
+        recognition = new SpeechRecognition();
+        recognition.lang = 'es-ES';
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = function() {
+            isRecording = true;
+            micBtn.classList.add('recording');
+            input.placeholder = 'Escuchando tu voz...';
+            input.focus();
+            showToast('Micrófono activo. ¡Habla ahora!', '🎙️');
+        };
+
+        recognition.onresult = function(event) {
+            let interimTranscript = '';
+            let finalTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+            }
+
+            const text = finalTranscript || interimTranscript;
+            if (text) {
+                input.value = text;
+            }
+        };
+
+        recognition.onerror = function(event) {
+            console.error('Speech recognition error:', event.error);
+            if (event.error === 'not-allowed') {
+                showAlert('Permiso Denegado', 'No se ha concedido permiso para usar el micrófono. Actívalo en la configuración de tu navegador.', '❌');
+            } else if (event.error !== 'aborted') {
+                showToast('Error en reconocimiento de voz', '⚠️');
+            }
+            cleanupRecognition();
+        };
+
+        recognition.onend = function() {
+            cleanupRecognition();
+            if (input.value.trim() !== '') {
+                setTimeout(() => {
+                    sendToBrain();
+                }, 400);
+            }
+        };
+
+        recognition.start();
+
+    } catch (e) {
+        console.error('Failed to start speech recognition:', e);
+        cleanupRecognition();
+    }
+};
+
+function cleanupRecognition() {
+    isRecording = false;
+    const micBtn = document.getElementById('brain-mic-btn');
+    const input = document.getElementById('brain-chat-input');
+    if (micBtn) micBtn.classList.remove('recording');
+    if (input) input.placeholder = 'Ej: Busca leads de gestorías en España...';
+    recognition = null;
+}
+
 // 10. Chat interactivo con "El Cerebro" (Multi-Agent Orchestrator)
 async function sendToBrain() {
     const input = document.getElementById('brain-chat-input');

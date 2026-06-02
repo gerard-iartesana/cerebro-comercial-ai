@@ -1011,6 +1011,44 @@ html, body {
     cursor: pointer;
 }
 
+/* --- Premium Voice Chat Microphone --- */
+.chat-mic-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-grey);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    flex-shrink: 0;
+    outline: none;
+    position: relative;
+}
+.chat-mic-btn:hover {
+    color: var(--text-main);
+    border-color: var(--text-grey);
+    background: var(--bg-secondary);
+}
+.chat-mic-btn.recording {
+    color: var(--accent-red) !important;
+    border-color: var(--accent-red) !important;
+    background: rgba(255, 59, 48, 0.08) !important;
+    box-shadow: 0 0 12px rgba(255, 59, 48, 0.2) !important;
+}
+.chat-mic-btn.recording .mic-pulse {
+    display: block !important;
+}
+
+@keyframes micPulse {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.4); opacity: 0; }
+}
+
+
 /* --- Brain Progress Indicator --- */
 .chat-progress-bubble {
     padding: 12px 16px !important;
