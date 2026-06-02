@@ -968,42 +968,231 @@
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(10,132,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--accent);">📋</div>
                             <div>
-                                <h2 id="edit-pres-modal-title">Editar Plantilla</h2>
-                                <span class="task-modal-sub" id="edit-pres-modal-subtitle">Propuesta comercial</span>
+                                <h2 id="edit-pres-modal-title">Editar Propuesta</h2>
+                                <span class="task-modal-sub" id="edit-pres-modal-subtitle">Propuesta comercial y secuencias</span>
                             </div>
                         </div>
                         <button class="modal-close" onclick="closeEditPresupuestoModal()">✕</button>
                     </div>
-                    <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px; max-height: 70vh; overflow-y: auto; padding-right: 8px;">
+                    <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px; max-height: 75vh; overflow-y: auto; padding-right: 10px;">
                         
-                        <!-- Tabs inside editor: Básico, Líneas / Desglose, Pago y Detalles -->
-                        <div style="display: flex; gap: 4px; margin-bottom: 8px; background: rgba(0,0,0,0.15); padding: 4px; border-radius: 10px; border: 1px solid var(--card-border);">
-                            <button class="tab-btn active" id="editor-tab-basico" onclick="switchEditorTab('basico')" style="flex: 1; padding: 6px; font-size: 0.76rem; border-radius: 7px;">⚙️ Básico</button>
-                            <button class="tab-btn" id="editor-tab-desglose" onclick="switchEditorTab('desglose')" style="flex: 1; padding: 6px; font-size: 0.76rem; border-radius: 7px;">📊 Desglose (CRUD)</button>
-                            <button class="tab-btn" id="editor-tab-detalles" onclick="switchEditorTab('detalles')" style="flex: 1; padding: 6px; font-size: 0.76rem; border-radius: 7px;">💳 Detalles y Pago</button>
+                        <!-- 🤖 COPILOTO IA DE PROPUESTAS -->
+                        <div style="background: rgba(10, 132, 255, 0.04); border: 1px dashed rgba(10, 132, 255, 0.3); padding: 14px; border-radius: 14px; display: flex; flex-direction: column; gap: 8px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 1.15rem;">🤖</span>
+                                    <span style="font-size: 0.85rem; font-weight: 800; color: var(--accent); letter-spacing: -0.01em;">COPILOTO IA DE PROPUESTAS</span>
+                                </div>
+                                <span style="font-size: 0.65rem; background: var(--accent-glow); color: var(--accent); padding: 2px 8px; border-radius: 20px; font-weight: 700;">AGENTE ACTIVO</span>
+                            </div>
+                            <p style="font-size: 0.76rem; color: var(--text-grey); margin: 0; line-height: 1.45;">Escribe la idea general del servicio comercial (ej: *Web corporativa premium con chatbot IA y SEO*). El agente de Inteligencia Artificial diseñará la propuesta y creará el desglose completo de fases, plazos y sub-líneas automáticamente.</p>
+                            <div style="display: flex; gap: 8px; margin-top: 4px;">
+                                <input type="text" id="ai-copilot-prompt" class="modal-input" placeholder="Ej: Plataforma Web inmobiliaria premium con Agente IA para atención y captación automática..." style="flex: 1; font-size: 0.8rem; height: 36px;">
+                                <button class="btn-primary" onclick="generateProposalWithIA()" id="btn-ai-copilot-generate" style="height: 36px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; display: flex; align-items: center; gap: 5px; border-radius: 10px;">
+                                    <span>✨</span> Generar
+                                </button>
+                            </div>
+                            <div id="ai-copilot-feedback" style="display: none; font-size: 0.74rem; color: var(--accent); font-weight: 600; margin-top: 2px;"></div>
                         </div>
 
-                        <!-- PANEL 1: BASICO -->
-                        <div id="editor-panel-basico" class="editor-panel active" style="display: flex; flex-direction: column; gap: 14px;">
+                        <!-- SECCIÓN 1: SERVICIO -->
+                        <div class="editor-card-block">
+                            <div class="editor-card-block-title">📦 SERVICIO</div>
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <div>
+                                    <label class="mtg-label">Concepto del servicio general</label>
+                                    <input type="text" id="edit-pres-titulo" class="modal-input" placeholder="Ej: Landing + crm + agentes + adds" style="font-weight: 700; font-size: 0.92rem;">
+                                </div>
+                                <div>
+                                    <label class="mtg-label">Subtítulo explicativo</label>
+                                    <input type="text" id="edit-pres-subtitulo" class="modal-input" placeholder="Ej: Propuesta Kombo 2">
+                                </div>
+                                <div>
+                                    <label class="mtg-label">Descripción del proyecto</label>
+                                    <textarea id="edit-pres-descripcion" class="modal-input" rows="3" placeholder="Proyecto ejecución sistema de captación de leads..." style="resize: vertical; font-size: 0.8rem; line-height: 1.45;"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN 2: DATOS DEL LEAD -->
+                        <div class="editor-card-block">
+                            <div class="editor-card-block-title">👤 DATOS DEL LEAD</div>
+                            <div style="display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 12px; align-items: flex-end;">
+                                <div style="position: relative;">
+                                    <label class="mtg-label">Nombre (buscar o escribir)</label>
+                                    <input type="text" id="edit-pres-lead-nombre" class="modal-input" placeholder="Ej: Dani Sintes" onfocus="showEditorLeadDropdown()" oninput="filterEditorLeadDropdown()">
+                                    <div id="edit-pres-lead-dropdown" class="seq-lead-dd-menu" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-secondary); border: 1px solid var(--card-border); border-radius: 12px; max-height: 140px; overflow-y: auto; z-index: 110; box-shadow: var(--glass-shadow); padding: 4px;">
+                                        <!-- Dynamic leads list -->
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="mtg-label">Fecha emisión</label>
+                                    <input type="date" id="edit-pres-fecha" class="modal-input" onchange="recalcPaymentOptionsInModal()">
+                                </div>
+                                <div>
+                                    <label class="mtg-label">Fecha de entrega estimada</label>
+                                    <input type="date" id="edit-pres-fecha-entrega" class="modal-input">
+                                </div>
+                            </div>
+                            
+                            <!-- HORAS TOTALES ESTIMADAS -->
+                            <div style="background: rgba(255, 255, 255, 0.015); border: 1px solid var(--card-border); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; margin-top: 4px;" id="edit-pres-horas-display-box">
+                                <span style="font-size: 1.1rem; color: var(--text-grey);">⏱️</span>
+                                <div>
+                                    <div style="font-size: 0.68rem; color: var(--text-grey); text-transform: uppercase; font-weight: 700; letter-spacing: 0.03em;">Horas totales estimadas</div>
+                                    <div style="font-size: 0.85rem; font-weight: 500; color: var(--text-main);">
+                                        <strong id="edit-pres-total-horas-txt" style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">0h</strong>
+                                        <span id="edit-pres-total-dias-txt" style="color: var(--text-grey); font-size: 0.78rem; font-weight: 600; margin-left: 4px;">(0 días laborables)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN 3: LÍNEAS DE PRODUCTO/SERVICIO -->
+                        <div class="editor-card-block" style="background: transparent; border: none; padding: 0; margin-bottom: 8px;">
+                            <div class="editor-card-block-title" style="padding-left: 4px;">📋 LÍNEAS DE PRODUCTO/SERVICIO</div>
+                            
+                            <!-- Dynamic lines container -->
+                            <div id="edit-pres-lineas-container" style="display: flex; flex-direction: column; gap: 14px; width: 100%;">
+                                <!-- Rendered dynamically by app.js -->
+                            </div>
+
+                            <!-- + Añadir línea button -->
+                            <button id="btn-add-line" onclick="addEditPresLinea()" style="width: 100%; border: 1.5px dashed var(--card-border); background: rgba(255,255,255,0.015); border-radius: 14px; padding: 12px; text-align: center; color: var(--text-grey); font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: all 0.2s; margin-top: 10px; font-family: inherit;">
+                                + Añadir línea
+                            </button>
+                        </div>
+
+                        <!-- SECCIÓN 4: TOTALES Y CALCULADORA DE PAGOS -->
+                        <div class="editor-card-block" style="gap: 14px;">
+                            <!-- Totals summary box -->
+                            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--card-border); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                                    <span id="edit-pres-tot-lines-badge" style="font-size: 0.78rem; font-weight: 800; color: #ea580c; text-transform: uppercase;">TOTAL (0/0 LÍNEAS ACTIVAS)</span>
+                                    <div style="text-align: right; display: flex; align-items: baseline; gap: 8px;">
+                                        <span id="edit-pres-tot-gross-txt" style="text-decoration: line-through; color: var(--text-grey); font-size: 0.95rem; font-weight: 500; display: none;">0€</span>
+                                        <strong id="edit-pres-tot-net-txt" style="font-size: 1.6rem; font-weight: 900; color: var(--text-main); letter-spacing: -0.02em;">0€</strong>
+                                    </div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--card-border); padding-top: 8px; margin-top: 2px;">
+                                    <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-grey); display: flex; align-items: center; gap: 6px;">🔄 Mantenimiento mensual total</span>
+                                    <strong id="edit-pres-tot-mant-txt" style="font-size: 1.05rem; font-weight: 800; color: #0071e3;">0€/mes</strong>
+                                </div>
+                            </div>
+
+                            <div class="editor-card-block-title" style="margin-top: 4px; display: flex; align-items: center; gap: 6px;">💰 CALCULADORA DE OPCIONES DE PAGO</div>
+
+                            <!-- Banner showing selected option -->
+                            <div id="payment-selected-banner" style="display: none; justify-content: space-between; align-items: center; padding: 10px 14px; border-radius: 10px; background: rgba(52, 199, 89, 0.08); border: 1px solid rgba(52, 199, 89, 0.2); color: #34c759; font-size: 0.82rem; font-weight: 700;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span>✔️</span>
+                                    <span id="payment-selected-banner-text">Opción C seleccionada — Precio final: 0€</span>
+                                </div>
+                                <button onclick="selectPaymentOptionAction(null)" style="border: none; background: transparent; color: #ff3b30; font-size: 0.8rem; font-weight: 700; cursor: pointer;">✕ Quitar</button>
+                            </div>
+
+                            <!-- Option A: Plazos -->
+                            <div class="payment-option-card" id="pay-opt-card-a">
+                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.88rem; color: var(--accent);">
+                                        <div class="ios-checkmark-btn" id="pay-opt-chk-a" onclick="selectPaymentOptionAction('A')"></div>
+                                        <span>A) Financiación a plazos</span>
+                                    </div>
+                                    <button type="button" id="btn-select-pay-a" onclick="selectPaymentOptionAction('A')" class="tab-btn" style="padding: 4px 12px; font-size: 0.72rem; border-radius: 8px; font-weight: 700; cursor: pointer; border: 1px solid rgba(255,255,255,0.12); height: 26px; display: flex; align-items: center;">Seleccionar</button>
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem; line-height: 1.5; color: var(--text-grey); padding-left: 32px; margin-top: 2px;">
+                                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                        <span>Inversión mínima</span>
+                                        <input type="number" id="edit-pres-pc-inv-min" class="modal-input" value="18" style="width: 55px; text-align: center; font-size: 0.8rem; height: 26px; padding: 0 4px;" oninput="recalcPaymentOptionsInModal()">
+                                        <span>% = </span>
+                                        <strong id="pay-opt-a-inv-calc" style="color: var(--text-main);">0€ + IVA</strong>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                        <span>Resto en</span>
+                                        <input type="number" id="edit-pres-pc-cuotas" class="modal-input" value="24" style="width: 55px; text-align: center; font-size: 0.8rem; height: 26px; padding: 0 4px;" oninput="recalcPaymentOptionsInModal()">
+                                        <span>cuotas de </span>
+                                        <strong id="pay-opt-a-cuota-calc" style="color: var(--text-main);">0€ + IVA / mes</strong>
+                                    </div>
+                                    <div style="font-size: 0.74rem; color: var(--text-grey); margin-top: 2px;" id="pay-opt-a-total-calc">Total: 0€ + IVA (sin intereses)</div>
+                                </div>
+                            </div>
+
+                            <!-- Option B: Parcial -->
+                            <div class="payment-option-card" id="pay-opt-card-b">
+                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.88rem; color: #34c759;">
+                                        <div class="ios-checkmark-btn" id="pay-opt-chk-b" onclick="selectPaymentOptionAction('B')"></div>
+                                        <span>B) Pago anticipado parcial (3 pagos)</span>
+                                    </div>
+                                    <button type="button" id="btn-select-pay-b" onclick="selectPaymentOptionAction('B')" class="tab-btn" style="padding: 4px 12px; font-size: 0.72rem; border-radius: 8px; font-weight: 700; cursor: pointer; border: 1px solid rgba(255,255,255,0.12); height: 26px; display: flex; align-items: center;">Seleccionar</button>
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem; color: var(--text-grey); padding-left: 32px; margin-top: 2px;">
+                                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 2px;">
+                                        <span>Descuento</span>
+                                        <input type="number" id="edit-pres-pc-dto-b" class="modal-input" value="4" style="width: 55px; text-align: center; font-size: 0.8rem; height: 26px; padding: 0 4px;" oninput="recalcPaymentOptionsInModal()">
+                                        <span>% → Total:</span>
+                                        <strong id="pay-opt-b-tot-calc" style="color: #34c759;">0€ + IVA</strong>
+                                        <span id="pay-opt-b-orig-calc" style="text-decoration: line-through; font-size: 0.74rem;">0€</span>
+                                    </div>
+                                    <ul style="margin: 0; padding-left: 14px; display: flex; flex-direction: column; gap: 4px; font-size: 0.78rem;">
+                                        <li>Pago 1: <strong id="pay-opt-b-p1" style="color: var(--text-main);">0€ + IVA</strong> — <span id="pay-opt-b-d1">mayo de 2026</span></li>
+                                        <li>Pago 2: <strong id="pay-opt-b-p2" style="color: var(--text-main);">0€ + IVA</strong> — <span id="pay-opt-b-d2">noviembre de 2026</span></li>
+                                        <li>Pago 3: <strong id="pay-opt-b-p3" style="color: var(--text-main);">0€ + IVA</strong> — <span id="pay-opt-b-d3">mayo de 2027</span></li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Option C: Anticipado -->
+                            <div class="payment-option-card" id="pay-opt-card-c">
+                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.88rem; color: #ff9f0a;">
+                                        <div class="ios-checkmark-btn" id="pay-opt-chk-c" onclick="selectPaymentOptionAction('C')"></div>
+                                        <span>C) Pago total anticipado</span>
+                                    </div>
+                                    <button type="button" id="btn-select-pay-c" onclick="selectPaymentOptionAction('C')" class="tab-btn" style="padding: 4px 12px; font-size: 0.72rem; border-radius: 8px; font-weight: 700; cursor: pointer; border: 1px solid rgba(255,255,255,0.12); height: 26px; display: flex; align-items: center;">Seleccionar</button>
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--text-grey); padding-left: 32px; margin-top: 2px;">
+                                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                        <span>Descuento</span>
+                                        <input type="number" id="edit-pres-pc-dto-c" class="modal-input" value="8" style="width: 55px; text-align: center; font-size: 0.8rem; height: 26px; padding: 0 4px;" oninput="recalcPaymentOptionsInModal()">
+                                        <span>% → Total:</span>
+                                        <strong id="pay-opt-c-tot-calc" style="color: #ff9f0a;">0€ + IVA</strong>
+                                        <span id="pay-opt-c-orig-calc" style="text-decoration: line-through; font-size: 0.74rem;">0€</span>
+                                    </div>
+                                    <div style="font-size: 0.76rem; color: var(--text-grey); margin-top: 2px;">
+                                        Pago único al inicio del proyecto — <span style="color: #ff9f0a; font-weight: 600;">Ahorro de <span id="pay-opt-c-saving">0</span>€</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bonus / Regalos extra -->
+                            <div>
+                                <label class="mtg-label">🎁 Bonus / Regalos extra</label>
+                                <textarea id="edit-pres-bonus" class="modal-input" rows="3" placeholder="Ej: * Creación del mismo sistema aplicado a Cabinbox..." style="resize: vertical; font-size: 0.8rem;"></textarea>
+                            </div>
+
+                            <!-- Formas de pago offered -->
+                            <div>
+                                <div class="editor-card-block-title" style="margin-top: 2px; font-size: 0.75rem;">💳 FORMAS DE PAGO OFRECIDAS AL CLIENTE</div>
+                                <p style="font-size: 0.72rem; color: var(--text-grey); margin: 0 0 6px;">Selecciona las que quieres ofrecer. El cliente solo verá estas opciones en el PDF.</p>
+                                
+                                <div class="pay-methods-grid">
+                                    <button type="button" class="pay-method-btn" data-value="transferencia" onclick="togglePayMethodBtn(this)">🏧 Transferencia</button>
+                                    <button type="button" class="pay-method-btn" data-value="giro" onclick="togglePayMethodBtn(this)">🏦 Giro bancario</button>
+                                    <button type="button" class="pay-method-btn" data-value="bizum" onclick="togglePayMethodBtn(this)">📱 Bizum</button>
+                                    <button type="button" class="pay-method-btn" data-value="stripe" onclick="togglePayMethodBtn(this)">💳 Stripe</button>
+                                    <button type="button" class="pay-method-btn" data-value="efectivo" onclick="togglePayMethodBtn(this)">💵 Efectivo</button>
+                                    <button type="button" class="pay-method-btn" data-value="sin_iva" onclick="togglePayMethodBtn(this)">🇺🇸 Sin IVA</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN 5: CONFIGURACIÓN GENERAL Y AJUSTES PRIVADOS -->
+                        <div class="editor-card-block" style="gap: 12px;">
+                            <div class="editor-card-block-title">⚙️ AJUSTES GENERALES Y PRIVADOS</div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                                 <div>
-                                    <label class="mtg-label">Título de la propuesta</label>
-                                    <input type="text" id="edit-pres-titulo" class="modal-input" placeholder="Ej: Consultoría en Procesos de IA">
-                                </div>
-                                <div>
-                                    <label class="mtg-label">Subtítulo</label>
-                                    <input type="text" id="edit-pres-subtitulo" class="modal-input" placeholder="Ej: Análisis estratégico modular">
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="mtg-label">Descripción</label>
-                                <textarea id="edit-pres-descripcion" class="modal-input" rows="3" placeholder="Descripción general de la propuesta o valor diferencial..." style="resize: vertical;"></textarea>
-                            </div>
-
-                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-                                <div>
-                                    <label class="mtg-label">Categoría</label>
+                                    <label class="mtg-label">Categoría para filtros</label>
                                     <select id="edit-pres-categoria" class="modal-input">
                                         <option value="consultoria">🎯 Consultoría</option>
                                         <option value="agentes_ia">🤖 Agentes de IA</option>
@@ -1013,150 +1202,47 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="mtg-label">Badge de destaque</label>
-                                    <input type="text" id="edit-pres-badge" class="modal-input" placeholder="Ej: RECOMENDADO, REBAJADO">
-                                </div>
-                                <div>
-                                    <label class="mtg-label">Orden visual</label>
-                                    <input type="number" id="edit-pres-orden" class="modal-input" value="1">
+                                    <label class="mtg-label">Badge de destaque visual</label>
+                                    <input type="text" id="edit-pres-badge" class="modal-input" placeholder="Ej: RECOMENDADO, MÁS VENDIDO">
                                 </div>
                             </div>
-
-                            <!-- Fallback Prices (Solo si no hay líneas de desglose) -->
-                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); padding: 12px; border-radius: 12px;">
-                                <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-grey); text-transform: uppercase; margin-bottom: 8px;">💰 Precios de Fallback (Si no hay desglose activo)</div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-                                    <div>
-                                        <label class="mtg-label">Precio base/alta (€)</label>
-                                        <input type="number" id="edit-pres-precio-alta" class="modal-input" placeholder="0">
-                                    </div>
-                                    <div>
-                                        <label class="mtg-label">Mantenimiento mensual (€)</label>
-                                        <input type="number" id="edit-pres-precio-mensual" class="modal-input" placeholder="0">
-                                    </div>
-                                    <div>
-                                        <label class="mtg-label">Tipo de precio</label>
-                                        <select id="edit-pres-precio-tipo" class="modal-input">
-                                            <option value="fijo">Monto Fijo</option>
-                                            <option value="desde">Desde...</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; align-items: center; margin-top: 6px;">
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; padding: 4px 0;">
                                 <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; cursor: pointer; color: var(--text-main);">
-                                    <input type="checkbox" id="edit-pres-es-plantilla" onchange="toggleEditPresLeadField()"> 📋 ¿Es Plantilla?
+                                    <input type="checkbox" id="edit-pres-es-plantilla"> 📋 ¿Guardar como Plantilla B2B?
                                 </label>
                                 <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; cursor: pointer; color: var(--text-main);">
                                     <input type="checkbox" id="edit-pres-activo" checked> 🟢 Activa
                                 </label>
-                                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; cursor: pointer; color: var(--accent-purple);">
-                                    <input type="checkbox" id="edit-pres-es-prueba"> 🧪 Modo prueba (naranja)
-                                </label>
                             </div>
 
-                            <div id="edit-pres-lead-field-wrap" style="display: none; grid-template-columns: 1.5fr 1fr; gap: 10px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 10px;">
                                 <div>
-                                    <label class="mtg-label">Nombre del lead destinatario</label>
-                                    <input type="text" id="edit-pres-lead-nombre" class="modal-input" placeholder="Ej: Dani Sintes">
+                                    <label class="mtg-label">Orden visual</label>
+                                    <input type="number" id="edit-pres-orden" class="modal-input" value="1">
                                 </div>
-                                <div>
-                                    <label class="mtg-label">Fecha Emisión</label>
-                                    <input type="date" id="edit-pres-fecha" class="modal-input">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- PANEL 2: DESGLOSE CRUD -->
-                        <div id="editor-panel-desglose" class="editor-panel" style="display: none; flex-direction: column; gap: 12px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <div style="font-size: 0.85rem; font-weight: 700;">Líneas del Presupuesto (CRUD)</div>
-                                <button class="btn-primary" onclick="addEditPresLinea()" style="padding: 6px 12px; font-size: 0.72rem; border-radius: 8px;">+ Nueva Línea</button>
-                            </div>
-                            <div id="edit-pres-lineas-container" style="display: flex; flex-direction: column; gap: 12px; max-height: 48vh; overflow-y: auto; padding-right: 4px;">
-                                <!-- Populate lines -->
-                            </div>
-                        </div>
-
-                        <!-- PANEL 3: DETALLES Y PAGO -->
-                        <div id="editor-panel-detalles" class="editor-panel" style="display: none; flex-direction: column; gap: 14px;">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 10px;">
-                                <div>
-                                    <label class="mtg-label">Descuento Global (%)</label>
-                                    <input type="number" id="edit-pres-descuento-pct" class="modal-input" value="0" min="0" max="100">
-                                </div>
-                                <div>
-                                    <label class="mtg-label">Fecha de entrega</label>
-                                    <input type="date" id="edit-pres-fecha-entrega" class="modal-input">
-                                </div>
-                                <div>
-                                    <label class="mtg-label">Enlace de cobro (Stripe/Revolut)</label>
-                                    <input type="url" id="edit-pres-link-pago" class="modal-input" placeholder="https://buy.stripe.com/...">
+                                <div style="padding-top: 24px;">
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; cursor: pointer; color: var(--accent-orange); font-weight: 700;">
+                                        <input type="checkbox" id="edit-pres-es-prueba"> 🧪 Modo prueba (líneas naranjas)
+                                    </label>
                                 </div>
                             </div>
 
                             <div>
-                                <label class="mtg-label">Formas de pago ofrecidas</label>
-                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px;">
-                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem;"><input type="checkbox" class="pres-fp-offered" value="sin_iva"> Sin IVA</label>
-                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem;"><input type="checkbox" class="pres-fp-offered" value="giro" checked> Giro bancario</label>
-                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem;"><input type="checkbox" class="pres-fp-offered" value="transferencia" checked> Transferencia</label>
-                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem;"><input type="checkbox" class="pres-fp-offered" value="stripe"> Stripe</label>
-                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem;"><input type="checkbox" class="pres-fp-offered" value="bizum" checked> Bizum</label>
-                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem;"><input type="checkbox" class="pres-fp-offered" value="efectivo"> Efectivo</label>
-                                </div>
-                            </div>
-
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                <div>
-                                    <label class="mtg-label">Bonus incluidos (Muestra como regalo 🎁)</label>
-                                    <textarea id="edit-pres-bonus" class="modal-input" rows="3" placeholder="Ej: Auditoría SEO de regalo valorada en 450€..." style="resize: vertical;"></textarea>
-                                </div>
-                                <div>
-                                    <label class="mtg-label">Notas internas (Privadas)</label>
-                                    <textarea id="edit-pres-notas-internas" class="modal-input" rows="3" placeholder="Notas sobre el cliente, el coste de ejecución, etc..." style="resize: vertical;"></textarea>
-                                </div>
+                                <label class="mtg-label">Detalle técnico / Contenido adicional IA</label>
+                                <textarea id="edit-pres-contenido-ia" class="modal-input" rows="3" placeholder="Detalles estratégicos o explicaciones adicionales que aparecerán en el PDF..." style="resize: vertical; font-size: 0.8rem;"></textarea>
                             </div>
 
                             <div>
-                                <label class="mtg-label">Detalle Técnico / Contenido adicional IA</label>
-                                <textarea id="edit-pres-contenido-ia" class="modal-input" rows="3" placeholder="Detalle técnico que aparecerá como bloque destacado azul en el PDF..." style="resize: vertical;"></textarea>
-                            </div>
-
-                            <!-- Pago Config (Financiación en PDF) -->
-                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); padding: 12px; border-radius: 12px;">
-                                <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-grey); text-transform: uppercase; margin-bottom: 8px;">🔄 Opciones de Financiación (PDF Modular)</div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr 1.2fr 1.2fr; gap: 10px; margin-bottom: 8px;">
-                                    <div>
-                                        <label class="mtg-label">Inversión inicial (%)</label>
-                                        <input type="number" id="edit-pres-pc-inv-min" class="modal-input" value="15">
-                                    </div>
-                                    <div>
-                                        <label class="mtg-label">Cuotas (meses)</label>
-                                        <input type="number" id="edit-pres-pc-cuotas" class="modal-input" value="24">
-                                    </div>
-                                    <div>
-                                        <label class="mtg-label">Descuento B (%)</label>
-                                        <input type="number" id="edit-pres-pc-dto-b" class="modal-input" value="4">
-                                    </div>
-                                    <div>
-                                        <label class="mtg-label">Descuento C (%)</label>
-                                        <input type="number" id="edit-pres-pc-dto-c" class="modal-input" value="8">
-                                    </div>
-                                </div>
-                                <div style="display: flex; gap: 14px; align-items: center; margin-top: 6px;">
-                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem;"><input type="checkbox" id="edit-pres-pc-show-a" checked> Mostrar Opción A (Financiado)</label>
-                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem;"><input type="checkbox" id="edit-pres-pc-show-b" checked> Mostrar Opción B (Parcial)</label>
-                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem;"><input type="checkbox" id="edit-pres-pc-show-c" checked> Mostrar Opción C (Anticipado)</label>
-                                </div>
+                                <label class="mtg-label">Notas internas (Privado, solo tú lo verás)</label>
+                                <textarea id="edit-pres-notas-internas" class="modal-input" rows="2" placeholder="Costes estimados de ejecución, notas sobre negociación..." style="resize: vertical; font-size: 0.8rem;"></textarea>
                             </div>
                         </div>
 
                     </div>
                     <div class="modal-footer">
                         <button class="modal-cancel-btn" onclick="closeEditPresupuestoModal()">Cancelar</button>
-                        <button class="btn-primary" onclick="savePresupuestoAction()" style="padding: 10px 24px;">✓ Guardar Plantilla</button>
+                        <button class="btn-primary" onclick="savePresupuestoAction()" style="padding: 10px 24px;">✓ Guardar Cambios</button>
                     </div>
                 </div>
                 <input type="hidden" id="edit-pres-id" value="">

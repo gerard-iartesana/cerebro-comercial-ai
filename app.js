@@ -2840,26 +2840,79 @@ async function savePresupuesto(id, updates) {
     localStorage.setItem('gf_presupuestos', JSON.stringify(presupuestos));
 }
 
-// --- 7. Modal Plantilla Editor: Tab & Panel routing ---
-function switchEditorTab(tab) {
-    document.querySelectorAll('#modal-edit-presupuesto .tab-btn').forEach(btn => btn.classList.remove('active'));
-    const btn = document.getElementById(`editor-tab-${tab}`);
-    if (btn) btn.classList.add('active');
+// --- 7. High Fidelity Unified Proposal Editor & AI Copilot ---
+let selectedPaymentOption = null; // Global state: 'A', 'B', 'C' or null
 
-    // Panels toggle
-    document.querySelectorAll('.editor-panel').forEach(p => p.style.display = 'none');
-    document.getElementById(`editor-panel-${tab}`).style.display = 'flex';
+// Autocomplete for Leads inside Editor Modal
+function showEditorLeadDropdown() {
+    const dd = document.getElementById('edit-pres-lead-dropdown');
+    if (!dd) return;
+    dd.style.display = 'block';
+    filterEditorLeadDropdown();
 }
 
-function toggleEditPresLeadField() {
-    const isTpl = document.getElementById('edit-pres-es-plantilla').checked;
-    document.getElementById('edit-pres-lead-field-wrap').style.display = isTpl ? 'none' : 'grid';
+function filterEditorLeadDropdown() {
+    const query = document.getElementById('edit-pres-lead-nombre').value.toLowerCase();
+    const dd = document.getElementById('edit-pres-lead-dropdown');
+    if (!dd) return;
+    
+    const filtered = leadsList.filter(l => 
+        (l.first_name && l.first_name.toLowerCase().includes(query)) || 
+        (l.email && l.email.toLowerCase().includes(query)) ||
+        (l.company_name && l.company_name.toLowerCase().includes(query))
+    );
+
+    if (filtered.length === 0) {
+        dd.innerHTML = `<div style="padding:10px; color:var(--text-grey); font-size:0.8rem; text-align:center;">No se encontraron leads</div>`;
+        return;
+    }
+
+    dd.innerHTML = filtered.map(l => `
+        <div onclick="selectEditorLead('${l.first_name || l.email}')" 
+             style="padding:8px 12px; font-size:0.8rem; cursor:pointer; border-radius:8px; display:flex; flex-direction:column; gap:2px; transition:background 0.15s;"
+             onmouseover="this.style.background='rgba(255,255,255,0.06)'"
+             onmouseout="this.style.background='transparent'">
+            <span style="font-weight:700; color:var(--text-main);">${l.first_name || 'Sin Nombre'}</span>
+            <span style="font-size:0.7rem; color:var(--text-grey);">${l.company_name ? l.company_name + ' · ' : ''}${l.email}</span>
+        </div>
+    `).join('');
 }
 
-// Opening edit modal
+function selectEditorLead(name) {
+    document.getElementById('edit-pres-lead-nombre').value = name;
+    document.getElementById('edit-pres-lead-dropdown').style.display = 'none';
+    
+    // Auto populate today as Emission Date if empty
+    const dateInput = document.getElementById('edit-pres-fecha');
+    if (dateInput && !dateInput.value) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+    }
+    recalcPaymentOptionsInModal();
+}
+
+// Close Editor dropdown on clicking outside
+window.addEventListener('click', function(e) {
+    const dd = document.getElementById('edit-pres-lead-dropdown');
+    if (dd && e.target && e.target.id !== 'edit-pres-lead-nombre' && !dd.contains(e.target)) {
+        dd.style.display = 'none';
+    }
+});
+
+// Pay methods toggle buttons handler
+function togglePayMethodBtn(btn) {
+    btn.classList.toggle('selected');
+}
+
+// Option A, B, C selection handler
+function selectPaymentOptionAction(opt) {
+    selectedPaymentOption = opt;
+    recalcPaymentOptionsInModal();
+}
+
+// Opening Create Template Modal
 function openCreateTemplateModal(defaultCat = 'consultoria') {
     document.getElementById('edit-pres-id').value = '';
-    document.getElementById('edit-pres-modal-title').textContent = 'Crear Plantilla';
+    document.getElementById('edit-pres-modal-title').textContent = 'Crear Propuesta';
     
     // Clear inputs
     document.getElementById('edit-pres-titulo').value = '';
@@ -2869,47 +2922,42 @@ function openCreateTemplateModal(defaultCat = 'consultoria') {
     document.getElementById('edit-pres-badge').value = '';
     document.getElementById('edit-pres-orden').value = '1';
     
-    document.getElementById('edit-pres-precio-alta').value = '';
-    document.getElementById('edit-pres-precio-mensual').value = '';
-    document.getElementById('edit-pres-precio-tipo').value = 'fijo';
-    
     document.getElementById('edit-pres-es-plantilla').checked = true;
     document.getElementById('edit-pres-activo').checked = true;
     document.getElementById('edit-pres-es-prueba').checked = false;
     document.getElementById('edit-pres-lead-nombre').value = '';
     document.getElementById('edit-pres-fecha').value = new Date().toISOString().split('T')[0];
-    
-    document.getElementById('edit-pres-descuento-pct').value = '0';
     document.getElementById('edit-pres-fecha-entrega').value = '';
-    document.getElementById('edit-pres-link-pago').value = '';
     document.getElementById('edit-pres-bonus').value = '';
     document.getElementById('edit-pres-notas-internas').value = '';
     document.getElementById('edit-pres-contenido-ia').value = '';
     
-    // Check payment checkboxes
-    document.querySelectorAll('.pres-fp-offered').forEach(chk => {
-        chk.checked = ['giro', 'transferencia', 'bizum'].includes(chk.value);
+    // Reset payment option buttons
+    document.querySelectorAll('.pay-method-btn').forEach(btn => {
+        if (['giro', 'transferencia', 'bizum'].includes(btn.dataset.value)) {
+            btn.classList.add('selected');
+        } else {
+            btn.classList.remove('selected');
+        }
     });
 
     // Finance defaults
-    document.getElementById('edit-pres-pc-inv-min').value = '15';
+    document.getElementById('edit-pres-pc-inv-min').value = '18';
     document.getElementById('edit-pres-pc-cuotas').value = '24';
     document.getElementById('edit-pres-pc-dto-b').value = '4';
     document.getElementById('edit-pres-pc-dto-c').value = '8';
-    document.getElementById('edit-pres-pc-show-a').checked = true;
-    document.getElementById('edit-pres-pc-show-b').checked = true;
-    document.getElementById('edit-pres-pc-show-c').checked = true;
 
     lineasTempList = [];
+    selectedPaymentOption = null;
+
+    recalcPaymentOptionsInModal();
     renderEditPresLineas();
-    
-    toggleEditPresLeadField();
-    switchEditorTab('basico');
     
     document.getElementById('modal-edit-presupuesto').classList.add('active');
     document.getElementById('modal-edit-presupuesto').style.display = 'flex';
 }
 
+// Opening Edit Proposal Modal
 function openEditPresupuestoModal(id) {
     const p = presupuestos.find(pr => pr.id === id);
     if (!p) return;
@@ -2924,45 +2972,41 @@ function openEditPresupuestoModal(id) {
     document.getElementById('edit-pres-badge').value = p.badge || '';
     document.getElementById('edit-pres-orden').value = p.orden || '1';
 
-    document.getElementById('edit-pres-precio-alta').value = p.precio_alta || '';
-    document.getElementById('edit-pres-precio-mensual').value = p.precio_mensual || '';
-    document.getElementById('edit-pres-precio-tipo').value = p.precio_tipo || 'fijo';
-
     document.getElementById('edit-pres-es-plantilla').checked = p.es_plantilla !== false;
     document.getElementById('edit-pres-activo').checked = p.activo !== false;
     document.getElementById('edit-pres-es-prueba').checked = !!p.es_prueba;
     document.getElementById('edit-pres-lead-nombre').value = p.lead_nombre || '';
     document.getElementById('edit-pres-fecha').value = p.fecha ? p.fecha.split('T')[0] : new Date().toISOString().split('T')[0];
-
-    document.getElementById('edit-pres-descuento-pct').value = p.descuento_pct || '0';
     document.getElementById('edit-pres-fecha-entrega').value = p.fecha_entrega ? p.fecha_entrega.split('T')[0] : '';
-    document.getElementById('edit-pres-link-pago').value = p.link_pago || '';
     document.getElementById('edit-pres-bonus').value = p.bonus || '';
     document.getElementById('edit-pres-notas-internas').value = p.notas_internas || '';
     document.getElementById('edit-pres-contenido-ia').value = p.contenido_ia || '';
 
-    // Check payment checkboxes
+    // Payment methods toggles
     const offered = p.formas_pago_ofrecidas || [];
-    document.querySelectorAll('.pres-fp-offered').forEach(chk => {
-        chk.checked = offered.length > 0 ? offered.includes(chk.value) : (p.forma_pago === chk.value || ['giro', 'transferencia', 'bizum'].includes(chk.value));
+    document.querySelectorAll('.pay-method-btn').forEach(btn => {
+        const val = btn.dataset.value;
+        const isOffered = offered.length > 0 ? offered.includes(val) : (p.forma_pago === val || ['giro', 'transferencia', 'bizum'].includes(val));
+        if (isOffered) {
+            btn.classList.add('selected');
+        } else {
+            btn.classList.remove('selected');
+        }
     });
 
-    // Finance
-    const pc = p.pago_config || { inv_min_pct: 15, num_cuotas: 24, descuento_b_pct: 4, descuento_c_pct: 8, show_a: true, show_b: true, show_c: true };
-    document.getElementById('edit-pres-pc-inv-min').value = pc.inv_min_pct != null ? pc.inv_min_pct : '15';
+    // Finance config
+    const pc = p.pago_config || { inv_min_pct: 18, num_cuotas: 24, descuento_b_pct: 4, descuento_c_pct: 8, selected_option: null };
+    document.getElementById('edit-pres-pc-inv-min').value = pc.inv_min_pct != null ? pc.inv_min_pct : '18';
     document.getElementById('edit-pres-pc-cuotas').value = pc.num_cuotas != null ? pc.num_cuotas : '24';
     document.getElementById('edit-pres-pc-dto-b').value = pc.descuento_b_pct != null ? pc.descuento_b_pct : '4';
     document.getElementById('edit-pres-pc-dto-c').value = pc.descuento_c_pct != null ? pc.descuento_c_pct : '8';
-    document.getElementById('edit-pres-pc-show-a').checked = pc.show_a !== false;
-    document.getElementById('edit-pres-pc-show-b').checked = pc.show_b !== false;
-    document.getElementById('edit-pres-pc-show-c').checked = pc.show_c !== false;
-
-    // Deep copy lineas to temp
+    
+    // Deep copy lineas
     lineasTempList = p.lineas ? JSON.parse(JSON.stringify(p.lineas)) : [];
-    renderEditPresLineas();
+    selectedPaymentOption = pc.selected_option || null;
 
-    toggleEditPresLeadField();
-    switchEditorTab('basico');
+    recalcPaymentOptionsInModal();
+    renderEditPresLineas();
 
     document.getElementById('modal-edit-presupuesto').classList.add('active');
     document.getElementById('modal-edit-presupuesto').style.display = 'flex';
@@ -2973,101 +3017,416 @@ function closeEditPresupuestoModal() {
     document.getElementById('modal-edit-presupuesto').style.display = 'none';
 }
 
-// Line items editor renderer
+// Recalculate dynamic hours, totals and financing inside the modal
+function recalcPaymentOptionsInModal() {
+    const activeLines = lineasTempList.filter(l => l.activo !== false);
+    const billingLines = activeLines.filter(l => l.recomendado !== true); // starred "recomendado" lines are NOT included in main total
+
+    // Total hours sum
+    const totalHours = billingLines.reduce((s, l) => s + Number(l.horas_estimadas || 0), 0);
+    const totalDays = Math.ceil(totalHours / 8);
+    
+    const hTxt = document.getElementById('edit-pres-total-horas-txt');
+    const dTxt = document.getElementById('edit-pres-total-dias-txt');
+    if (hTxt) hTxt.textContent = totalHours + 'h';
+    if (dTxt) dTxt.textContent = `(${totalDays} días laborables)`;
+
+    // Prices calculation
+    const totalGross = billingLines.reduce((s, l) => s + (Number(l.precio) || 0), 0);
+    const totalNet = billingLines.reduce((s, l) => {
+        const itemPrice = Number(l.precio) || 0;
+        const discount = Number(l.descuento) || 0;
+        return s + (itemPrice * (1 - discount / 100));
+    }, 0);
+    const totalMant = activeLines.reduce((s, l) => s + (l.mantenimiento ? (Number(l.mantenimiento_precio) || 0) : 0), 0);
+
+    // Update main totals labels
+    const countBadge = document.getElementById('edit-pres-tot-lines-badge');
+    if (countBadge) countBadge.textContent = `TOTAL (${activeLines.length}/${lineasTempList.length} LÍNEAS ACTIVAS)`;
+
+    const grossEl = document.getElementById('edit-pres-tot-gross-txt');
+    if (grossEl) {
+        if (totalGross > totalNet) {
+            grossEl.style.display = 'inline';
+            grossEl.textContent = Math.round(totalGross) + '€';
+        } else {
+            grossEl.style.display = 'none';
+        }
+    }
+    const netEl = document.getElementById('edit-pres-tot-net-txt');
+    if (netEl) netEl.textContent = Math.round(totalNet) + '€';
+
+    const mantEl = document.getElementById('edit-pres-tot-mant-txt');
+    if (mantEl) mantEl.textContent = Math.round(totalMant) + '€/mes';
+
+    // PAYMENT OPTIONS DYNAMIC ESTIMATES
+    const invMinPct = Number(document.getElementById('edit-pres-pc-inv-min').value || 18);
+    const numCuotas = Number(document.getElementById('edit-pres-pc-cuotas').value || 24);
+    const dtoBPct = Number(document.getElementById('edit-pres-pc-dto-b').value || 4);
+    const dtoCPct = Number(document.getElementById('edit-pres-pc-dto-c').value || 8);
+
+    // Option A: Financiación
+    const invMinA = Math.round(totalNet * invMinPct / 100);
+    const cuotaA = Math.round((totalNet - invMinA) / numCuotas);
+    document.getElementById('pay-opt-a-inv-calc').textContent = `${invMinA}€ + IVA`;
+    document.getElementById('pay-opt-a-cuota-calc').textContent = `${cuotaA}€ + IVA / mes`;
+    document.getElementById('pay-opt-a-total-calc').textContent = `Total: ${Math.round(totalNet)}€ + IVA (sin intereses)`;
+
+    // Option B: Parcial (3 pagos)
+    const totB = Math.round(totalNet * (1 - dtoBPct / 100));
+    const p3 = Math.round(totB / 3);
+    document.getElementById('pay-opt-b-tot-calc').textContent = `${totB}€ + IVA`;
+    document.getElementById('pay-opt-b-orig-calc').textContent = `${Math.round(totalNet)}€`;
+    
+    // Dynamic dates
+    const emissionDateStr = document.getElementById('edit-pres-fecha').value;
+    const emissionDate = emissionDateStr ? new Date(emissionDateStr) : new Date();
+    const mNames = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    
+    const d1 = mNames[emissionDate.getMonth()] + ' de ' + emissionDate.getFullYear();
+    const date2 = new Date(emissionDate); date2.setMonth(date2.getMonth() + 6);
+    const d2 = mNames[date2.getMonth()] + ' de ' + date2.getFullYear();
+    const date3 = new Date(emissionDate); date3.setMonth(date3.getMonth() + 12);
+    const d3 = mNames[date3.getMonth()] + ' de ' + date3.getFullYear();
+    
+    document.getElementById('pay-opt-b-p1').textContent = `${p3}€ + IVA`;
+    document.getElementById('pay-opt-b-d1').textContent = d1;
+    document.getElementById('pay-opt-b-p2').textContent = `${p3}€ + IVA`;
+    document.getElementById('pay-opt-b-d2').textContent = d2;
+    document.getElementById('pay-opt-b-p3').textContent = `${p3}€ + IVA`;
+    document.getElementById('pay-opt-b-d3').textContent = d3;
+
+    // Option C: Anticipado
+    const totC = Math.round(totalNet * (1 - dtoCPct / 100));
+    document.getElementById('pay-opt-c-tot-calc').textContent = `${totC}€ + IVA`;
+    document.getElementById('pay-opt-c-orig-calc').textContent = `${Math.round(totalNet)}€`;
+    document.getElementById('pay-opt-c-saving').textContent = Math.round(totalNet - totC);
+
+    // Dynamic banner and options highlighted state
+    document.querySelectorAll('.payment-option-card').forEach(card => card.classList.remove('selected', 'selected-b', 'selected-c'));
+    document.querySelectorAll('.ios-checkmark-btn').forEach(chk => chk.classList.remove('checked'));
+    document.querySelectorAll('[id^="btn-select-pay-"]').forEach(b => {
+        b.textContent = 'Seleccionar';
+        b.classList.remove('active');
+    });
+
+    const banner = document.getElementById('payment-selected-banner');
+    const bannerTxt = document.getElementById('payment-selected-banner-text');
+
+    if (selectedPaymentOption === 'A') {
+        document.getElementById('pay-opt-card-a').classList.add('selected');
+        document.getElementById('pay-opt-chk-a').classList.add('checked');
+        const btn = document.getElementById('btn-select-pay-a');
+        if (btn) { btn.textContent = 'Seleccionada'; btn.classList.add('active'); }
+        if (banner) {
+            banner.style.display = 'flex';
+            banner.style.background = 'rgba(10, 132, 255, 0.08)';
+            banner.style.borderColor = 'rgba(10, 132, 255, 0.2)';
+            banner.style.color = 'var(--accent)';
+            bannerTxt.textContent = `Opción A seleccionada — Precio final: ${Math.round(totalNet)}€`;
+        }
+    } else if (selectedPaymentOption === 'B') {
+        document.getElementById('pay-opt-card-b').classList.add('selected-b');
+        document.getElementById('pay-opt-chk-b').classList.add('checked');
+        const btn = document.getElementById('btn-select-pay-b');
+        if (btn) { btn.textContent = 'Seleccionada'; btn.classList.add('active'); }
+        if (banner) {
+            banner.style.display = 'flex';
+            banner.style.background = 'rgba(52, 199, 89, 0.08)';
+            banner.style.borderColor = 'rgba(52, 199, 89, 0.2)';
+            banner.style.color = '#34c759';
+            bannerTxt.textContent = `Opción B seleccionada — Precio final: ${totB}€`;
+        }
+    } else if (selectedPaymentOption === 'C') {
+        document.getElementById('pay-opt-card-c').classList.add('selected-c');
+        document.getElementById('pay-opt-chk-c').classList.add('checked');
+        const btn = document.getElementById('btn-select-pay-c');
+        if (btn) { btn.textContent = 'Seleccionada'; btn.classList.add('active'); }
+        if (banner) {
+            banner.style.display = 'flex';
+            banner.style.background = 'rgba(255, 159, 10, 0.08)';
+            banner.style.borderColor = 'rgba(255, 159, 10, 0.2)';
+            banner.style.color = '#ff9f0a';
+            bannerTxt.textContent = `Opción C seleccionada — Precio final: ${totC}€`;
+        }
+    } else {
+        if (banner) banner.style.display = 'none';
+    }
+}
+
+// Render dynamic service lines list inside modal
+// HTML5 Drag and Drop for service lines reordering inside modal
+let lineDragIndex = null;
+
+window.handleLineDragStart = function(e, index) {
+    lineDragIndex = index;
+    e.dataTransfer.effectAllowed = 'move';
+    e.currentTarget.classList.add('dragging-line');
+};
+
+window.handleLineDragOver = function(e, index) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+};
+
+window.handleLineDragEnd = function(e) {
+    e.currentTarget.classList.remove('dragging-line');
+    lineDragIndex = null;
+};
+
+window.handleLineDrop = function(e, index) {
+    e.preventDefault();
+    if (lineDragIndex !== null && lineDragIndex !== index) {
+        const draggedLine = lineasTempList[lineDragIndex];
+        lineasTempList.splice(lineDragIndex, 1);
+        lineasTempList.splice(index, 0, draggedLine);
+        recalcPaymentOptionsInModal();
+        renderEditPresLineas();
+    }
+};
+
+// Function: Call Gemini to generate B2B value-added copy blocks for a specific proposal line item
+async function generateValueCopyForLine(index) {
+    const concept = lineasTempList[index].concepto.trim();
+    if (!concept) {
+        showToast('Escribe primero el concepto de la línea para poder generar su copy', true);
+        return;
+    }
+    
+    const btn = document.getElementById(`btn-ai-line-copy-${index}`);
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Generando...';
+    }
+    showToast('El agente está diseñando el copy persuasivo de esta línea...');
+    
+    const systemPrompt = `Genera un desglose de sub-líneas comerciales B2B persuasivas y de alto valor (copywriting) en ESPAÑOL para esta fase de proyecto: "${concept}".
+Responde EXCLUSIVAMENTE con un array JSON de sublineas sin delimitadores de código markdown \`\`\`json, sin texto adicional.
+Cada sublínea debe ser una frase corta y persuasiva dirigida a convencer al cliente B2B, cubriendo de forma secuencial:
+1. Concepto técnico o alcance simplificado de esta fase.
+2. Identificación del dolor del cliente o problema resuelto en esta fase.
+3. Dificultades o retos que analizaremos para evitar fallos.
+4. Beneficio directo de trabajar con nosotros.
+5. Solución ideal y personalizada propuesta.
+6. Llamada a la acción o hito de cierre de la fase.
+
+Estructura exacta a retornar:
+[
+  {"concepto": "Detalle técnico simplificado de la fase..."},
+  {"concepto": "Referencia a un dolor del posible cliente o solución a un problema..."},
+  {"concepto": "Dificultades analizadas para evitar fallos..."},
+  {"concepto": "Beneficios de trabajar con nosotros esta fase..."},
+  {"concepto": "Solución adecuada y despliegue estratégico..."},
+  {"concepto": "CTA o validación de entregable..."}
+]`;
+
+    try {
+        const res = await fetch('/api/brain-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: systemPrompt })
+        });
+        if (!res.ok) throw new Error('Error al conectar con el cerebro IA');
+        const data = await res.json();
+        let jsonStr = data.text;
+        
+        // Clean markdown tags
+        jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+        const startIdx = jsonStr.indexOf('[');
+        const endIdx = jsonStr.lastIndexOf(']');
+        if (startIdx !== -1 && endIdx !== -1) {
+            jsonStr = jsonStr.substring(startIdx, endIdx + 1);
+        }
+        
+        const sublineas = JSON.parse(jsonStr);
+        if (Array.isArray(sublineas)) {
+            lineasTempList[index].sublineas = sublineas;
+            renderEditPresLineas();
+            showToast('¡Contenido de valor generado con éxito por el Agente!');
+        }
+    } catch (e) {
+        console.error(e);
+        showToast('Error al generar copy de valor con el Agente', true);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span>✨</span> Contenido de Valor (IA)';
+        }
+    }
+}
+
+// Render dynamic service lines list inside modal
 function renderEditPresLineas() {
     const container = document.getElementById('edit-pres-lineas-container');
+    if (!container) return;
+    
     container.innerHTML = '';
 
     if (lineasTempList.length === 0) {
-        container.innerHTML = `<div style="text-align:center; color:var(--text-grey); font-size:0.8rem; padding:20px;">No hay líneas de desglose. Agrega la primera para habilitar la cotización dinámica modular en el PDF.</div>`;
+        container.innerHTML = `
+            <div style="text-align:center; color:var(--text-grey); font-size:0.8rem; padding:24px; border:1px dashed var(--card-border); border-radius:14px; background:rgba(255,255,255,0.01);">
+                No hay líneas de desglose de servicio. Utiliza el 🤖 Copiloto IA superior para generar una estructura instantánea o pulsa "+ Añadir línea" para comenzar.
+            </div>`;
         return;
     }
 
     lineasTempList.forEach((linea, index) => {
-        const item = document.createElement('div');
-        item.className = 'edit-linea-item';
+        const isRec = !!linea.recomendado;
+        const isActive = linea.activo !== false;
         
-        // Build sublineas HTML
+        const card = document.createElement('div');
+        card.className = `edit-linea-item ${isRec ? 'recommended' : ''}`;
+        
+        // Setup Drag & Drop attributes and listeners
+        card.setAttribute('draggable', 'true');
+        card.setAttribute('ondragstart', `handleLineDragStart(event, ${index})`);
+        card.setAttribute('ondragover', `handleLineDragOver(event, ${index})`);
+        card.setAttribute('ondragend', `handleLineDragEnd(event)`);
+        card.setAttribute('ondrop', `handleLineDrop(event, ${index})`);
+        
+        // Sub-lines HTML list
         const sublineasHtml = (linea.sublineas || []).map((sub, sIdx) => `
             <div class="sublinea-row">
+                <span style="font-size:0.75rem; color:var(--text-grey); padding-left:14px; cursor:grab;">⠿</span>
                 <span style="font-size:0.75rem; color:var(--text-grey);">└</span>
                 <input type="text" placeholder="Concepto de sub-línea..." value="${sub.concepto || ''}" 
                        oninput="lineasTempList[${index}].sublineas[${sIdx}].concepto = this.value"
                        class="modal-input" style="flex:1; font-size:0.78rem; padding:4px 8px; height: 28px;">
-                <button onclick="removeEditPresSublinea(${index}, ${sIdx})" 
-                        style="border:none; background:transparent; color:var(--accent-red); cursor:pointer; font-size:0.8rem; padding:4px;">✕</button>
+                
+                <!-- UP / DOWN sort arrows & delete -->
+                <button type="button" onclick="moveEditPresSublinea(${index}, ${sIdx}, -1)" style="border:none; background:transparent; color:var(--text-grey); cursor:pointer; font-size:0.68rem; padding:4px;" title="Subir">▲</button>
+                <button type="button" onclick="moveEditPresSublinea(${index}, ${sIdx}, 1)" style="border:none; background:transparent; color:var(--text-grey); cursor:pointer; font-size:0.68rem; padding:4px;" title="Bajar">▼</button>
+                <button type="button" onclick="removeEditPresSublinea(${index}, ${sIdx})" style="border:none; background:transparent; color:var(--accent-red); cursor:pointer; font-size:0.75rem; padding:4px;">✕</button>
             </div>
         `).join('');
 
-        item.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:6px; margin-bottom:4px;">
-                <span style="font-size:0.72rem; font-weight:700; color:var(--accent); text-transform:uppercase;">Línea #${index + 1}</span>
-                <button onclick="removeEditPresLinea(${index})" 
-                        style="border:none; background:rgba(255,59,48,0.1); color:var(--accent-red); padding:4px 8px; border-radius:6px; font-size:0.7rem; font-weight:700; cursor:pointer;">✕ Eliminar Línea</button>
-            </div>
-            
-            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:8px;">
-                <div>
-                    <label style="font-size:0.68rem; color:var(--text-grey); display:block; margin-bottom:2px;">Concepto/Servicio</label>
-                    <input type="text" placeholder="Ej: Fase 1: Desarrollo de Widget corporativo..." value="${linea.concepto || ''}" 
-                           oninput="lineasTempList[${index}].concepto = this.value"
-                           class="modal-input" style="font-size:0.8rem; padding:6px 10px; height: 32px;">
-                </div>
-                <div>
-                    <label style="font-size:0.68rem; color:var(--text-grey); display:block; margin-bottom:2px;">Precio (€)</label>
-                    <input type="number" placeholder="0" value="${linea.precio != null ? linea.precio : ''}" 
-                           oninput="lineasTempList[${index}].precio = Number(this.value)"
-                           class="modal-input" style="font-size:0.8rem; padding:6px 10px; height: 32px;">
-                </div>
-                <div>
-                    <label style="font-size:0.68rem; color:var(--text-grey); display:block; margin-bottom:2px;">Descuento (%)</label>
-                    <input type="number" placeholder="0" value="${linea.descuento != null ? linea.descuento : ''}" 
-                           oninput="lineasTempList[${index}].descuento = Number(this.value)"
-                           class="modal-input" style="font-size:0.8rem; padding:6px 10px; height: 32px;" min="0" max="100">
-                </div>
-            </div>
+        const imp = (linea.precio || 0) * (1 - (linea.descuento || 0) / 100);
 
-            <div style="display:grid; grid-template-columns: 1.2fr 1.8fr; gap:8px; margin-top:4px;">
-                <div>
-                    <label style="font-size:0.68rem; color:var(--text-grey); display:block; margin-bottom:2px;">Plazo entrega</label>
-                    <input type="text" placeholder="Ej: 10 días, 2 semanas..." value="${linea.plazo || ''}" 
-                           oninput="lineasTempList[${index}].plazo = this.value"
-                           class="modal-input" style="font-size:0.8rem; padding:6px 10px; height: 32px;">
+        card.innerHTML = `
+            ${isRec ? `<div class="line-rec-badge">⭐ RECOMENDADO · No incluido</div>` : ''}
+            
+            <!-- ROW 1 -->
+            <div style="display:flex; gap:10px; align-items:center; width:100%; flex-wrap:wrap;">
+                <!-- Drag dots apple-style -->
+                <span style="color:var(--text-grey); cursor:grab; font-size:1.15rem; font-weight:700; user-select:none; margin-right:2px;" title="Arrastrar para reordenar">⠿</span>
+                
+                <!-- Circular Checkbox Active toggle -->
+                <div class="ios-checkmark-btn ${isActive ? 'checked' : ''}" 
+                     onclick="lineasTempList[${index}].activo = !${isActive}; recalcPaymentOptionsInModal(); renderEditPresLineas();"
+                     title="Activar / Desactivar línea"></div>
+                
+                <!-- Concept name -->
+                <div style="flex:2; min-width:180px;">
+                    <label style="font-size:0.68rem; color:var(--text-grey); display:block; margin-bottom:2px; font-weight:700;">Concepto</label>
+                    <input type="text" placeholder="Landing Page" value="${linea.concepto || ''}" 
+                           oninput="lineasTempList[${index}].concepto = this.value; recalcPaymentOptionsInModal();"
+                           class="modal-input" style="font-size:0.8rem; padding:6px 10px; height: 32px; font-weight:600;">
                 </div>
                 
-                <div style="display:flex; gap:10px; align-items:center; padding-top:14px;">
-                    <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; cursor:pointer; color:var(--text-main);">
-                        <input type="checkbox" ${linea.mantenimiento ? 'checked' : ''} 
-                               onchange="lineasTempList[${index}].mantenimiento = this.checked; renderEditPresLineas();"> Mantenimiento mensual?
-                    </label>
-                    
-                    ${linea.mantenimiento ? `
-                        <input type="number" placeholder="€/mes" value="${linea.mantenimiento_precio != null ? linea.mantenimiento_precio : ''}" 
-                               oninput="lineasTempList[${index}].mantenimiento_precio = Number(this.value)"
-                               class="modal-input" style="font-size:0.75rem; padding:4px 8px; width:70px; height:28px;">
-                    ` : ''}
+                <!-- Price -->
+                <div style="width:90px;">
+                    <label style="font-size:0.68rem; color:var(--text-grey); display:block; margin-bottom:2px; font-weight:700;">Precio (€)</label>
+                    <input type="number" placeholder="0" value="${linea.precio != null ? linea.precio : ''}" 
+                           oninput="lineasTempList[${index}].precio = Number(this.value); recalcPaymentOptionsInModal(); renderEditPresLineas();"
+                           class="modal-input" style="font-size:0.8rem; padding:6px 10px; height: 32px; text-align:center;">
+                </div>
+                
+                <!-- Discount -->
+                <div style="width:75px;">
+                    <label style="font-size:0.68rem; color:var(--text-grey); display:block; margin-bottom:2px; font-weight:700;">Dto. (%)</label>
+                    <input type="number" placeholder="0" value="${linea.descuento != null ? linea.descuento : ''}" 
+                           oninput="lineasTempList[${index}].descuento = Number(this.value); recalcPaymentOptionsInModal(); renderEditPresLineas();"
+                           class="modal-input" style="font-size:0.8rem; padding:6px 10px; height: 32px; text-align:center;" min="0" max="100">
+                </div>
+
+                <!-- Final Net calculated label -->
+                <div style="display:flex; flex-direction:column; align-items:center; min-width:70px; margin-left:4px;">
+                    <span style="font-size:0.65rem; color:var(--text-grey); font-weight:700; text-transform:uppercase;">Final</span>
+                    <strong style="font-size:0.95rem; color:#34c759; margin-top:2px; font-weight:800;">${Math.round(imp)}€</strong>
+                </div>
+
+                <!-- Star toggle recommended optional -->
+                <button type="button" class="ios-star-btn ${isRec ? 'active' : ''}" 
+                        onclick="lineasTempList[${index}].recomendado = !${isRec}; recalcPaymentOptionsInModal(); renderEditPresLineas();"
+                        title="Marcar como recomendada (Opcional, excluida de totales)">★</button>
+                
+                <!-- Delete row button (pink/red high fidelity) -->
+                <button type="button" class="ios-delete-btn" onclick="removeEditPresLinea(${index})" title="Eliminar línea">✕</button>
+            </div>
+            
+            <!-- ROW 2 -->
+            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin-top:6px; align-items:flex-end;">
+                <!-- Hours estimated -->
+                <div>
+                    <label style="font-size:0.68rem; color:var(--text-grey); display:block; margin-bottom:2px;">⏱️ Horas estimadas</label>
+                    <div style="display:flex; gap:4px;">
+                        <input type="number" value="${linea.horas_estimadas || '0'}" 
+                               oninput="lineasTempList[${index}].horas_estimadas = Number(this.value); const f = lineasTempList[${index}].unidad_estimacion === 'días' ? 8 : 1; lineasTempList[${index}].precio = Number(this.value) * f * (lineasTempList[${index}].precio_hora || 53); lineasTempList[${index}].plazo = this.value + ' ' + (lineasTempList[${index}].unidad_estimacion || 'horas'); recalcPaymentOptionsInModal(); renderEditPresLineas();"
+                               class="modal-input" style="flex:1.2; font-size:0.78rem; padding:4px 6px; height:28px; text-align:center;">
+                        
+                        <select onchange="lineasTempList[${index}].unidad_estimacion = this.value; const f = this.value === 'días' ? 8 : 1; lineasTempList[${index}].precio = (lineasTempList[${index}].horas_estimadas || 0) * f * (lineasTempList[${index}].precio_hora || 53); lineasTempList[${index}].plazo = (lineasTempList[${index}].horas_estimadas || 0) + ' ' + this.value; recalcPaymentOptionsInModal(); renderEditPresLineas();"
+                                class="modal-input" style="flex:1; font-size:0.74rem; padding:0; height:28px; text-align:center; min-width:60px;">
+                            <option value="horas" ${linea.unidad_estimacion !== 'días' ? 'selected' : ''}>horas</option>
+                            <option value="días" ${linea.unidad_estimacion === 'días' ? 'selected' : ''}>días</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- rate/hour -->
+                <div>
+                    <label style="font-size:0.68rem; color:var(--text-grey); display:block; margin-bottom:2px;">💰 €/hora</label>
+                    <input type="number" value="${linea.precio_hora || '53'}" 
+                           oninput="lineasTempList[${index}].precio_hora = Number(this.value); const f = lineasTempList[${index}].unidad_estimacion === 'días' ? 8 : 1; lineasTempList[${index}].precio = (lineasTempList[${index}].horas_estimadas || 0) * f * Number(this.value); recalcPaymentOptionsInModal(); renderEditPresLineas();"
+                           class="modal-input" style="font-size:0.78rem; padding:4px 8px; height:28px; text-align:center;">
+                </div>
+
+                <!-- Live formula text with Multiplication Symbol (×) -->
+                <div style="display:flex; align-items:center; font-size:0.74rem; color:#34c759; font-weight:600; padding-bottom:6px; min-width:120px;">
+                    = ${linea.horas_estimadas || 0}${linea.unidad_estimacion === 'días' ? 'd' : 'h'} × ${linea.precio_hora || 53}€ = ${linea.precio || 0}€
+                </div>
+                
+                <!-- Plazo text -->
+                <div>
+                    <label style="font-size:0.68rem; color:var(--text-grey); display:block; margin-bottom:2px;">📋 Plazo (texto para PDF)</label>
+                    <input type="text" placeholder="Ej: 16 horas, 2 semanas..." value="${linea.plazo || ''}" 
+                           oninput="lineasTempList[${index}].plazo = this.value"
+                           class="modal-input" style="font-size:0.78rem; padding:4px 8px; height:28px;">
                 </div>
             </div>
 
-            <!-- Optional check -->
-            <div style="display:flex; gap:12px; align-items:center; margin-top:2px;">
-                <label style="display:flex; align-items:center; gap:6px; font-size:0.72rem; cursor:pointer; color:var(--accent-purple);">
-                    <input type="checkbox" ${linea.recomendado ? 'checked' : ''} 
-                           onchange="lineasTempList[${index}].recomendado = this.checked; renderEditPresLineas();"> ⭐ Módulo recomendado complementario (No incluido en precio base)
+            <!-- ROW 3: MANTENIMIENTO SLIDER TOGGLE -->
+            <div style="display:flex; gap:10px; align-items:center; margin-top:4px;">
+                <span style="font-size:0.74rem; color:var(--text-grey); display:flex; align-items:center; gap:4px;">🔄 Mant. mensual</span>
+                <label class="ios-switch">
+                    <input type="checkbox" ${linea.mantenimiento ? 'checked' : ''} 
+                           onchange="lineasTempList[${index}].mantenimiento = this.checked; recalcPaymentOptionsInModal(); renderEditPresLineas();">
+                    <span class="ios-switch-slider"></span>
                 </label>
+                
+                ${linea.mantenimiento ? `
+                    <input type="number" placeholder="€/mes" value="${linea.mantenimiento_precio != null ? linea.mantenimiento_precio : ''}" 
+                           oninput="lineasTempList[${index}].mantenimiento_precio = Number(this.value); recalcPaymentOptionsInModal();"
+                           class="modal-input" style="font-size:0.75rem; padding:4px 8px; width:75px; height:26px; text-align:center;">
+                ` : ''}
             </div>
 
-            <!-- Sublineas wrapper -->
-            <div style="margin-top:6px; padding-left:14px; border-left:1.5px solid var(--border-color);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                    <span style="font-size:0.7rem; font-weight:700; color:var(--text-grey);">Desglose Detallado / Puntos Clave</span>
-                    <button onclick="addEditPresSublinea(${index})" 
-                            style="border:none; background:transparent; color:var(--accent); font-size:0.7rem; font-weight:700; cursor:pointer;">+ Añadir punto</button>
+            <!-- ROW 4: SUB-LINES LIST WITH COPYWRITING AGENT TRIGGER -->
+            <div style="margin-top:6px; padding-left:14px; border-left:1.5px solid rgba(255,255,255,0.06);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding-left:14px; flex-wrap:wrap; gap:8px;">
+                    <span style="font-size:0.7rem; font-weight:700; color:var(--text-grey);">Desglose de Sub-líneas (Detalle PDF)</span>
+                    <div style="display:flex; gap:8px;">
+                        <button type="button" id="btn-ai-line-copy-${index}" onclick="generateValueCopyForLine(${index})" 
+                                style="border:none; background:transparent; color:#ff9f0a; font-size:0.72rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:3px;">
+                            <span>✨</span> Contenido de Valor (IA)
+                        </button>
+                        <button type="button" onclick="addEditPresSublinea(${index})" 
+                                style="border:none; background:transparent; color:var(--accent); font-size:0.72rem; font-weight:700; cursor:pointer;">+ Sublínea</button>
+                    </div>
                 </div>
                 ${sublineasHtml}
             </div>
         `;
-        container.appendChild(item);
+        container.appendChild(card);
     });
 }
 
@@ -3076,6 +3435,9 @@ function addEditPresLinea() {
         concepto: '',
         precio: 0,
         descuento: 0,
+        horas_estimadas: 0,
+        unidad_estimacion: 'horas',
+        precio_hora: 53,
         plazo: '',
         mantenimiento: false,
         mantenimiento_precio: 0,
@@ -3083,11 +3445,13 @@ function addEditPresLinea() {
         sublineas: [],
         activo: true
     });
+    recalcPaymentOptionsInModal();
     renderEditPresLineas();
 }
 
 function removeEditPresLinea(index) {
     lineasTempList.splice(index, 1);
+    recalcPaymentOptionsInModal();
     renderEditPresLineas();
 }
 
@@ -3104,24 +3468,154 @@ function removeEditPresSublinea(lineIdx, subIdx) {
     renderEditPresLineas();
 }
 
+function moveEditPresSublinea(lineIdx, subIdx, direction) {
+    const sublineas = lineasTempList[lineIdx].sublineas || [];
+    const targetIdx = subIdx + direction;
+    if (targetIdx >= 0 && targetIdx < sublineas.length) {
+        const tmp = sublineas[subIdx];
+        sublineas[subIdx] = sublineas[targetIdx];
+        sublineas[targetIdx] = tmp;
+        renderEditPresLineas();
+    }
+}
+
+// 🤖 ADVANCED AI COPILOT PROPOSAL GENERATOR (WITH HIGH VALUE COPYWRITING TRIGGERS)
+async function generateProposalWithIA() {
+    const promptInput = document.getElementById('ai-copilot-prompt');
+    const userPrompt = promptInput.value.trim();
+    if (!userPrompt) {
+        showToast('Escribe una idea o servicio para proponer', true);
+        return;
+    }
+
+    const btn = document.getElementById('btn-ai-copilot-generate');
+    const feedback = document.getElementById('ai-copilot-feedback');
+    
+    btn.disabled = true;
+    btn.textContent = '🤖 Generando...';
+    feedback.style.display = 'block';
+    feedback.textContent = 'El Copiloto IA está analizando los dolores comerciales y estructurando la propuesta...';
+
+    const systemPrompt = `Diseña una propuesta comercial B2B premium en ESPAÑOL adaptada a CerebroComercial AI (iadebarrio.com) para este servicio/cliente: "${userPrompt}".
+Responde EXCLUSIVAMENTE con un objeto JSON (sin delimitadores de código markdown \`\`\`json, sin texto adicional, solo el JSON estructurado).
+Estructura exacta del JSON a retornar:
+{
+  "titulo": "Título comercial de alto impacto",
+  "subtitulo": "Propuesta de valor clara",
+  "descripcion": "Descripción persuasiva de lo que se logrará con el servicio",
+  "bonus": "* Auditoría de embudo de ventas complementaria (Valorada en 450€)\\n* 30 días de soporte post-entrega premium",
+  "contenido_ia": "Detalle técnico estratégico redactado de manera excelente para captar la atención del cliente",
+  "lineas": [
+    {
+      "concepto": "Fase 1: Mapeo de procesos y estrategia comercial",
+      "horas": 12,
+      "unidad_estimacion": "horas",
+      "precio_hora": 53,
+      "descuento": 0,
+      "plazo": "7 días",
+      "mantenimiento": false,
+      "mantenimiento_precio": 0,
+      "recomendado": false,
+      "sublineas": [
+        {"concepto": "Auditoría de cuellos de botella y mapeo simplificado"},
+        {"concepto": "Referencia a un dolor del posible cliente o solución a un problema"},
+        {"concepto": "Dificultades y cuellos de botella analizados en esta fase"},
+        {"concepto": "Beneficios clave y retorno de trabajar con nosotros esta fase"},
+        {"concepto": "Solución adecuada y despliegue estratégico"},
+        {"concepto": "CTA o validación de entregable"}
+      ]
+    },
+    ... (genera entre 2 y 4 líneas completas y detalladas de este tipo, incluye al menos una línea recomendada con recomendado=true. Cada una de las líneas debe rellenar obligatoriamente las 6 sublíneas persuasivas de copywriting comercial según el orden anterior)
+  ]
+}`;
+
+    try {
+        const res = await fetch('/api/brain-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: systemPrompt
+            })
+        });
+
+        if (!res.ok) throw new Error('Error al conectar con el cerebro IA');
+        const data = await res.json();
+        let jsonStr = data.text;
+        
+        // Clean markdown JSON block tags if present
+        jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+        
+        // Extra clean search for JSON object
+        const startIdx = jsonStr.indexOf('{');
+        const endIdx = jsonStr.lastIndexOf('}');
+        if (startIdx !== -1 && endIdx !== -1) {
+            jsonStr = jsonStr.substring(startIdx, endIdx + 1);
+        }
+
+        const parsed = JSON.parse(jsonStr);
+
+        // Populate fields
+        document.getElementById('edit-pres-titulo').value = parsed.titulo || '';
+        document.getElementById('edit-pres-subtitulo').value = parsed.subtitulo || '';
+        document.getElementById('edit-pres-descripcion').value = parsed.descripcion || '';
+        document.getElementById('edit-pres-bonus').value = parsed.bonus || '';
+        document.getElementById('edit-pres-contenido-ia').value = parsed.contenido_ia || '';
+        
+        // Convert lineas
+        lineasTempList = (parsed.lineas || []).map(l => ({
+            concepto: l.concepto || '',
+            precio: l.precio || (Number(l.horas || 0) * (l.unidad_estimacion === 'días' ? 8 : 1) * Number(l.precio_hora || 53)) || 0,
+            descuento: l.descuento || 0,
+            horas_estimadas: l.horas || 0,
+            unidad_estimacion: l.unidad_estimacion || 'horas',
+            precio_hora: l.precio_hora || 53,
+            plazo: l.plazo || '',
+            mantenimiento: !!l.mantenimiento,
+            mantenimiento_precio: l.mantenimiento_precio || 0,
+            recomendado: !!l.recomendado,
+            sublineas: l.sublineas || [],
+            activo: true
+        }));
+
+        recalcPaymentOptionsInModal();
+        renderEditPresLineas();
+        showToast('¡Propuesta diseñada por el Copiloto IA con éxito!');
+        feedback.textContent = '✨ Estructura generada correctamente.';
+        setTimeout(() => feedback.style.display = 'none', 3000);
+    } catch (e) {
+        console.error(e);
+        feedback.textContent = '❌ Error al generar: ' + e.message;
+        showToast('Error del Copiloto IA al diseñar propuesta', true);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generar';
+    }
+}
+
 // Action: Save Proposal/Template from modal
 async function savePresupuestoAction() {
     const id = document.getElementById('edit-pres-id').value;
     const isPlantilla = document.getElementById('edit-pres-es-plantilla').checked;
 
+    // Get Horizontal forms_pago_ofrecidas selected
     const offeredPayMethods = [];
-    document.querySelectorAll('.pres-fp-offered:checked').forEach(chk => offeredPayMethods.push(chk.value));
+    document.querySelectorAll('.pay-method-btn.selected').forEach(btn => {
+        offeredPayMethods.push(btn.dataset.value);
+    });
 
-    // Compile Pago Config
+    // Compile Pago Config including selected_option
     const pagoConfig = {
-        inv_min_pct: Number(document.getElementById('edit-pres-pc-inv-min').value || 15),
+        inv_min_pct: Number(document.getElementById('edit-pres-pc-inv-min').value || 18),
         num_cuotas: Number(document.getElementById('edit-pres-pc-cuotas').value || 24),
         descuento_b_pct: Number(document.getElementById('edit-pres-pc-dto-b').value || 4),
         descuento_c_pct: Number(document.getElementById('edit-pres-pc-dto-c').value || 8),
-        show_a: document.getElementById('edit-pres-pc-show-a').checked,
-        show_b: document.getElementById('edit-pres-pc-show-b').checked,
-        show_c: document.getElementById('edit-pres-pc-show-c').checked
+        selected_option: selectedPaymentOption
     };
+
+    // Calculate totals to save as pricing values
+    const billingLines = lineasTempList.filter(l => l.activo !== false && l.recomendado !== true);
+    const totalNetCalculated = billingLines.reduce((s, l) => s + (l.precio * (1 - (l.descuento || 0) / 100)), 0);
+    const totalMantCalculated = lineasTempList.filter(l => l.activo !== false).reduce((s, l) => s + (l.mantenimiento ? (l.mantenimiento_precio || 0) : 0), 0);
 
     const record = {
         titulo: document.getElementById('edit-pres-titulo').value.trim(),
@@ -3131,9 +3625,10 @@ async function savePresupuestoAction() {
         badge: document.getElementById('edit-pres-badge').value.trim() || null,
         orden: Number(document.getElementById('edit-pres-orden').value || 1),
 
-        precio_alta: document.getElementById('edit-pres-precio-alta').value ? Number(document.getElementById('edit-pres-precio-alta').value) : null,
-        precio_mensual: document.getElementById('edit-pres-precio-mensual').value ? Number(document.getElementById('edit-pres-precio-mensual').value) : null,
-        precio_tipo: document.getElementById('edit-pres-precio-tipo').value,
+        // Auto compile base prices from lines if present
+        precio_alta: lineasTempList.length > 0 ? totalNetCalculated : null,
+        precio_mensual: lineasTempList.length > 0 ? totalMantCalculated : null,
+        precio_tipo: lineasTempList.length > 0 ? 'fijo' : 'fijo',
 
         es_plantilla: isPlantilla,
         activo: document.getElementById('edit-pres-activo').checked,
@@ -3142,9 +3637,9 @@ async function savePresupuestoAction() {
         lead_nombre: isPlantilla ? null : document.getElementById('edit-pres-lead-nombre').value.trim() || null,
         fecha: isPlantilla ? null : new Date(document.getElementById('edit-pres-fecha').value).toISOString(),
 
-        descuento_pct: Number(document.getElementById('edit-pres-descuento-pct').value || 0),
+        descuento_pct: 0,
         fecha_entrega: document.getElementById('edit-pres-fecha-entrega').value ? new Date(document.getElementById('edit-pres-fecha-entrega').value).toISOString() : null,
-        link_pago: document.getElementById('edit-pres-link-pago').value.trim() || null,
+        link_pago: null,
         bonus: document.getElementById('edit-pres-bonus').value.trim() || null,
         notas_internas: document.getElementById('edit-pres-notas-internas').value.trim() || null,
         contenido_ia: document.getElementById('edit-pres-contenido-ia').value.trim() || null,
