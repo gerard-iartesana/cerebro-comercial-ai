@@ -198,6 +198,8 @@ async function initializeDashboard() {
         document.getElementById('metrics-replied').textContent = replied;
         document.getElementById('metrics-booked').textContent = booked;
 
+        logToSystemSupport(`Dashboard cargado: ${total} leads en la base de datos (${enriched} enriquecidos, ${replied} contestados, ${booked} citas).`);
+
         // Fetch and display Hunter.io API credits
         try {
             const creditsRes = await fetch('/api/brain-chat', {
@@ -238,12 +240,15 @@ async function initializeDashboard() {
                         marginEl.style.color = 'var(--accent-green)';
                     }
                 }
+                logToSystemSupport(`Créditos Hunter.io consultados: ${used}/${limit} usados (${margin} libres).`);
             }
         } catch (creditsErr) {
             console.error('Error cargando créditos de Hunter:', creditsErr);
+            logToSystemSupport(`Error consultando créditos de Hunter: ${creditsErr.message}`);
         }
     } catch (e) {
         console.error('Error cargando métricas:', e);
+        logToSystemSupport(`Error al inicializar dashboard: ${e.message}`);
         showAlert('Error de Base de Datos', `Error al cargar métricas del dashboard: ${e.message || JSON.stringify(e)}`);
     }
 }
@@ -734,6 +739,7 @@ async function sendToBrain() {
     if (!msg) return;
 
     input.value = '';
+    logToSystemSupport(`[Chat] Usuario envía a El Cerebro: "${msg}"`);
 
     const chatMessages = document.getElementById('brain-messages');
     
@@ -788,6 +794,7 @@ async function sendToBrain() {
 
     // Activate orchestrator node
     setAgentStatus('orchestrator', 'working', 'Analizando petición del usuario...');
+    logToSystemSupport(`[Orquestador] Enviando petición al modelo cognitivo de El Cerebro...`);
 
     try {
         const res = await fetch('/api/brain-chat', {
@@ -811,6 +818,8 @@ async function sendToBrain() {
                 setAgentStatus(data.agentUsed, 'done', `${actionName} completado`);
                 setAgentStatus('orchestrator', 'done', `Delegado a ${agent ? agent.name : data.agentUsed}`);
 
+                logToSystemSupport(`[Agente] Petición delegada al agente especializado [${agent ? agent.name : data.agentUsed}] (Acción: ${actionName}).`);
+
                 // Save to agent history
                 saveAgentHistory(data.agentUsed, actionName, msg, true);
 
@@ -821,6 +830,7 @@ async function sendToBrain() {
                 }, 8000);
             } else {
                 setAgentStatus('orchestrator', 'done', 'Respuesta directa generada');
+                logToSystemSupport(`[Orquestador] Respuesta conversacional directa generada por El Cerebro.`);
                 setTimeout(() => setAgentStatus('orchestrator', 'idle'), 5000);
             }
 
@@ -835,6 +845,7 @@ async function sendToBrain() {
 
             // Refresh leads grid and dashboard if an action was executed
             if (data.actionExecuted) {
+                logToSystemSupport(`[CRM] Acción ejecutada con éxito. Actualizando base de datos local y vistas.`);
                 initializeDashboard();
                 loadLeadsGrid(); // Auto-refresh leads table!
             }
@@ -844,6 +855,7 @@ async function sendToBrain() {
     } catch (e) {
         clearInterval(progressInterval);
         setAgentStatus('orchestrator', 'error', `Error: ${e.message}`);
+        logToSystemSupport(`[Error Chat] Error en la petición a El Cerebro: ${e.message}`);
         setTimeout(() => setAgentStatus('orchestrator', 'idle'), 8000);
 
         const errDiv = document.createElement('div');
@@ -2033,8 +2045,12 @@ async function importMeetingAsTask(meetingId) {
     try {
         await _supabase.from('tasks').insert([taskData]);
         await loadTasks();
+        logToSystemSupport(`Reunión importada como tarea: "${m.contact_name} - reunión"`);
         showAlert('Reunión importada', m.contact_name, '⬇');
-    } catch(e) { showAlert('Error importando', e.message, '❌'); }
+    } catch(e) {
+        logToSystemSupport(`Error importando reunión de ${m.contact_name}: ${e.message}`);
+        showAlert('Error importando', e.message, '❌');
+    }
 }
 
 async function importAllTomorrowMeetings() {
@@ -2047,11 +2063,13 @@ async function importAllTomorrowMeetings() {
     const { data } = await _supabase.from('meetings').select('*').gte('meeting_date', tStr).lt('meeting_date', dayAfter.toISOString().split('T')[0]);
     if (!data) return;
     
+    logToSystemSupport(`Iniciando importación masiva de reuniones para mañana (${data.length} encontradas)...`);
     for (const m of data) {
         if (!allTasks.some(t => t.meeting_id === m.id)) {
             await importMeetingAsTask(m.id);
         }
     }
+    logToSystemSupport(`Importación masiva finalizada con éxito.`);
     showAlert('Todas importadas', `${data.length} reuniones`, '✅');
 }
 
