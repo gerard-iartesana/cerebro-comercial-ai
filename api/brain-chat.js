@@ -445,53 +445,65 @@ REGLA DE ADVERTENCIA DE CRÉDITOS:
       parts: [{ text: message }]
     });
 
-    // First call to Gemini – may trigger a function call
-    const geminiRes = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction,
-        contents,
-        tools: geminiTools
-      })
-    });
+    let loopCount = 0;
+    const maxLoops = 5;
+    let lastActionExecuted = null;
+    let lastAgentUsed = null;
+    let finalOutputText = null;
 
-    if (!geminiRes.ok) {
-      throw new Error(`Error en el API de Gemini: ${geminiRes.status} - ${await geminiRes.text()}`);
-    }
-
-    const geminiJson = await geminiRes.json();
-    console.log('Gemini raw response keys:', Object.keys(geminiJson));
-
-    const candidate = geminiJson.candidates && geminiJson.candidates[0];
-    if (!candidate || !candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
-      console.error('Gemini returned empty/invalid candidate:', JSON.stringify(geminiJson).substring(0, 500));
-      return res.status(200).json({
-        role: 'model',
-        text: '⚠️ El Cerebro no pudo procesar la respuesta de Gemini. Intenta reformular tu petición.'
+    while (loopCount < maxLoops) {
+      console.log(`[Loop ${loopCount}] Enviando petición a Gemini...`);
+      const geminiRes = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction,
+          contents,
+          tools: geminiTools
+        })
       });
-    }
 
-    // Search ALL parts for function calls (Gemini 2.5 returns thinking + text + functionCall in separate parts)
-    const allParts = candidate.content.parts;
-    const functionCalls = allParts.filter(p => p.functionCall).map(p => p.functionCall);
-    let textPart = null;
-
-    for (const part of allParts) {
-      if (part.text && !part.thought) {
-        textPart = part.text;
+      if (!geminiRes.ok) {
+        throw new Error(`Error en el API de Gemini: ${geminiRes.status} - ${await geminiRes.text()}`);
       }
-    }
 
-    console.log('Parts found:', allParts.length, '| functionCalls:', functionCalls.length, '| textPart:', !!textPart);
+      const geminiJson = await geminiRes.json();
+      console.log(`[Loop ${loopCount}] Respuesta de Gemini recibida. Claves:`, Object.keys(geminiJson));
 
-    // If Gemini decided to call one or more tools, execute them in parallel and feed the results back
-    if (functionCalls.length > 0) {
-      console.log(`El Cerebro detectó ${functionCalls.length} llamadas paralelas.`);
+      const candidate = geminiJson.candidates && geminiJson.candidates[0];
+      if (!candidate || !candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+        console.error(`[Loop ${loopCount}] Gemini devolvió un candidato vacío o inválido:`, JSON.stringify(geminiJson).substring(0, 500));
+        finalOutputText = '⚠️ El Cerebro no pudo procesar la respuesta de Gemini. Intenta reformular tu petición.';
+        break;
+      }
+
+      const allParts = candidate.content.parts;
+      const functionCalls = allParts.filter(p => p.functionCall).map(p => p.functionCall);
+
+      // If there are no function calls, extract text and break out of the loop
+      if (functionCalls.length === 0) {
+        for (const part of allParts) {
+          if (part.text && !part.thought) {
+            finalOutputText = part.text;
+          }
+        }
+        if (!finalOutputText) {
+          finalOutputText = '🤔 El Cerebro procesó tu mensaje pero no generó respuesta de texto. Intenta reformularlo.';
+        }
+        console.log(`[Loop ${loopCount}] Respuesta final de texto obtenida. Saliendo del bucle.`);
+        break;
+      }
+
+      // We have one or more function calls to execute
+      console.log(`[Loop ${loopCount}] El Cerebro detectó ${functionCalls.length} llamadas paralelas.`);
       
+      const firstCall = functionCalls[0];
+      lastActionExecuted = firstCall.name;
+      lastAgentUsed = agentMap[firstCall.name] || null;
+
       const functionResponseParts = await Promise.all(functionCalls.map(async (fCall) => {
         const { name, args } = fCall;
-        console.log(`Delegando al agente [${agentMap[name] || 'unknown'}] → ${name}`, args);
+        console.log(`[Loop ${loopCount}] Delegando al agente [${agentMap[name] || 'unknown'}] → ${name}`, args);
         
         const implementation = implementations[name];
         let toolResult;
@@ -501,7 +513,7 @@ REGLA DE ADVERTENCIA DE CRÉDITOS:
           try {
             toolResult = await implementation(args || {});
           } catch (implErr) {
-            console.error(`Error ejecutando ${name}:`, implErr);
+            console.error(`[Loop ${loopCount}] Error ejecutando ${name}:`, implErr);
             toolResult = { error: implErr.message };
           }
         }
@@ -514,62 +526,25 @@ REGLA DE ADVERTENCIA DE CRÉDITOS:
         };
       }));
 
-      // Send all tool results back to Gemini for the final natural-language response
+      // Append model call and tool responses to the conversation context
       contents.push(candidate.content);
       contents.push({
         role: 'user',
         parts: functionResponseParts
       });
 
-      const geminiFinalRes = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ systemInstruction, contents, tools: geminiTools })
-      });
-
-      const firstCall = functionCalls[0];
-      const primaryAgent = agentMap[firstCall.name] || null;
-
-      if (!geminiFinalRes.ok) {
-        const errText = await geminiFinalRes.text();
-        console.error('Gemini final parallel call failed:', geminiFinalRes.status, errText.substring(0, 300));
-        return res.status(200).json({
-          role: 'model',
-          text: `✅ Ejecutadas ${functionCalls.length} acciones correctamente.`,
-          actionExecuted: firstCall.name,
-          agentUsed: primaryAgent
-        });
-      }
-
-      const finalJson = await geminiFinalRes.json();
-      const finalCandidate = finalJson.candidates && finalJson.candidates[0];
-
-      // Search all parts for text (skip thinking parts)
-      let finalText = null;
-      if (finalCandidate && finalCandidate.content && finalCandidate.content.parts) {
-        for (const p of finalCandidate.content.parts) {
-          if (p.text && !p.thought) {
-            finalText = p.text;
-          }
-        }
-      }
-      if (!finalText) {
-        finalText = `✅ Se ejecutaron ${functionCalls.length} acciones correctamente.`;
-      }
-
-      return res.status(200).json({
-        role: 'model',
-        text: finalText,
-        actionExecuted: firstCall.name,
-        agentUsed: primaryAgent
-      });
+      loopCount++;
     }
 
-    // No function call – return the conversational response directly
-    const directText = textPart || '🤔 El Cerebro procesó tu mensaje pero no generó respuesta de texto. Intenta reformularlo.';
+    if (loopCount >= maxLoops && !finalOutputText) {
+      finalOutputText = `⚠️ Se ha alcanzado el límite máximo de iteraciones (${maxLoops}) sin obtener una respuesta final de texto. Por favor, intenta de nuevo o simplifica la consulta.`;
+    }
+
     return res.status(200).json({
       role: 'model',
-      text: directText
+      text: finalOutputText,
+      actionExecuted: lastActionExecuted,
+      agentUsed: lastAgentUsed
     });
 
   } catch (error) {
