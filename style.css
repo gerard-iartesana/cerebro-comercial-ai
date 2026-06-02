@@ -747,6 +747,36 @@ html, body {
     cursor: not-allowed !important;
     filter: grayscale(80%);
 }
+/* Guest (Read-Only) Global Protection */
+body.role-guest .dashboard-main input,
+body.role-guest .dashboard-main textarea,
+body.role-guest .dashboard-main select {
+    pointer-events: none !important;
+    opacity: 0.75 !important;
+    background: var(--bg-secondary) !important;
+    cursor: not-allowed !important;
+}
+body.role-guest .dashboard-main button:not(.sidebar-nav-item),
+body.role-guest .dashboard-main a.btn-primary,
+body.role-guest .dashboard-main a.btn-secondary,
+body.role-guest .dashboard-main .btn-primary,
+body.role-guest .dashboard-main .btn-secondary {
+    pointer-events: none !important;
+    opacity: 0.35 !important;
+    cursor: not-allowed !important;
+    filter: grayscale(40%);
+}
+body.role-guest .dashboard-main [contenteditable="true"] {
+    pointer-events: none !important;
+}
+body.role-guest .dashboard-main .kanban-card {
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+}
+body.role-guest .dashboard-main td button {
+    pointer-events: none !important;
+    opacity: 0.4 !important;
+}
 .login-user-item {
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
 }

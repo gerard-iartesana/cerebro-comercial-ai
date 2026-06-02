@@ -63,72 +63,21 @@ function resolvePrompt(result) {
 }
 
 
-// 2. Lock Screen Authentication (Multi-User & Role-Based Permissions)
-let selectedRole = 'admin';
-
-window.selectLoginUser = function(role) {
-    selectedRole = role;
-    const title = document.getElementById('user-select-title');
-    const grid = document.getElementById('login-user-grid');
-    const area = document.getElementById('active-user-area');
-    const avatar = document.getElementById('active-user-avatar');
-    const name = document.getElementById('active-user-name');
-    const pwdInput = document.getElementById('lock-password');
-    const errorText = document.getElementById('lock-error');
-
-    if (errorText) errorText.style.display = 'none';
-    if (pwdInput) pwdInput.value = '';
-
-    if (title) title.style.display = 'none';
-    if (grid) grid.style.display = 'none';
-    if (area) area.style.display = 'flex';
-
-    if (avatar) {
-        if (role === 'admin') {
-            avatar.innerHTML = '🛠️';
-            avatar.style.background = 'linear-gradient(135deg, #ff9500, #ff5e3a)';
-        } else if (role === 'client') {
-            avatar.innerHTML = '💼';
-            avatar.style.background = 'linear-gradient(135deg, #007aff, #5856d6)';
-        } else if (role === 'guest') {
-            avatar.innerHTML = '👤';
-            avatar.style.background = 'linear-gradient(135deg, #34c759, #00c7b1)';
-        }
-    }
-
-    if (name) {
-        if (role === 'admin') name.textContent = 'Administrador';
-        if (role === 'client') name.textContent = 'Cliente';
-        if (role === 'guest') name.textContent = 'Invitado';
-    }
-
-    setTimeout(() => { if (pwdInput) pwdInput.focus(); }, 100);
-};
-
-window.goBackToUserSelect = function() {
-    const title = document.getElementById('user-select-title');
-    const grid = document.getElementById('login-user-grid');
-    const area = document.getElementById('active-user-area');
-    const errorText = document.getElementById('lock-error');
-
-    if (errorText) errorText.style.display = 'none';
-    if (title) title.style.display = 'block';
-    if (grid) grid.style.display = 'flex';
-    if (area) area.style.display = 'none';
-};
-
+// 2. Lock Screen Authentication (Username/Password & Role-Based Permissions)
 async function validateLock() {
+    const userInput = document.getElementById('lock-username');
     const pwdInput = document.getElementById('lock-password');
+    const user = userInput ? userInput.value : '';
     const pwd = pwdInput ? pwdInput.value : '';
     const errorText = document.getElementById('lock-error');
 
-    if (!pwd) return;
+    if (!user || !pwd) return;
 
     try {
         const res = await fetch('/api/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: pwd })
+            body: JSON.stringify({ username: user, password: pwd })
         });
 
         const data = await res.json();
@@ -146,7 +95,7 @@ async function validateLock() {
             unlockDashboard();
         } else {
             if (errorText) {
-                errorText.textContent = data.error || 'Clave incorrecta';
+                errorText.textContent = data.error || 'Credenciales incorrectas';
                 errorText.style.display = 'block';
             }
             if (pwdInput) pwdInput.value = '';
@@ -204,7 +153,14 @@ window.applyRolePermissions = function() {
         }
     });
 
-    // 2. Actualizar la tarjeta del usuario conectado en el pie del sidebar
+    // 2. Aplicar protección de solo lectura global si es Invitado
+    if (role === 'guest') {
+        document.body.classList.add('role-guest');
+    } else {
+        document.body.classList.remove('role-guest');
+    }
+
+    // 3. Actualizar la tarjeta del usuario conectado en el pie del sidebar
     const nameEl = document.querySelector('.connected-user-card div div div') || document.querySelector('.connected-user-card div[title="gerard@iartesana.es"]');
     if (nameEl) {
         let roleLabel = 'Admin';
