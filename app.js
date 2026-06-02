@@ -5471,3 +5471,45 @@ window.sendAppChatMessage = function() {
     
     logToSystemSupport(`[Chat App] Enviado mensaje de chat interno: "${msg}"`);
 };
+
+// --- Collapsible Sidebar Menu ---
+window.toggleSidebarGroup = function(groupId) {
+    const header = document.querySelector(`.sidebar-group-header[data-group="${groupId}"]`);
+    const subnav = document.getElementById(`subnav-${groupId}`);
+    if (!header || !subnav) return;
+
+    const isCurrentlyExpanded = header.classList.contains('expanded');
+    
+    if (isCurrentlyExpanded) {
+        header.classList.remove('expanded');
+        subnav.classList.add('collapsed');
+        localStorage.setItem(`cc_sidebar_collapsed_${groupId}`, 'true');
+    } else {
+        header.classList.add('expanded');
+        subnav.classList.remove('collapsed');
+        localStorage.setItem(`cc_sidebar_collapsed_${groupId}`, 'false');
+    }
+};
+
+window.initializeSidebarCollapse = function() {
+    const groups = ['dashboard', 'leads', 'clients', 'config', 'comms'];
+    groups.forEach(groupId => {
+        const header = document.querySelector(`.sidebar-group-header[data-group="${groupId}"]`);
+        const subnav = document.getElementById(`subnav-${groupId}`);
+        if (!header || !subnav) return;
+
+        const isCollapsed = localStorage.getItem(`cc_sidebar_collapsed_${groupId}`) === 'true';
+        if (isCollapsed) {
+            header.classList.remove('expanded');
+            subnav.classList.add('collapsed');
+        } else {
+            header.classList.add('expanded');
+            subnav.classList.remove('collapsed');
+        }
+    });
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    window.initializeSidebarCollapse();
+});
+

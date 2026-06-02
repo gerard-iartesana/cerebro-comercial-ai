@@ -78,7 +78,6 @@
             <div class="sidebar-logo">
                 <span class="logo-bold">Cerebro</span><span class="logo-light">Comercial</span>
             </div>
-            
             <nav class="sidebar-nav">
                 <button class="sidebar-nav-item sidebar-nav-brain" data-section="brain">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
@@ -90,9 +89,28 @@
                     Resumen
                 </button>
 
+                <!-- GRUPO: DASHBOARD -->
+                <div class="sidebar-group-header expanded" data-group="dashboard" onclick="toggleSidebarGroup('dashboard')">
+                    <span class="sidebar-group-title">Dashboard</span>
+                    <svg class="sidebar-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <div class="sidebar-subnav" id="subnav-dashboard">
+                    <button class="sidebar-nav-item" data-section="dashboard-business">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        Dashboard Negocio
+                    </button>
+                    <button class="sidebar-nav-item" data-section="dashboard-client">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                        Dashboard Cliente
+                    </button>
+                </div>
+
                 <!-- GRUPO: LEADS -->
-                <div class="sidebar-group-title">Leads</div>
-                <div class="sidebar-subnav">
+                <div class="sidebar-group-header expanded" data-group="leads" onclick="toggleSidebarGroup('leads')">
+                    <span class="sidebar-group-title">Leads</span>
+                    <svg class="sidebar-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <div class="sidebar-subnav" id="subnav-leads">
                     <button class="sidebar-nav-item" data-section="leads">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                         Registro de Leads
@@ -112,8 +130,11 @@
                 </div>
 
                 <!-- GRUPO: CLIENTES -->
-                <div class="sidebar-group-title">Clientes</div>
-                <div class="sidebar-subnav">
+                <div class="sidebar-group-header expanded" data-group="clients" onclick="toggleSidebarGroup('clients')">
+                    <span class="sidebar-group-title">Clientes</span>
+                    <svg class="sidebar-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <div class="sidebar-subnav" id="subnav-clients">
                     <button class="sidebar-nav-item" data-section="proposals">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                         Propuestas
@@ -125,8 +146,11 @@
                 </div>
 
                 <!-- GRUPO: CONFIGURACIÓN -->
-                <div class="sidebar-group-title">Configuración</div>
-                <div class="sidebar-subnav">
+                <div class="sidebar-group-header expanded" data-group="config" onclick="toggleSidebarGroup('config')">
+                    <span class="sidebar-group-title">Configuración</span>
+                    <svg class="sidebar-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <div class="sidebar-subnav" id="subnav-config">
                     <button class="sidebar-nav-item" data-section="config-business">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                         Datos de Negocio
@@ -138,8 +162,11 @@
                 </div>
 
                 <!-- GRUPO: COMUNICACIÓN -->
-                <div class="sidebar-group-title">Comunicación</div>
-                <div class="sidebar-subnav">
+                <div class="sidebar-group-header expanded" data-group="comms" onclick="toggleSidebarGroup('comms')">
+                    <span class="sidebar-group-title">Comunicación</span>
+                    <svg class="sidebar-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <div class="sidebar-subnav" id="subnav-comms">
                     <button class="sidebar-nav-item" data-section="whatsapp">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                         WhatsApp
@@ -1927,6 +1954,92 @@
                     <div style="padding:16px 20px; background:var(--bg-secondary); border-top:1px solid var(--border-color); display:flex; gap:12px; align-items:center">
                         <input type="text" placeholder="Escribe un mensaje en #general-comercial..." style="flex:1; padding:12px 16px; border-radius:12px; border:1px solid var(--card-border); background:var(--bg-primary); color:var(--text-main); outline:none; font-size:0.88rem" id="app-chat-input" onkeydown="if(event.key==='Enter')sendAppChatMessage()">
                         <button class="btn-primary" style="padding:12px 20px" onclick="sendAppChatMessage()">Enviar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: Dashboard Negocio (New) -->
+            <div class="dashboard-section" id="sec-dashboard-business">
+                <div class="section-header">
+                    <h1>Dashboard de Negocio</h1>
+                    <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Métricas & Rendimiento</span>
+                </div>
+                
+                <div class="stats-grid" style="margin-bottom:24px">
+                    <div class="stat-card-glass">
+                        <span class="stat-label">Ingresos Totales (SaaS + Consultoría)</span>
+                        <div class="stat-value">12.450€</div>
+                        <span class="stat-trend trend-up">▲ 18% este mes</span>
+                    </div>
+                    <div class="stat-card-glass">
+                        <span class="stat-label">Tasa de Conversión</span>
+                        <div class="stat-value">3.2%</div>
+                        <span class="stat-trend trend-up">▲ Outbound optimizado</span>
+                    </div>
+                    <div class="stat-card-glass">
+                        <span class="stat-label">Negociaciones Activas</span>
+                        <div class="stat-value">8</div>
+                        <span class="stat-trend" style="color:var(--text-grey)">En embudo CRM</span>
+                    </div>
+                    <div class="stat-card-glass">
+                        <span class="stat-label">LTV Medio de Cuenta</span>
+                        <div class="stat-value">1.850€</div>
+                        <span class="stat-trend trend-up">▲ Up-selling Pro</span>
+                    </div>
+                </div>
+
+                <div class="stat-card-glass" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                        📊 Rendimiento Operativo & Finanzas
+                    </h3>
+                    <p style="margin: 0; color: var(--text-grey); font-size: 0.9rem; line-height: 1.6;">
+                        Este módulo centralizará el rendimiento financiero de la plataforma <strong>Cerebro Comercial</strong>. Permitirá auditar el retorno de la inversión (ROI) de campañas de outbound y paid ads, analizar el consumo de APIs (créditos de Hunter, Resend, Gemini) y proyectar los ingresos mensuales recurrentes (MRR).
+                    </p>
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px dashed var(--card-border); padding: 16px; border-radius: 12px; font-size: 0.85rem; color: var(--text-grey); line-height: 1.5;">
+                        ℹ️ <strong>Nota de Integración:</strong> Los datos se conectarán automáticamente con las tablas de facturación de Stripe y el registro de consumo de créditos del agente en Supabase.
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: Dashboard Cliente (New) -->
+            <div class="dashboard-section" id="sec-dashboard-client">
+                <div class="section-header">
+                    <h1>Dashboard de Clientes</h1>
+                    <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Estado de Cuentas & CRM</span>
+                </div>
+                
+                <div class="stats-grid" style="margin-bottom:24px">
+                    <div class="stat-card-glass">
+                        <span class="stat-label">Clientes Activos</span>
+                        <div class="stat-value">12</div>
+                        <span class="stat-trend trend-up">✦ 2 nuevas altas</span>
+                    </div>
+                    <div class="stat-card-glass">
+                        <span class="stat-label">NPS / Satisfacción</span>
+                        <div class="stat-value">9.6 <span style="font-size:1rem;color:var(--text-grey)">/ 10</span></div>
+                        <span class="stat-trend trend-up">▲ Excelente</span>
+                    </div>
+                    <div class="stat-card-glass">
+                        <span class="stat-label">Tiempo de Respuesta Soporte</span>
+                        <div class="stat-value">1.5h</div>
+                        <span class="stat-trend trend-down">▼ -20% tiempo</span>
+                    </div>
+                    <div class="stat-card-glass">
+                        <span class="stat-label">Tasa de Retención</span>
+                        <div class="stat-value">95%</div>
+                        <span class="stat-trend" style="color:var(--text-grey)">Renovación mensual</span>
+                    </div>
+                </div>
+
+                <div class="stat-card-glass" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                        👥 Gestión de Cuentas & Soporte Integrado
+                    </h3>
+                    <p style="margin: 0; color: var(--text-grey); font-size: 0.9rem; line-height: 1.6;">
+                        Este módulo centralizará el estado de los proyectos activos de cada cliente de iadebarrio.com. Permitirá revisar el historial de interacciones, automatizar la entrega de informes mensuales de captación de leads, y realizar el seguimiento de incidencias o tickets pendientes de soporte.
+                    </p>
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px dashed var(--card-border); padding: 16px; border-radius: 12px; font-size: 0.85rem; color: var(--text-grey); line-height: 1.5;">
+                        ℹ️ <strong>Nota de Integración:</strong> La vista de cliente se sincronizará con el módulo de propuestas y contratos aprobados, permitiendo enviar actualizaciones automáticas de avance del embudo comercial por WhatsApp y Email.
                     </div>
                 </div>
             </div>
