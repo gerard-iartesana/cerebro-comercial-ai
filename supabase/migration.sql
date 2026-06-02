@@ -51,3 +51,95 @@ CREATE POLICY "Admin full access for leads" ON outreach_leads
 
 CREATE POLICY "Admin full access for email logs" ON outreach_email_logs
     FOR ALL USING (auth.role() = 'authenticated');
+
+-- 6. Tabla de Presupuestos y Plantillas (presupuestos)
+CREATE TABLE IF NOT EXISTS presupuestos (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    titulo TEXT NOT NULL,
+    subtitulo TEXT,
+    descripcion TEXT,
+    categoria TEXT DEFAULT 'personalizada',
+    precio_alta NUMERIC,
+    precio_mensual NUMERIC,
+    precio_tipo TEXT DEFAULT 'fijo',
+    badge TEXT,
+    es_plantilla BOOLEAN DEFAULT TRUE,
+    activo BOOLEAN DEFAULT TRUE,
+    numero TEXT,
+    beneficios JSONB DEFAULT '[]'::jsonb,
+    notas TEXT,
+    lead_nombre TEXT,
+    fecha TIMESTAMPTZ,
+    descuento_pct NUMERIC DEFAULT 0,
+    notas_internas TEXT,
+    forma_pago TEXT,
+    formas_pago_ofrecidas JSONB DEFAULT '[]'::jsonb,
+    link_pago TEXT,
+    contenido_ia TEXT,
+    fecha_entrega TIMESTAMPTZ,
+    lineas JSONB DEFAULT '[]'::jsonb,
+    pago_config JSONB DEFAULT '{"inv_min_pct": 15, "num_cuotas": 24, "descuento_b_pct": 4, "descuento_c_pct": 8, "show_a": true, "show_b": true, "show_c": true}'::jsonb,
+    bonus TEXT,
+    es_prueba BOOLEAN DEFAULT FALSE,
+    orden INT DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+-- 7. Tabla de Propuestas Enviadas (propuestas_enviadas)
+CREATE TABLE IF NOT EXISTS propuestas_enviadas (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    presupuesto_id UUID REFERENCES presupuestos(id) ON DELETE SET NULL,
+    lead_id UUID REFERENCES outreach_leads(id) ON DELETE SET NULL,
+    lead_nombre TEXT,
+    lead_email TEXT,
+    titulo TEXT NOT NULL,
+    precio_final NUMERIC,
+    precio_mensual_final NUMERIC,
+    descuento_pct NUMERIC DEFAULT 0,
+    canal TEXT DEFAULT 'email',
+    estado TEXT DEFAULT 'entregada', -- 'entregada', 'aceptada', 'rechazada'
+    lineas JSONB DEFAULT '[]'::jsonb,
+    enviado_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+-- 8. Tabla de Seguimiento de Propuestas y Secuencias (propuesta_seguimiento)
+CREATE TABLE IF NOT EXISTS propuesta_seguimiento (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    lead_id UUID REFERENCES outreach_leads(id) ON DELETE CASCADE,
+    lead_nombre TEXT,
+    lead_email TEXT,
+    presupuesto_id UUID REFERENCES presupuestos(id) ON DELETE SET NULL,
+    categoria TEXT DEFAULT 'personalizada',
+    columna TEXT NOT NULL DEFAULT 'enviada' CHECK (columna IN ('enviada','inmediato','mensual','anual','stop')),
+    secuencia_activa TEXT CHECK (secuencia_activa IN ('inmediato','mensual','anual') OR secuencia_activa IS NULL),
+    paso_actual INT DEFAULT 0,
+    ultimo_email_id TEXT,
+    ultimo_email_nombre TEXT,
+    ultimo_envio_at TIMESTAMPTZ,
+    proximo_envio_at TIMESTAMPTZ,
+    fecha_propuesta_enviada TIMESTAMPTZ DEFAULT now(),
+    pausada BOOLEAN DEFAULT FALSE,
+    frecuencia_dias INT DEFAULT 2,
+    notas TEXT,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+-- Habilitar RLS para las nuevas tablas
+ALTER TABLE presupuestos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE propuestas_enviadas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE propuesta_seguimiento ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de RLS para las nuevas tablas (Acceso Administrativo)
+CREATE POLICY "Admin full access for budgets" ON presupuestos
+    FOR ALL USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Admin full access for sent proposals" ON propuestas_enviadas
+    FOR ALL USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Admin full access for tracking" ON propuesta_seguimiento
+    FOR ALL USING (auth.role() = 'authenticated');
+

@@ -768,12 +768,493 @@
             </div>
 
             <!-- Placeholders for other tabs: Proposals, Clients, WhatsApp, Support, Config -->
+            <!-- SECTION: Propuestas B2B & Seguimiento Emails -->
             <div class="dashboard-section" id="sec-proposals">
-                <div class="section-header"><h1>Propuestas Comerciales</h1></div>
-                <div class="stat-card-glass" style="padding:30px">
-                    <p style="color:var(--text-grey);font-size:0.9rem">Generación de presupuestos B2B automatizados con Gemini 3.1 Pro en base al raspado web.</p>
+                <div class="section-header" style="margin-bottom: 20px; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <h1 style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px;">Propuestas</h1>
+                        <p style="color: var(--text-grey); font-size: 0.85rem; font-weight: 500;">Gestiona y envía presupuestos a tus leads</p>
+                    </div>
+                    <!-- Tab Selector -->
+                    <div class="proposals-tab-selector" style="display: flex; gap: 8px;">
+                        <button class="tab-btn active" id="pres-tab-plantillas" onclick="switchPresTab('plantillas')">
+                            📋 Plantillas (<span id="count-templates-badge">0</span>)
+                        </button>
+                        <button class="tab-btn" id="pres-tab-emails" onclick="switchPresTab('emails')">
+                            ✉️ Emails
+                        </button>
+                        <button class="tab-btn" id="pres-tab-enviadas" onclick="switchPresTab('enviadas')">
+                            📨 Enviadas (<span id="count-sent-badge">0</span>)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ================== SUB-TAB: PLANTILLAS ================== -->
+                <div id="pres-sub-plantillas" class="proposals-sub-section active">
+                    <!-- Filters and Search Bar -->
+                    <div style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; align-items: center; width: 100%;">
+                        <div style="position: relative; flex: 1 1 240px; min-width: 200px;">
+                            <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-grey); font-size: 0.9rem;">🔍</span>
+                            <input type="text" id="pres-search" placeholder="Buscar plantilla..." oninput="filterTemplates()"
+                                style="width: 100%; padding: 10px 14px 10px 38px; border-radius: 12px; border: 1px solid var(--card-border); background: var(--bg-card); color: var(--text-main); font-size: 0.85rem; outline: none; font-family: inherit; transition: border-color 0.2s;"
+                                onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--card-border)'">
+                        </div>
+                        
+                        <!-- Categories selector -->
+                        <div class="category-pills-bar" style="display: flex; gap: 6px; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 4px; border: 1px solid var(--card-border); flex-wrap: wrap;">
+                            <button class="cat-pill active" data-cat="all" onclick="filterTemplatesByCategory('all')">Todos</button>
+                            <button class="cat-pill" data-cat="consultoria" onclick="filterTemplatesByCategory('consultoria')">Consultoría</button>
+                            <button class="cat-pill" data-cat="agentes_ia" onclick="filterTemplatesByCategory('agentes_ia')">Agentes IA</button>
+                            <button class="cat-pill" data-cat="apps_web" onclick="filterTemplatesByCategory('apps_web')">Apps Web</button>
+                            <button class="cat-pill" data-cat="automatizacion" onclick="filterTemplatesByCategory('automatizacion')">Automatización</button>
+                            <button class="cat-pill" data-cat="personalizada" onclick="filterTemplatesByCategory('personalizada')">Personalizada</button>
+                        </div>
+
+                        <!-- Create template button -->
+                        <button class="btn-primary" onclick="openCreateTemplateModal()" style="padding: 10px 18px; border-radius: 12px; font-size: 0.82rem; font-weight: 700; height: 38px; display: flex; align-items: center; gap: 6px;">
+                            <span>+</span> Nueva Plantilla
+                        </button>
+                    </div>
+
+                    <!-- Templates Render Grid -->
+                    <div id="pres-templates-container" style="display: flex; flex-direction: column; gap: 24px;">
+                        <!-- Category Sections will be populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- ================== SUB-TAB: EMAILS ================== -->
+                <div id="pres-sub-emails" class="proposals-sub-section" style="display: none;">
+                    <!-- Email Sub-tabs: Seguimiento / Configurar -->
+                    <div style="display: flex; gap: 8px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;">
+                        <button class="tab-btn active" id="seg-subtab-seguimiento" onclick="switchSegEmailSubTab('seguimiento')" style="font-size: 0.8rem; padding: 8px 16px; border-radius: 9px;">
+                            📊 Seguimiento
+                        </button>
+                        <button class="tab-btn" id="seg-subtab-configurar" onclick="switchSegEmailSubTab('configurar')" style="font-size: 0.8rem; padding: 8px 16px; border-radius: 9px;">
+                            ⚙️ Configurar secuencias
+                        </button>
+                    </div>
+
+                    <!-- ── KANBAN SEGUIMIENTO ── -->
+                    <div id="seg-container-seguimiento">
+                        <!-- Add lead bar -->
+                        <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: flex-start; flex-wrap: wrap; width: 100%;">
+                            <div style="position: relative; flex: 1; min-width: 240px;">
+                                <input type="text" id="seg-lead-search" class="modal-input" placeholder="🔍 Buscar lead para añadir al seguimiento..."
+                                    onfocus="showSegLeadDropdown()" oninput="filterSegLeadDropdown()" style="width: 100%;">
+                                <div id="seg-lead-dropdown" class="seq-lead-dd-menu" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-secondary); border: 1px solid var(--card-border); border-radius: 12px; max-height: 220px; overflow-y: auto; z-index: 100; box-shadow: var(--glass-shadow); padding: 4px;">
+                                    <!-- Dynamic lead items -->
+                                </div>
+                            </div>
+                            <select id="seg-add-category" class="modal-input" style="width: auto; min-width: 160px; font-size: 0.82rem; height: 38px;">
+                                <option value="consultoria">🎯 Consultoría</option>
+                                <option value="agentes_ia">🤖 Agentes IA</option>
+                                <option value="apps_web">🌐 Apps Web</option>
+                                <option value="automatizacion">⚡ Automatización</option>
+                                <option value="personalizada">📋 Personalizada</option>
+                            </select>
+                            <button class="btn-primary" onclick="addLeadToSeguimiento()" style="height: 38px; padding: 0 16px; border-radius: 10px; font-size: 0.82rem;">
+                                Añadir Lead
+                            </button>
+                        </div>
+
+                        <!-- Kanban Board -->
+                        <div class="pres-kanban-board" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; overflow-x: auto; width: 100%;">
+                            <!-- Columns populated in app.js -->
+                            <!-- Column 1: Propuesta enviada -->
+                            <div class="pres-kanban-column" id="seg-col-enviada" ondragover="allowDropSegCard(event)" ondrop="handleDropSegCard(event, 'enviada')">
+                                <div class="column-header" style="border-bottom: 2px solid var(--text-grey);">
+                                    <span class="column-title" style="color: var(--text-grey);">📄 Enviada</span>
+                                    <span class="column-badge" id="seg-badge-enviada">0</span>
+                                </div>
+                                <div class="kanban-cards-container" id="seg-cards-enviada"></div>
+                            </div>
+                            <!-- Column 2: Inmediato -->
+                            <div class="pres-kanban-column" id="seg-col-inmediato" ondragover="allowDropSegCard(event)" ondrop="handleDropSegCard(event, 'inmediato')">
+                                <div class="column-header" style="border-bottom: 2px solid var(--accent);">
+                                    <span class="column-title" style="color: var(--accent);">⚡ Inmediato</span>
+                                    <span class="column-badge" id="seg-badge-inmediato" style="background: var(--accent-glow); color: var(--accent);">0</span>
+                                </div>
+                                <div class="kanban-cards-container" id="seg-cards-inmediato"></div>
+                            </div>
+                            <!-- Column 3: Mensual -->
+                            <div class="pres-kanban-column" id="seg-col-mensual" ondragover="allowDropSegCard(event)" ondrop="handleDropSegCard(event, 'mensual')">
+                                <div class="column-header" style="border-bottom: 2px solid var(--accent-purple);">
+                                    <span class="column-title" style="color: var(--accent-purple);">📅 Mensual</span>
+                                    <span class="column-badge" id="seg-badge-mensual" style="background: rgba(88,86,214,0.15); color: var(--accent-purple);">0</span>
+                                </div>
+                                <div class="kanban-cards-container" id="seg-cards-mensual"></div>
+                            </div>
+                            <!-- Column 4: Anual -->
+                            <div class="pres-kanban-column" id="seg-col-anual" ondragover="allowDropSegCard(event)" ondrop="handleDropSegCard(event, 'anual')">
+                                <div class="column-header" style="border-bottom: 2px solid var(--accent-green);">
+                                    <span class="column-title" style="color: var(--accent-green);">🔄 Anual</span>
+                                    <span class="column-badge" id="seg-badge-anual" style="background: rgba(52,199,89,0.15); color: var(--accent-green);">0</span>
+                                </div>
+                                <div class="kanban-cards-container" id="seg-cards-anual"></div>
+                            </div>
+                            <!-- Column 5: Stop -->
+                            <div class="pres-kanban-column" id="seg-col-stop" ondragover="allowDropSegCard(event)" ondrop="handleDropSegCard(event, 'stop')">
+                                <div class="column-header" style="border-bottom: 2px solid var(--accent-red);">
+                                    <span class="column-title" style="color: var(--accent-red);">⏹ Stop</span>
+                                    <span class="column-badge" id="seg-badge-stop" style="background: rgba(255,59,48,0.15); color: var(--accent-red);">0</span>
+                                </div>
+                                <div class="kanban-cards-container" id="seg-cards-stop"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── CONFIGURAR SECUENCIAS ── -->
+                    <div id="seg-container-configurar" style="display: none;">
+                        <div style="margin-bottom: 20px;">
+                            <h2 style="font-size: 1.15rem; font-weight: 800; letter-spacing: -0.02em;">Secuencias de emails</h2>
+                            <p style="color: var(--text-grey); font-size: 0.8rem; margin-top: 4px;">Configura las cadenas de seguimiento de propuestas por categoría</p>
+                        </div>
+
+                        <!-- Sequence Selection -->
+                        <div style="display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap;">
+                            <button class="cat-pill active" id="btn-seq-inmediato" onclick="selectSequenceConfig('inmediato')">⚡ Inmediato</button>
+                            <button class="cat-pill" id="btn-seq-mensual" onclick="selectSequenceConfig('mensual')">📅 Mensual</button>
+                            <button class="cat-pill" id="btn-seq-anual" onclick="selectSequenceConfig('anual')">🔄 Anual</button>
+                        </div>
+
+                        <!-- Sequence Details Box -->
+                        <div id="seq-details-box" style="margin-bottom: 24px;">
+                            <!-- Populated dynamically in app.js -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================== SUB-TAB: ENVIADAS ================== -->
+                <div id="pres-sub-enviadas" class="proposals-sub-section" style="display: none;">
+                    <!-- Search bar -->
+                    <div style="margin-bottom: 16px; width: 100%;">
+                        <input type="text" id="pres-enviada-search" placeholder="🔍 Buscar por lead, email, propuesta..." oninput="filterSentProposals()"
+                            style="width: 100%; max-width: 480px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--card-border); background: var(--bg-card); color: var(--text-main); font-size: 0.85rem; outline: none;"
+                            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--card-border)'">
+                    </div>
+
+                    <!-- Spreadsheet Table -->
+                    <div class="table-wrapper">
+                        <table class="spreadsheet-table">
+                            <thead>
+                                <tr>
+                                    <th>Lead</th>
+                                    <th>Propuesta</th>
+                                    <th>Precio</th>
+                                    <th>Desc.</th>
+                                    <th>Canal</th>
+                                    <th>Estado</th>
+                                    <th>Enviado</th>
+                                    <th style="width: 40px; text-align: center;">🧪</th>
+                                    <th style="width: 90px; text-align: center;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pres-enviadas-tbody">
+                                <!-- Populated dynamically in app.js -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
+
+            <!-- ============================================================== -->
+            <!-- ===================== MODALES PROPUESTAS ===================== -->
+            <!-- ============================================================== -->
+
+            <!-- MODAL: CREAR / EDITAR PROPUESTA (COMPLETO) -->
+            <div class="modal-overlay" id="modal-edit-presupuesto" style="display: none;" onclick="if(event.target===this)closeEditPresupuestoModal()">
+                <div class="modal-box" style="max-width: 820px; width: 95%;">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(10,132,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--accent);">📋</div>
+                            <div>
+                                <h2 id="edit-pres-modal-title">Editar Plantilla</h2>
+                                <span class="task-modal-sub" id="edit-pres-modal-subtitle">Propuesta comercial</span>
+                            </div>
+                        </div>
+                        <button class="modal-close" onclick="closeEditPresupuestoModal()">✕</button>
+                    </div>
+                    <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px; max-height: 70vh; overflow-y: auto; padding-right: 8px;">
+                        
+                        <!-- Tabs inside editor: Básico, Líneas / Desglose, Pago y Detalles -->
+                        <div style="display: flex; gap: 4px; margin-bottom: 8px; background: rgba(0,0,0,0.15); padding: 4px; border-radius: 10px; border: 1px solid var(--card-border);">
+                            <button class="tab-btn active" id="editor-tab-basico" onclick="switchEditorTab('basico')" style="flex: 1; padding: 6px; font-size: 0.76rem; border-radius: 7px;">⚙️ Básico</button>
+                            <button class="tab-btn" id="editor-tab-desglose" onclick="switchEditorTab('desglose')" style="flex: 1; padding: 6px; font-size: 0.76rem; border-radius: 7px;">📊 Desglose (CRUD)</button>
+                            <button class="tab-btn" id="editor-tab-detalles" onclick="switchEditorTab('detalles')" style="flex: 1; padding: 6px; font-size: 0.76rem; border-radius: 7px;">💳 Detalles y Pago</button>
+                        </div>
+
+                        <!-- PANEL 1: BASICO -->
+                        <div id="editor-panel-basico" class="editor-panel active" style="display: flex; flex-direction: column; gap: 14px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <label class="mtg-label">Título de la propuesta</label>
+                                    <input type="text" id="edit-pres-titulo" class="modal-input" placeholder="Ej: Consultoría en Procesos de IA">
+                                </div>
+                                <div>
+                                    <label class="mtg-label">Subtítulo</label>
+                                    <input type="text" id="edit-pres-subtitulo" class="modal-input" placeholder="Ej: Análisis estratégico modular">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="mtg-label">Descripción</label>
+                                <textarea id="edit-pres-descripcion" class="modal-input" rows="3" placeholder="Descripción general de la propuesta o valor diferencial..." style="resize: vertical;"></textarea>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <label class="mtg-label">Categoría</label>
+                                    <select id="edit-pres-categoria" class="modal-input">
+                                        <option value="consultoria">🎯 Consultoría</option>
+                                        <option value="agentes_ia">🤖 Agentes de IA</option>
+                                        <option value="apps_web">🌐 Apps Web</option>
+                                        <option value="automatizacion">⚡ Automatización</option>
+                                        <option value="personalizada">📋 Personalizada</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="mtg-label">Badge de destaque</label>
+                                    <input type="text" id="edit-pres-badge" class="modal-input" placeholder="Ej: RECOMENDADO, REBAJADO">
+                                </div>
+                                <div>
+                                    <label class="mtg-label">Orden visual</label>
+                                    <input type="number" id="edit-pres-orden" class="modal-input" value="1">
+                                </div>
+                            </div>
+
+                            <!-- Fallback Prices (Solo si no hay líneas de desglose) -->
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); padding: 12px; border-radius: 12px;">
+                                <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-grey); text-transform: uppercase; margin-bottom: 8px;">💰 Precios de Fallback (Si no hay desglose activo)</div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                                    <div>
+                                        <label class="mtg-label">Precio base/alta (€)</label>
+                                        <input type="number" id="edit-pres-precio-alta" class="modal-input" placeholder="0">
+                                    </div>
+                                    <div>
+                                        <label class="mtg-label">Mantenimiento mensual (€)</label>
+                                        <input type="number" id="edit-pres-precio-mensual" class="modal-input" placeholder="0">
+                                    </div>
+                                    <div>
+                                        <label class="mtg-label">Tipo de precio</label>
+                                        <select id="edit-pres-precio-tipo" class="modal-input">
+                                            <option value="fijo">Monto Fijo</option>
+                                            <option value="desde">Desde...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; align-items: center; margin-top: 6px;">
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; cursor: pointer; color: var(--text-main);">
+                                    <input type="checkbox" id="edit-pres-es-plantilla" onchange="toggleEditPresLeadField()"> 📋 ¿Es Plantilla?
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; cursor: pointer; color: var(--text-main);">
+                                    <input type="checkbox" id="edit-pres-activo" checked> 🟢 Activa
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; cursor: pointer; color: var(--accent-purple);">
+                                    <input type="checkbox" id="edit-pres-es-prueba"> 🧪 Modo prueba (naranja)
+                                </label>
+                            </div>
+
+                            <div id="edit-pres-lead-field-wrap" style="display: none; grid-template-columns: 1.5fr 1fr; gap: 10px;">
+                                <div>
+                                    <label class="mtg-label">Nombre del lead destinatario</label>
+                                    <input type="text" id="edit-pres-lead-nombre" class="modal-input" placeholder="Ej: Dani Sintes">
+                                </div>
+                                <div>
+                                    <label class="mtg-label">Fecha Emisión</label>
+                                    <input type="date" id="edit-pres-fecha" class="modal-input">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PANEL 2: DESGLOSE CRUD -->
+                        <div id="editor-panel-desglose" class="editor-panel" style="display: none; flex-direction: column; gap: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <div style="font-size: 0.85rem; font-weight: 700;">Líneas del Presupuesto (CRUD)</div>
+                                <button class="btn-primary" onclick="addEditPresLinea()" style="padding: 6px 12px; font-size: 0.72rem; border-radius: 8px;">+ Nueva Línea</button>
+                            </div>
+                            <div id="edit-pres-lineas-container" style="display: flex; flex-direction: column; gap: 12px; max-height: 48vh; overflow-y: auto; padding-right: 4px;">
+                                <!-- Populate lines -->
+                            </div>
+                        </div>
+
+                        <!-- PANEL 3: DETALLES Y PAGO -->
+                        <div id="editor-panel-detalles" class="editor-panel" style="display: none; flex-direction: column; gap: 14px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 10px;">
+                                <div>
+                                    <label class="mtg-label">Descuento Global (%)</label>
+                                    <input type="number" id="edit-pres-descuento-pct" class="modal-input" value="0" min="0" max="100">
+                                </div>
+                                <div>
+                                    <label class="mtg-label">Fecha de entrega</label>
+                                    <input type="date" id="edit-pres-fecha-entrega" class="modal-input">
+                                </div>
+                                <div>
+                                    <label class="mtg-label">Enlace de cobro (Stripe/Revolut)</label>
+                                    <input type="url" id="edit-pres-link-pago" class="modal-input" placeholder="https://buy.stripe.com/...">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="mtg-label">Formas de pago ofrecidas</label>
+                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px;">
+                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem;"><input type="checkbox" class="pres-fp-offered" value="sin_iva"> Sin IVA</label>
+                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem;"><input type="checkbox" class="pres-fp-offered" value="giro" checked> Giro bancario</label>
+                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem;"><input type="checkbox" class="pres-fp-offered" value="transferencia" checked> Transferencia</label>
+                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem;"><input type="checkbox" class="pres-fp-offered" value="stripe"> Stripe</label>
+                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem;"><input type="checkbox" class="pres-fp-offered" value="bizum" checked> Bizum</label>
+                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem;"><input type="checkbox" class="pres-fp-offered" value="efectivo"> Efectivo</label>
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <label class="mtg-label">Bonus incluidos (Muestra como regalo 🎁)</label>
+                                    <textarea id="edit-pres-bonus" class="modal-input" rows="3" placeholder="Ej: Auditoría SEO de regalo valorada en 450€..." style="resize: vertical;"></textarea>
+                                </div>
+                                <div>
+                                    <label class="mtg-label">Notas internas (Privadas)</label>
+                                    <textarea id="edit-pres-notas-internas" class="modal-input" rows="3" placeholder="Notas sobre el cliente, el coste de ejecución, etc..." style="resize: vertical;"></textarea>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="mtg-label">Detalle Técnico / Contenido adicional IA</label>
+                                <textarea id="edit-pres-contenido-ia" class="modal-input" rows="3" placeholder="Detalle técnico que aparecerá como bloque destacado azul en el PDF..." style="resize: vertical;"></textarea>
+                            </div>
+
+                            <!-- Pago Config (Financiación en PDF) -->
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); padding: 12px; border-radius: 12px;">
+                                <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-grey); text-transform: uppercase; margin-bottom: 8px;">🔄 Opciones de Financiación (PDF Modular)</div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1.2fr 1.2fr; gap: 10px; margin-bottom: 8px;">
+                                    <div>
+                                        <label class="mtg-label">Inversión inicial (%)</label>
+                                        <input type="number" id="edit-pres-pc-inv-min" class="modal-input" value="15">
+                                    </div>
+                                    <div>
+                                        <label class="mtg-label">Cuotas (meses)</label>
+                                        <input type="number" id="edit-pres-pc-cuotas" class="modal-input" value="24">
+                                    </div>
+                                    <div>
+                                        <label class="mtg-label">Descuento B (%)</label>
+                                        <input type="number" id="edit-pres-pc-dto-b" class="modal-input" value="4">
+                                    </div>
+                                    <div>
+                                        <label class="mtg-label">Descuento C (%)</label>
+                                        <input type="number" id="edit-pres-pc-dto-c" class="modal-input" value="8">
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 14px; align-items: center; margin-top: 6px;">
+                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem;"><input type="checkbox" id="edit-pres-pc-show-a" checked> Mostrar Opción A (Financiado)</label>
+                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem;"><input type="checkbox" id="edit-pres-pc-show-b" checked> Mostrar Opción B (Parcial)</label>
+                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem;"><input type="checkbox" id="edit-pres-pc-show-c" checked> Mostrar Opción C (Anticipado)</label>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button class="modal-cancel-btn" onclick="closeEditPresupuestoModal()">Cancelar</button>
+                        <button class="btn-primary" onclick="savePresupuestoAction()" style="padding: 10px 24px;">✓ Guardar Plantilla</button>
+                    </div>
+                </div>
+                <input type="hidden" id="edit-pres-id" value="">
+            </div>
+
+            <!-- MODAL: ENVIAR PROPUESTA A LEAD -->
+            <div class="modal-overlay" id="modal-send-propuesta" style="display: none;" onclick="if(event.target===this)closeSendPropuestaModal()">
+                <div class="modal-box" style="max-width: 520px; width: 95%;">
+                    <div class="modal-header">
+                        <h2>✈️ Enviar Propuesta a Lead</h2>
+                        <button class="modal-close" onclick="closeSendPropuestaModal()">✕</button>
+                    </div>
+                    <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+                        
+                        <div>
+                            <label class="mtg-label" style="color: var(--accent);">PROPUESTA SELECCIONADA</label>
+                            <div style="font-size: 1.05rem; font-weight: 800;" id="send-pres-titulo-label">—</div>
+                            <div style="font-size: 0.78rem; color: var(--text-grey); margin-top: 2px;" id="send-pres-sub-label">—</div>
+                        </div>
+
+                        <div style="position: relative;">
+                            <label class="mtg-label">Buscar y vincular Lead de la base de datos</label>
+                            <input type="text" id="send-pres-lead-search" class="modal-input" placeholder="🔍 Escribe nombre o email del lead..."
+                                onfocus="showSendLeadDropdown()" oninput="filterSendLeadDropdown()">
+                            <div id="send-pres-lead-dropdown" class="seq-lead-dd-menu" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-secondary); border: 1px solid var(--card-border); border-radius: 12px; max-height: 180px; overflow-y: auto; z-index: 100; box-shadow: var(--glass-shadow); padding: 4px;">
+                                <!-- Dynamic lead options -->
+                            </div>
+                        </div>
+
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-size: 0.7rem; color: var(--text-grey); text-transform: uppercase;">Importe Final Estimado</div>
+                                <div style="font-size: 1.4rem; font-weight: 900; letter-spacing: -0.02em;" id="send-pres-precio-neto">—</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 0.7rem; color: var(--text-grey); text-transform: uppercase;">Descuento Global</div>
+                                <div style="font-weight: 700; color: var(--accent-green);" id="send-pres-descuento-pct">—</div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="mtg-label">Canales de Envío y CRM</label>
+                            <div style="display: flex; gap: 14px; margin-top: 6px;">
+                                <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; cursor: pointer;">
+                                    <input type="checkbox" id="send-channel-email" checked> 📧 Email
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; cursor: pointer;">
+                                    <input type="checkbox" id="send-channel-whatsapp" checked> 📱 WhatsApp
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; cursor: pointer;">
+                                    <input type="checkbox" id="send-channel-crm" checked> 📊 Activar Seguimiento CRM
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="mtg-label">Emails CC (Opcional, separados por comas)</label>
+                            <input type="text" id="send-pres-cc-emails" class="modal-input" placeholder="ejemplo@cc.com, gestor@empresa.com">
+                        </div>
+
+                        <div>
+                            <label class="mtg-label">Notas Adicionales / Mensaje personalizado</label>
+                            <textarea id="send-pres-notes" class="modal-input" rows="2" placeholder="Estas notas se añadirán al texto de correo de envío inicial..." style="resize: vertical;"></textarea>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button class="modal-cancel-btn" onclick="closeSendPropuestaModal()">Cancelar</button>
+                        <button class="btn-primary" onclick="executeSendPropuestaAction()" style="padding: 10px 24px;">✓ Enviar Propuesta</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL: DUPLICAR PROPUESTA -->
+            <div class="modal-overlay" id="modal-dup-propuesta" style="display: none;" onclick="if(event.target===this)closeDupPropuestaModal()">
+                <div class="modal-box" style="max-width: 440px; width: 95%;">
+                    <div class="modal-header">
+                        <h2>➕ Duplicar Propuesta</h2>
+                        <button class="modal-close" onclick="closeDupPropuestaModal()">✕</button>
+                    </div>
+                    <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+                        <div>
+                            <label class="mtg-label">Nuevo título para la copia</label>
+                            <input type="text" id="dup-pres-titulo" class="modal-input" placeholder="Copia de...">
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center; margin-top: 4px;">
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; cursor: pointer;">
+                                <input type="checkbox" id="dup-pres-es-plantilla" checked> ¿Guardar como Plantilla?
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="modal-cancel-btn" onclick="closeDupPropuestaModal()">Cancelar</button>
+                        <button class="btn-primary" onclick="executeDuplicatePresAction()" style="padding: 10px 20px;">✓ Duplicar</button>
+                    </div>
+                </div>
+            </div>
+
             
             <div class="dashboard-section" id="sec-clients">
                 <div class="section-header"><h1>Clientes B2B</h1></div>

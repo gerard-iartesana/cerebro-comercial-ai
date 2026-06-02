@@ -2217,3 +2217,332 @@ html, body {
     color: var(--text-main);
     flex: 1;
 }
+
+/* ========================================================================== */
+/* ==================== PROPUESTAS B2B & EMAIL OUTREACH ===================== */
+/* ========================================================================== */
+
+/* Sub-Tab Selector Buttons */
+.proposals-tab-selector .tab-btn, .proposals-sub-section .tab-btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--card-border);
+    background: var(--bg-card);
+    color: var(--text-grey);
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.proposals-tab-selector .tab-btn:hover, .proposals-sub-section .tab-btn:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.08);
+}
+.proposals-tab-selector .tab-btn.active, .proposals-sub-section .tab-btn.active {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+/* Category Pills Bar */
+.category-pills-bar .cat-pill {
+    padding: 8px 16px;
+    border-radius: 9px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: inherit;
+    background: transparent;
+    color: var(--text-grey);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.category-pills-bar .cat-pill:hover {
+    color: var(--text-main);
+}
+.category-pills-bar .cat-pill.active {
+    background: var(--accent);
+    color: #ffffff;
+    box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+/* Templates Section Grid Layout */
+.pres-templates-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    width: 100%;
+}
+@media (max-width: 1024px) {
+    .pres-templates-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (max-width: 680px) {
+    .pres-templates-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Premium iOS Squircle Card */
+.pres-card {
+    border-radius: 20px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    border: 1px solid var(--card-border);
+    background: var(--bg-card);
+    backdrop-filter: var(--glass-blur);
+    box-shadow: var(--glass-shadow);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, border-color 0.2s ease;
+    cursor: grab;
+}
+.pres-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+.pres-card:active {
+    cursor: grabbing;
+}
+
+/* Test Mode Dashed Stripes Overlay */
+.test-mode-stripes {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    pointer-events: none;
+    z-index: 1;
+    background: repeating-linear-gradient(135deg, rgba(255, 149, 0, 0.06), rgba(255, 149, 0, 0.06) 10px, transparent 10px, transparent 20px);
+}
+
+/* Tooltip Wrapper */
+.pres-tooltip-wrap {
+    position: relative;
+}
+.pres-tooltip-wrap:hover .pres-tooltip-content {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+.pres-tooltip-content {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    margin-bottom: 8px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: #1c1c1e;
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 10;
+}
+
+/* Category Badges Styling */
+.pres-cat-badge {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    padding: 3px 10px;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+/* Action tool buttons */
+.pres-tool-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid var(--card-border);
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-main);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pres-tool-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Switch styling */
+.pres-switch-btn {
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s;
+}
+.pres-switch-btn span {
+    position: absolute;
+    top: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ffffff;
+    transition: left 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Kanban Board Seguimiento */
+.pres-kanban-board {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+}
+.pres-kanban-column {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 16px;
+    padding: 12px;
+    min-height: 480px;
+    border: 1px solid var(--card-border);
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 200px;
+}
+.pres-kanban-column .column-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 4px 6px 8px;
+}
+.pres-kanban-column .column-title {
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+.pres-kanban-column .column-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: rgba(255,255,255,0.06);
+    color: var(--text-grey);
+    padding: 2px 8px;
+    border-radius: 20px;
+}
+.kanban-cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    min-height: 400px;
+}
+
+/* Kanban Card Followup */
+.pres-kanban-card {
+    background: var(--bg-secondary);
+    border-radius: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--card-border);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    cursor: grab;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+.pres-kanban-card:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    border-color: rgba(255,255,255,0.12);
+}
+.pres-kanban-card:active {
+    cursor: grabbing;
+}
+
+/* Accordion emails lists configuration */
+.seq-email-item {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+    margin-bottom: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+.seq-email-header {
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+    font-family: inherit;
+    color: var(--text-main);
+}
+.seq-email-body {
+    padding: 14px 18px;
+    border-top: 1px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.15);
+    font-size: 0.85rem;
+}
+
+/* Line Item Builder inside Editor Modal */
+.edit-linea-item {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+}
+.edit-linea-item:hover {
+    background: rgba(255,255,255,0.03);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+.sublinea-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+    align-items: center;
+}
+
+/* Editor Panel Animation Tabs */
+.editor-panel {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.editor-panel.active {
+    display: flex;
+    opacity: 1;
+}
+
+/* Status selection box inside table cell */
+.pres-sent-status-select {
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.seq-lead-dd-menu::-webkit-scrollbar {
+    width: 6px;
+}
+.seq-lead-dd-menu::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+}
+

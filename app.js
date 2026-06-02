@@ -145,6 +145,7 @@ document.querySelectorAll('.sidebar-nav-item[data-section]').forEach(btn => {
         if (btn.dataset.section === 'kanban') loadKanbanCRM();
         if (btn.dataset.section === 'emails') loadEmailsLog();
         if (btn.dataset.section === 'calendar') { renderCalGrid(); loadMeetings(); }
+        if (btn.dataset.section === 'proposals') loadProposalsModule();
     });
 });
 
@@ -2155,3 +2156,2170 @@ function _showGCalReconnectBtn() {
         btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg> Reconectar Calendar';
     }
 }
+
+// ==========================================================================
+// ==================== PROPUESTAS B2B & EMAIL OUTREACH =====================
+// ==========================================================================
+
+// --- 1. Model: Email Sequences Configuration ---
+const CTA_HTML = '<div style="text-align:center;margin:28px 0 12px"><a href="{{link_confirmar}}" style="display:inline-block;padding:14px 32px;background:#34c759;color:#fff;text-decoration:none;border-radius:12px;font-weight:700;font-size:14px">✅ Confirmar presupuesto</a></div><p style="text-align:center;color:#aeaeb2;font-size:12px;margin-top:8px">¿Dudas? Responde directamente a este email</p>';
+const G_SIG = '<p>Un saludo,<br/>Gerard Fanals<br/><small style="color:#86868b">CerebroComercial AI</small></p>';
+const G_HUG = '<p>Un abrazo,<br/>Gerard Fanals<br/><small style="color:#86868b">CerebroComercial AI</small></p>';
+
+const INM_CONS_EMAILS = [
+    { id:'inm_cons_1', step:1, name:'Envío de propuesta', freq:'Inmediato', asunto:'Tu propuesta de consultoría personalizada, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Adjunto te envío la propuesta de consultoría de procesos que hemos preparado especialmente para tu negocio.</p><p>Revísala tranquilamente y avísame si tienes alguna pregunta.</p>'+G_HUG+CTA_HTML },
+    { id:'inm_cons_2', step:2, name:'Primer seguimiento', freq:'3 días', asunto:'¿Has podido revisar la propuesta, {{nombre}}?', contenido:'<p>Hola {{nombre}},</p><p>Te escribo por si has tenido oportunidad de revisar la propuesta de consultoría que te envié hace unos días.</p><p>Quedo a tu entera disposición para resolver cualquier duda que te haya surgido.</p>'+G_SIG+CTA_HTML },
+    { id:'inm_cons_3', step:3, name:'Valor diferencial', freq:'5 días', asunto:'Lo que diferencia esta propuesta, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Quería destacarte algo importante: esta propuesta está diseñada 100% a medida de tu negocio, no es una plantilla genérica.</p><p>Hemos analizado tu situación actual y las oportunidades concretas de automatización con IA que puedes aprovechar. Los resultados que hemos logrado con negocios similares han sido muy positivos.</p>'+G_SIG+CTA_HTML },
+    { id:'inm_cons_4', step:4, name:'Urgencia suave', freq:'7 días', asunto:'Las condiciones de tu propuesta, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Solo quería avisarte de que las condiciones incluidas en la propuesta tienen una validez limitada. No es por presionarte, sino porque nuestro equipo tiene una disponibilidad de consultoría muy ajustada para este trimestre.</p><p>Si te interesa que colaboremos, es buen momento para avanzar.</p>'+G_SIG+CTA_HTML },
+    { id:'inm_cons_5', step:5, name:'Cierre amable', freq:'10 días', asunto:'¿Cerramos el tema, {{nombre}}?', contenido:'<p>Hola {{nombre}},</p><p>No quiero ser insistente, así que este será mi último email sobre la propuesta de consultoría. Si no encaja en este momento en tus planes, lo entiendo perfectamente.</p><p>La propuesta queda abierta. Cuando estés listo/a para dar el salto, aquí estaré.</p><p>¡Ánimo con todo!</p>'+G_HUG+CTA_HTML }
+];
+
+const INM_IA_EMAILS = [
+    { id:'inm_ia_1', step:1, name:'Envío de propuesta', freq:'Inmediato', asunto:'Tu agente de IA personalizado, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Te envío la propuesta del agente de IA diseñado para tu negocio. Con esta solución podrás automatizar tareas repetitivas de captación y atención a leads para ganar horas valiosas cada semana.</p>'+G_HUG+CTA_HTML },
+    { id:'inm_ia_2', step:2, name:'Beneficios concretos', freq:'3 días', asunto:'Lo que tu agente IA puede hacer por ti, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>¿Sabías que negocios como el tuyo están ahorrando entre 15 y 25 horas semanales con agentes de IA? Tu agente podría encargarse de atención al cliente, gestión de citas y seguimiento de leads automáticamente.</p><p>¿Te interesa que te enseñe cómo funciona?</p>'+G_SIG+CTA_HTML },
+    { id:'inm_ia_3', step:3, name:'Demo en vivo', freq:'5 días', asunto:'¿Quieres ver tu agente IA en acción, {{nombre}}?', contenido:'<p>Hola {{nombre}},</p><p>He preparado una demo personalizada de cómo funcionaría el agente en tu negocio. En 15 minutos podrás ver exactamente qué tareas automatizaría.</p><p>Sin compromiso, solo para que valores si te encaja.</p>'+G_SIG+CTA_HTML },
+    { id:'inm_ia_4', step:4, name:'ROI estimado', freq:'7 días', asunto:'He calculado tu ahorro con IA, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>He hecho los números: con tu volumen actual, el agente IA se amortizaría en menos de 2 meses. A partir de ahí, todo es ahorro puro.</p><p>Te adjunto el desglose en la propuesta. ¿Lo revisamos juntos?</p>'+G_SIG+CTA_HTML },
+    { id:'inm_ia_5', step:5, name:'Cierre amable', freq:'10 días', asunto:'¿Seguimos adelante con el agente IA, {{nombre}}?', contenido:'<p>Hola {{nombre}},</p><p>Este es mi último seguimiento sobre la propuesta. Entiendo que quizá no es el momento, y está bien.</p><p>Cuando quieras retomarlo, la propuesta sigue vigente. ¡Mucho éxito!</p>'+G_HUG+CTA_HTML }
+];
+
+const INM_WEB_EMAILS = [
+    { id:'inm_web_1', step:1, name:'Envío de propuesta', freq:'Inmediato', asunto:'Tu proyecto web personalizado, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Adjunto encontrarás la propuesta con diseño, funcionalidades, plazos y presupuesto desglosado para tu nueva web.</p><p>Revísala y hablamos cuando te vaya bien.</p>'+G_HUG+CTA_HTML },
+    { id:'inm_web_2', step:2, name:'Seguimiento', freq:'3 días', asunto:'¿Has revisado la propuesta web, {{nombre}}?', contenido:'<p>Hola {{nombre}},</p><p>Te escribo por si has podido echar un vistazo a la propuesta. Estoy disponible para cualquier ajuste que necesites en el alcance o presupuesto.</p>'+G_SIG+CTA_HTML },
+    { id:'inm_web_3', step:3, name:'Ventaja competitiva', freq:'5 días', asunto:'Tu competencia ya tiene web profesional, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>He investigado un poco tu sector y la mayoría de tus competidores ya tienen presencia digital profesional. Cada día sin una web optimizada son clientes que van a la competencia.</p><p>La propuesta que te hice está pensada para posicionarte por encima de ellos.</p>'+G_SIG+CTA_HTML },
+    { id:'inm_web_4', step:4, name:'Funcionalidades clave', freq:'7 días', asunto:'Lo que incluye tu web, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Quería recordarte las funcionalidades clave de la propuesta: diseño responsive, SEO optimizado, velocidad de carga premium y un panel de administración fácil de usar.</p><p>Todo pensado para que tu web trabaje por ti 24/7.</p>'+G_SIG+CTA_HTML },
+    { id:'inm_web_5', step:5, name:'Cierre amable', freq:'10 días', asunto:'Último aviso sobre tu propuesta web, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>No quiero agobiarte, así que este será mi último email. La propuesta queda abierta sin fecha de caducidad.</p><p>Cuando estés preparado/a, aquí estaré para ayudarte.</p>'+G_HUG+CTA_HTML }
+];
+
+const INM_AUTO_EMAILS = [
+    { id:'inm_auto_1', step:1, name:'Envío de propuesta', freq:'Inmediato', asunto:'Tu plan de automatización, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Te envío la propuesta de automatización para optimizar tus procesos. Podrás ahorrar horas de trabajo manual cada semana.</p>'+G_HUG+CTA_HTML },
+    { id:'inm_auto_2', step:2, name:'Ahorro de tiempo', freq:'3 días', asunto:'Cuántas horas pierdes en tareas manuales, {{nombre}}?', contenido:'<p>Hola {{nombre}},</p><p>¿Has contado cuántas horas semanales dedicas a tareas repetitivas? Facturación, seguimiento de clientes, emails… todo eso se puede automatizar.</p><p>En la propuesta tienes el detalle de qué procesos cubriríamos.</p>'+G_SIG+CTA_HTML },
+    { id:'inm_auto_3', step:3, name:'Flujo paso a paso', freq:'5 días', asunto:'Así funcionaría tu automatización, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>He preparado un esquema simplificado del flujo de automatización para tu negocio. Es más sencillo de lo que parece: en 2-3 semanas podrías tener todo funcionando.</p><p>¿Te lo explico en detalle?</p>'+G_SIG+CTA_HTML },
+    { id:'inm_auto_4', step:4, name:'Impacto real', freq:'7 días', asunto:'El impacto de automatizar tu negocio, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Los negocios que automatizan sus procesos crecen un 30% más rápido de media. No es magia, es eficiencia: tu equipo se centra en lo importante mientras la tecnología hace el resto.</p>'+G_SIG+CTA_HTML },
+    { id:'inm_auto_5', step:5, name:'Cierre amable', freq:'10 días', asunto:'¿Retomamos la automatización, {{nombre}}?', contenido:'<p>Hola {{nombre}},</p><p>Último email sobre esto. Si no es el momento, lo entiendo perfectamente. La propuesta no caduca.</p><p>¡Mucha suerte con todo!</p>'+G_HUG+CTA_HTML }
+];
+
+const INM_PERS_EMAILS = [
+    { id:'inm_pers_1', step:1, name:'Envío de propuesta', freq:'Inmediato', asunto:'Tu propuesta personalizada, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Te envío la propuesta que hemos diseñado a medida para tu proyecto. Hemos desglosado cada servicio con su precio individual para que tengas total transparencia.</p><p>Revísala tranquilamente y cuéntame qué te parece.</p>'+G_HUG+CTA_HTML },
+    { id:'inm_pers_2', step:2, name:'Seguimiento', freq:'3 días', asunto:'¿Has podido revisar tu propuesta, {{nombre}}?', contenido:'<p>Hola {{nombre}},</p><p>Te escribo por si has tenido oportunidad de revisar la propuesta personalizada. Cada línea está pensada para cubrir exactamente lo que necesitas, ni más ni menos.</p><p>¿Alguna duda sobre el desglose?</p>'+G_SIG+CTA_HTML },
+    { id:'inm_pers_3', step:3, name:'Flexibilidad', freq:'5 días', asunto:'Tu propuesta es 100% flexible, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Quería recordarte que esta propuesta es modular: puedes seleccionar solo los servicios que más te interesen o ajustar el alcance de cada línea. Todo es adaptable a tu presupuesto y prioridades.</p><p>¿Hablamos para ajustarla?</p>'+G_SIG+CTA_HTML },
+    { id:'inm_pers_4', step:4, name:'Valor del paquete', freq:'7 días', asunto:'El valor real de tu propuesta, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>He repasado el desglose de tu propuesta y quiero destacarte algo: contratar cada servicio por separado en el mercado te costaría significativamente más. Con este paquete personalizado, obtienes un ecosistema integrado con un precio optimizado.</p>'+G_SIG+CTA_HTML },
+    { id:'inm_pers_5', step:5, name:'Cierre amable', freq:'10 días', asunto:'¿Seguimos adelante, {{nombre}}?', contenido:'<p>Hola {{nombre}},</p><p>Es mi último seguimiento sobre la propuesta. Entiendo que quizá necesitas más tiempo o que las prioridades han cambiado. La propuesta queda abierta sin fecha de caducidad.</p><p>Cuando estés listo/a, aquí estaré.</p>'+G_HUG+CTA_HTML }
+];
+
+const MENS_CONS_EMAILS = [
+    { id:'mens_cons_1', step:1, name:'Recordatorio semanal', freq:'7 días', asunto:'Tu propuesta de consultoría sigue vigente, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Ha pasado una semana desde que te envié la propuesta. Queríamos recordarte que sigue vigente y que estamos disponibles para retomarla cuando lo necesites.</p>'+G_SIG+CTA_HTML },
+    { id:'mens_cons_2', step:2, name:'Caso de éxito', freq:'14 días', asunto:'Un caso de éxito que puede interesarte, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Quería compartirte un caso reciente: un negocio similar al tuyo aumentó su facturación un 40% en 6 meses aplicando nuestra consultoría. Sin grandes inversiones, solo estrategia bien ejecutada.</p><p>Tu propuesta incluye un plan similar. ¿Lo retomamos?</p>'+G_SIG+CTA_HTML },
+    { id:'mens_cons_3', step:3, name:'Propuesta actualizada', freq:'21 días', asunto:'Hemos mejorado tu propuesta, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Han pasado unas semanas y hemos actualizado nuestras metodologías. Tu propuesta ahora incluiría mejoras adicionales al mismo precio. ¿Te interesa revisarla?</p>'+G_SIG+CTA_HTML },
+    { id:'mens_cons_4', step:4, name:'Último contacto', freq:'28 días', asunto:'¿Ha cambiado tu situación, {{nombre}}?', contenido:'<p>Hola {{nombre}},</p><p>Es mi último seguimiento semanal. Las circunstancias cambian, y quizá ahora sí sea buen momento para optimizar tu negocio con consultoría profesional.</p><p>Si quieres, hablamos sin compromiso.</p>'+G_SIG+CTA_HTML }
+];
+
+const MENS_IA_EMAILS = [
+    { id:'mens_ia_1', step:1, name:'Novedades IA', freq:'7 días', asunto:'Novedades en IA para tu negocio, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>El mundo de la IA avanza rápido. Desde que te enviamos la propuesta, hay nuevas capacidades que podrían beneficiarte aún más. ¿Te apetece una actualización rápida?</p>'+G_SIG+CTA_HTML },
+    { id:'mens_ia_2', step:2, name:'Tu competencia usa IA', freq:'14 días', asunto:'Tus competidores ya usan IA, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Cada vez más negocios de tu sector adoptan soluciones de IA. No es tendencia, es necesidad competitiva. Nuestro agente puede ponerte al nivel (o por encima) en poco tiempo.</p>'+G_SIG+CTA_HTML },
+    { id:'mens_ia_3', step:3, name:'Mejoras disponibles', freq:'21 días', asunto:'Tu agente IA ahora es aún más potente, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Hemos incorporado nuevas funcionalidades a nuestros agentes: mejor comprensión del lenguaje, integración con más herramientas y respuestas más rápidas. Tu propuesta se beneficiaría de todo esto.</p>'+G_SIG+CTA_HTML },
+    { id:'mens_ia_4', step:4, name:'Último contacto', freq:'28 días', asunto:'¿Retomamos lo del agente IA, {{nombre}}?', contenido:'<p>Hola {{nombre}},</p><p>Es mi último seguimiento semanal. Si la IA ya no es prioridad, lo entiendo. Pero si te interesa, la propuesta sigue vigente con mejoras incluidas. ¿Hablamos?</p>'+G_SIG+CTA_HTML }
+];
+
+const MENS_WEB_EMAILS = [
+    { id:'mens_web_1', step:1, name:'Oportunidad digital', freq:'7 días', asunto:'Cada día sin web son clientes perdidos, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Cada semana sin presencia digital profesional son oportunidades que van a tu competencia. La propuesta que te preparamos sigue vigente.</p>'+G_SIG+CTA_HTML },
+    { id:'mens_web_2', step:2, name:'Tendencias web', freq:'14 días', asunto:'Las tendencias web que deberías conocer, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>El diseño web evoluciona constantemente. Las webs que mejor convierten en 2026 usan IA conversacional, carga ultrarrápida y diseño mobile-first. Todo esto está incluido en tu propuesta.</p>'+G_SIG+CTA_HTML },
+    { id:'mens_web_3', step:3, name:'Paquete especial', freq:'21 días', asunto:'Condiciones especiales para tu web, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Hemos revisado tu propuesta y podemos ofrecerte un paquete de mantenimiento optimizado y SEO avanzado. ¿Te interesa que te lo envíe?</p>'+G_SIG+CTA_HTML },
+    { id:'mens_web_4', step:4, name:'Último contacto', freq:'28 días', asunto:'¿Seguimos adelante con tu web, {{nombre}}?', contenido:'<p>Hola {{nombre}},</p><p>Es mi último seguimiento semanal. Si las circunstancias han cambiado, estaré encantado de adaptar la propuesta a tu situación actual.</p>'+G_SIG+CTA_HTML }
+];
+
+const MENS_AUTO_EMAILS = [
+    { id:'mens_auto_1', step:1, name:'Ahorro semanal', freq:'7 días', asunto:'Esta semana podrías haber ahorrado horas, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Si hubieras automatizado tus procesos, ya habrías ahorrado decenas de horas de trabajo manual esta semana. El cálculo exacto está en la propuesta.</p>'+G_SIG+CTA_HTML },
+    { id:'mens_auto_2', step:2, name:'Top 5 procesos', freq:'14 días', asunto:'Los 5 procesos que más tiempo te roban, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Facturación, seguimiento de leads, emails repetitivos, gestión de citas y reportes. Estos son los 5 procesos que más tiempo consumen en negocios como el tuyo. Todos automatizables.</p>'+G_SIG+CTA_HTML },
+    { id:'mens_auto_3', step:3, name:'Escalabilidad', freq:'21 días', asunto:'Crece sin contratar más personal, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>La automatización te permite escalar tu negocio sin aumentar equipo proporcionalmente. Más clientes, misma estructura de costes. Esa es la clave de nuestra propuesta.</p>'+G_SIG+CTA_HTML },
+    { id:'mens_auto_4', step:4, name:'Último contacto', freq:'28 días', asunto:'¿Ha cambiado algo en tu negocio, {{nombre}}?', contenido:'<p>Hola {{nombre}},</p><p>Es mi último seguimiento semanal. Quizá ahora sí sea buen momento para dar el salto a la automatización. La propuesta sigue en pie.</p>'+G_SIG+CTA_HTML }
+];
+
+const MENS_PERS_EMAILS = [
+    { id:'mens_pers_1', step:1, name:'Recordatorio semanal', freq:'7 días', asunto:'Tu propuesta personalizada sigue vigente, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Ha pasado una semana desde que te enviamos la propuesta a medida. Sigue vigente con todas las líneas de servicio detalladas. ¿Necesitas algún ajuste?</p>'+G_SIG+CTA_HTML },
+    { id:'mens_pers_2', step:2, name:'Resultados esperados', freq:'14 días', asunto:'Los resultados que puedes esperar, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Quería compartirte los resultados típicos que nuestros clientes obtienen con proyectos similares al tuyo: mayor eficiencia, mejor experiencia de usuario y un retorno medible desde el primer mes.</p><p>Todo esto está contemplado en tu propuesta.</p>'+G_SIG+CTA_HTML },
+    { id:'mens_pers_3', step:3, name:'Priorización flexible', freq:'21 días', asunto:'Podemos empezar por lo más urgente, {{nombre}}', contenido:'<p>Hola {{nombre}},</p><p>Si el presupuesto total te genera dudas, hay una alternativa: podemos priorizar las líneas más urgentes y dejar el resto para una segunda fase. Así reduces el riesgo inicial.</p><p>¿Te parece buena idea?</p>'+G_SIG+CTA_HTML },
+    { id:'mens_pers_4', step:4, name:'Último contacto', freq:'28 días', asunto:'¿Ha cambiado tu situación, {{nombre}}?', contenido:'<p>Hola {{nombre}},</p><p>Es mi último seguimiento semanal. Si las circunstancias han cambiado, podemos adaptar la propuesta a tu realidad actual. Sin compromiso.</p>'+G_SIG+CTA_HTML }
+];
+
+function buildAnualEmails(prefix, tema) {
+    const temas = [
+        { name:'Revisión de objetivos', asunto:`¿Cómo van tus objetivos de ${tema}, {{nombre}}?`, cuerpo:`<p>Empezamos un nuevo ciclo trimestral. Es buen momento para revisar si tu estrategia de ${tema} está alineada con tus objetivos de negocio. Podemos ayudarte a optimizarla.</p>` },
+        { name:'Tendencias del sector', asunto:`Tendencias en ${tema} que deberías conocer, {{nombre}}`, cuerpo:`<p>El mercado de ${tema} evoluciona muy rápido. Hay nuevas herramientas de Inteligencia Artificial y metodologías que podrían marcar la diferencia en tu negocio. Te contamos las más relevantes.</p>` },
+        { name:'Caso de éxito', asunto:`Un negocio como el tuyo triunfó con ${tema}, {{nombre}}`, cuerpo:`<p>Queremos compartirte un caso de éxito reciente: un negocio de tu sector implementó nuestra solución de ${tema} y los resultados superaron las expectativas. ¿Quieres saber cómo lo logramos?</p>` },
+        { name:'Checklist de mejora', asunto:`5 pasos para mejorar tu ${tema}, {{nombre}}`, cuerpo:`<p>Hemos preparado un checklist práctico con 5 acciones concretas para mejorar tu ${tema} este trimestre. Son cambios pequeños con gran impacto. La propuesta cubre todos estos puntos.</p>` },
+        { name:'Innovación y futuro', asunto:`El futuro de ${tema} ya está aquí, {{nombre}}`, cuerpo:`<p>La innovación no espera. Mientras algunos negocios siguen con métodos tradicionales, otros ya están aprovechando las nuevas soluciones de ${tema}. ¿En qué grupo quieres estar?</p>` },
+        { name:'Análisis de mercado', asunto:`Tu mercado ha cambiado, {{nombre}}`, cuerpo:`<p>Hemos analizado tu sector y hay movimientos interesantes. Tus competidores están invirtiendo en ${tema} y los que no lo hacen se están quedando atrás. Nuestra propuesta te posiciona a la vanguardia.</p>` },
+        { name:'ROI actualizado', asunto:`Nuevo cálculo de ROI para tu ${tema}, {{nombre}}`, cuerpo:`<p>Hemos actualizado los números. Con los precios actuales del mercado y la madurez de la tecnología, el retorno de inversión de implementar nuestra solución de ${tema} es aún mejor de lo que calculamos inicialmente.</p>` },
+        { name:'Nuevas funcionalidades', asunto:`Novedades en nuestra solución de ${tema}, {{nombre}}`, cuerpo:`<p>Hemos añadido nuevas funcionalidades a nuestra solución de ${tema}. Más potencia, mejor experiencia y el mismo precio. Tu propuesta se beneficia automáticamente de estas mejoras.</p>` },
+        { name:'Oferta especial', asunto:`Condiciones especiales de ${tema} para ti, {{nombre}}`, cuerpo:`<p>Como ya nos conocemos, queremos ofrecerte condiciones especiales si decides avanzar este mes. Es nuestra forma de premiar la confianza. ¿Te interesa conocer los detalles?</p>` },
+        { name:'Retrospectiva', asunto:`¿Qué ha cambiado en tu negocio, {{nombre}}?`, cuerpo:`<p>Ha pasado un tiempo desde que hablamos. Las circunstancias cambian y quizá ahora la situación sea diferente. Nos encantaría retomar la conversación y adaptar la propuesta de ${tema} a tu realidad actual.</p>` },
+        { name:'Planificación estratégica', asunto:`Planifica tu próximo trimestre con ${tema}, {{nombre}}`, cuerpo:`<p>El próximo trimestre puede ser el que marque la diferencia. Incluir ${tema} en tu planificación estratégica es invertir en el futuro de tu negocio. Te ayudamos a dar el paso.</p>` },
+        { name:'Cierre de ciclo', asunto:`Cerramos un ciclo, abrimos otro, {{nombre}}`, cuerpo:`<p>Ha pasado un año completo. Si en algún momento te planteaste implementar ${tema}, ahora es el momento perfecto. Nuevos precios, nuevas funcionalidades y la misma dedicación de siempre.</p>` }
+    ];
+    return temas.map((t, i) => ({
+        id: `${prefix}_${i+1}`, step: i+1, name: t.name, freq: '30 días',
+        asunto: t.asunto,
+        contenido: '<p>Hola {{nombre}},</p>' + t.cuerpo + (i % 2 === 0 ? G_HUG : G_SIG) + CTA_HTML,
+    }));
+}
+
+const PRES_SEQUENCES = [
+    { seqId:'inmediato', seqLabel:'Seguimiento inmediato', seqDesc:'Se activa al enviar la propuesta · 5 emails en 10 días', seqColor:'#0a84ff', seqIcon:'⚡', defaultFreq:'3 días',
+      categories: [
+        { key:'consultoria', label:'Consultoría', color:'#e8850a', bg:'rgba(232,133,10,0.15)', icon:'🎯', emails: INM_CONS_EMAILS },
+        { key:'agentes_ia', label:'Agentes de IA', color:'#0a84ff', bg:'rgba(10,132,255,0.15)', icon:'🤖', emails: INM_IA_EMAILS },
+        { key:'apps_web', label:'Apps Web', color:'#34c759', bg:'rgba(52,199,89,0.15)', icon:'🌐', emails: INM_WEB_EMAILS },
+        { id:'automatizacion', key:'automatizacion', label:'Automatización', color:'#5856d6', bg:'rgba(88,86,214,0.15)', icon:'⚡', emails: INM_AUTO_EMAILS },
+        { key:'personalizada', label:'Personalizada', color:'#aeaeb2', bg:'rgba(255,255,255,0.06)', icon:'📋', emails: INM_PERS_EMAILS }
+      ]
+    },
+    { seqId:'mensual', seqLabel:'Seguimiento mensual', seqDesc:'Se activa si no hay respuesta al inmediato · 1 email/semana durante 1 mes', seqColor:'#5856d6', seqIcon:'📅', defaultFreq:'7 días',
+      categories: [
+        { key:'consultoria', label:'Consultoría', color:'#e8850a', bg:'rgba(232,133,10,0.15)', icon:'🎯', emails: MENS_CONS_EMAILS },
+        { key:'agentes_ia', label:'Agentes de IA', color:'#0a84ff', bg:'rgba(10,132,255,0.15)', icon:'🤖', emails: MENS_IA_EMAILS },
+        { key:'apps_web', label:'Apps Web', color:'#34c759', bg:'rgba(52,199,89,0.15)', icon:'🌐', emails: MENS_WEB_EMAILS },
+        { key:'automatizacion', label:'Automatización', color:'#5856d6', bg:'rgba(88,86,214,0.15)', icon:'⚡', emails: MENS_AUTO_EMAILS },
+        { key:'personalizada', label:'Personalizada', color:'#aeaeb2', bg:'rgba(255,255,255,0.06)', icon:'📋', emails: MENS_PERS_EMAILS }
+      ]
+    },
+    { seqId:'anual', seqLabel:'Seguimiento anual', seqDesc:'1 email/mes · al completar los 12 vuelve a empezar', seqColor:'#34c759', seqIcon:'🔄', defaultFreq:'30 días',
+      categories: [
+        { key:'consultoria', label:'Consultoría', color:'#e8850a', bg:'rgba(232,133,10,0.15)', icon:'🎯', emails: buildAnualEmails('anual_cons', 'consultoría de procesos') },
+        { key:'agentes_ia', label:'Agentes de IA', color:'#0a84ff', bg:'rgba(10,132,255,0.15)', icon:'🤖', emails: buildAnualEmails('anual_ia', 'soluciones de inteligencia artificial') },
+        { key:'apps_web', label:'Apps Web', color:'#34c759', bg:'rgba(52,199,89,0.15)', icon:'🌐', emails: buildAnualEmails('anual_web', 'desarrollo web optimizado') },
+        { key:'automatizacion', label:'Automatización', color:'#5856d6', bg:'rgba(88,86,214,0.15)', icon:'⚡', emails: buildAnualEmails('anual_auto', 'automatización de flujos de trabajo') },
+        { key:'personalizada', label:'Personalizada', color:'#aeaeb2', bg:'rgba(255,255,255,0.06)', icon:'📋', emails: buildAnualEmails('anual_pers', 'soluciones personalizadas a medida') }
+      ]
+    }
+];
+
+const ALL_CATEGORIES_METADATA = {
+    consultoria: { label: 'Consultoría', bg: 'rgba(232,133,10,0.08)', border: '1px solid rgba(232,133,10,0.2)', accent: '#e8850a', icon: '🎯' },
+    agentes_ia: { label: 'Agentes de IA', bg: 'rgba(10,132,255,0.08)', border: '1px solid rgba(10,132,255,0.2)', accent: '#0a84ff', icon: '🤖' },
+    apps_web: { label: 'Apps Web', bg: 'rgba(52,199,89,0.08)', border: '1px solid rgba(52,199,89,0.2)', accent: '#34c759', icon: '🌐' },
+    automatizacion: { label: 'Automatización', bg: 'rgba(88,86,214,0.08)', border: '1px solid rgba(88,86,214,0.2)', accent: '#5856d6', icon: '⚡' },
+    personalizada: { label: 'Propuesta Personalizada', bg: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', accent: '#aeaeb2', icon: '📋' }
+};
+
+// --- 2. Global State ---
+let presupuestos = [];
+let propuestasEnviadas = [];
+let seguimientos = [];
+let presTab = 'plantillas';
+let segEmailSubTab = 'seguimiento';
+let presCat = 'all';
+let activeSeqConfigId = 'inmediato';
+let presEmailExpandedId = null;
+
+let currentSelectedLeadForSend = null;
+let currentSelectedLeadForSeg = null;
+
+let lineasTempList = []; // Temporal array to manage lines in Modal
+
+// --- 3. Entry point: Load Proposals tab ---
+async function loadProposalsModule() {
+    await fetchPresupuestos();
+    await fetchPropuestasEnviadas();
+    await fetchSeguimientos();
+    
+    // Initial Render
+    switchPresTab(presTab);
+}
+
+// Subtab switcher
+function switchPresTab(tab) {
+    presTab = tab;
+    
+    // UI active buttons styling
+    document.querySelectorAll('.proposals-tab-selector .tab-btn').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.getElementById(`pres-tab-${tab}`);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    // Show/Hide Panels
+    document.querySelectorAll('.proposals-sub-section').forEach(sec => sec.style.display = 'none');
+    const targetSec = document.getElementById(`pres-sub-${tab}`);
+    if (targetSec) targetSec.style.display = 'block';
+
+    // Reload triggers
+    if (tab === 'plantillas') renderPresupuestos();
+    if (tab === 'emails') switchSegEmailSubTab(segEmailSubTab);
+    if (tab === 'enviadas') renderPropuestasEnviadas();
+}
+
+function switchSegEmailSubTab(subtab) {
+    segEmailSubTab = subtab;
+    
+    document.querySelectorAll('#pres-sub-emails .tab-btn').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.getElementById(`seg-subtab-${subtab}`);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    // Toggle sub-containers
+    document.getElementById('seg-container-seguimiento').style.display = subtab === 'seguimiento' ? 'block' : 'none';
+    document.getElementById('seg-container-configurar').style.display = subtab === 'configurar' ? 'block' : 'none';
+
+    if (subtab === 'seguimiento') renderSeguimientoKanban();
+    if (subtab === 'configurar') renderConfigurarSecuencias();
+}
+
+// --- 4. Database Fetching with localStorage Fallback ---
+async function fetchPresupuestos() {
+    try {
+        const { data, error } = await _supabase
+            .from('presupuestos')
+            .select('*')
+            .order('orden', { ascending: true });
+
+        if (error) throw error;
+        presupuestos = data || [];
+    } catch (e) {
+        console.warn('Database "presupuestos" load failed, using local cache:', e);
+        const cached = localStorage.getItem('gf_presupuestos');
+        presupuestos = cached ? JSON.parse(cached) : [];
+    }
+
+    // Seed default templates if empty
+    if (presupuestos.length === 0) {
+        await seedDefaultTemplates();
+    }
+
+    // Update counts
+    const templatesCount = presupuestos.filter(p => p.es_plantilla !== false).length;
+    const countBadge = document.getElementById('count-templates-badge');
+    if (countBadge) countBadge.textContent = templatesCount;
+}
+
+async function fetchPropuestasEnviadas() {
+    try {
+        const { data, error } = await _supabase
+            .from('propuestas_enviadas')
+            .select('*')
+            .order('enviado_at', { ascending: false });
+
+        if (error) throw error;
+        propuestasEnviadas = data || [];
+    } catch (e) {
+        console.warn('Database "propuestas_enviadas" load failed, using local cache:', e);
+        const cached = localStorage.getItem('gf_propuestas_enviadas');
+        propuestasEnviadas = cached ? JSON.parse(cached) : [];
+    }
+
+    // Update count
+    const sentBadge = document.getElementById('count-sent-badge');
+    if (sentBadge) sentBadge.textContent = propuestasEnviadas.length;
+}
+
+async function fetchSeguimientos() {
+    try {
+        const { data, error } = await _supabase
+            .from('propuesta_seguimiento')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        seguimientos = data || [];
+    } catch (e) {
+        console.warn('Database "propuesta_seguimiento" load failed, using local cache:', e);
+        const cached = localStorage.getItem('gf_seguimiento');
+        seguimientos = cached ? JSON.parse(cached) : [];
+    }
+}
+
+// Seeding premium templates
+async function seedDefaultTemplates() {
+    const seeds = [
+        {
+            titulo: 'Estrategia y Auditoría IA',
+            subtitulo: 'Análisis modular de procesos internos y mapa de ruta IA',
+            descripcion: 'Evaluación integral de la infraestructura tecnológica, flujos de trabajo manuales de tu equipo e identificación de las 5 oportunidades de mayor impacto para implementar Automatizaciones y Modelos LLM en tu organización. Incluye auditoría, mapa de ruta detallado y propuesta técnica.',
+            categoria: 'consultoria',
+            precio_alta: 450,
+            precio_mensual: 0,
+            precio_tipo: 'fijo',
+            es_plantilla: true,
+            activo: true,
+            orden: 1,
+            badge: 'MÁS VENDIDO',
+            formas_pago_ofrecidas: ['giro', 'transferencia', 'stripe'],
+            lineas: [
+                { concepto: 'Fase 1: Auditoría operativa de procesos internos', precio: 250, descuento: 0, plazo: '7 días', mantenimiento: false, mantenimiento_precio: 0, sublineas: [{concepto: 'Mapeo detallado de cuellos de botella'}, {concepto: 'Identificación de tareas repetitivas automatizables'}], activo: true },
+                { concepto: 'Fase 2: Diseño de Mapa de Ruta e Integración de Agentes IA', precio: 200, descuento: 0, plazo: '7 días', mantenimiento: false, mantenimiento_precio: 0, sublineas: [{concepto: 'Propuesta de arquitectura técnica (Gemini API)'}, {concepto: 'Análisis de ROI estimado y tiempos de amortización'}], activo: true }
+            ]
+        },
+        {
+            titulo: 'Agente Conversacional IA para Leads',
+            subtitulo: 'Orquestador inteligente para atención al cliente y reserva 24/7',
+            descripcion: 'Diseño e integración de un agente cognitivo inteligente impulsado por Gemini que atiende leads entrantes, resuelve dudas en base a tu documentación comercial, califica el perfil del prospecto y reserva llamadas conectándose automáticamente a tu calendario en tiempo real.',
+            categoria: 'agentes_ia',
+            precio_alta: 1200,
+            precio_mensual: 150,
+            precio_tipo: 'desde',
+            es_plantilla: true,
+            activo: true,
+            orden: 2,
+            badge: 'AMORTIZACIÓN IA',
+            formas_pago_ofrecidas: ['giro', 'transferencia', 'stripe', 'bizum'],
+            lineas: [
+                { concepto: 'Entrenamiento cognitivo e ingesta de base de conocimientos', precio: 600, descuento: 0, plazo: '14 días', mantenimiento: false, mantenimiento_precio: 0, sublineas: [{concepto: 'Configuración de personalidad y directrices de Gemini'}, {concepto: 'Carga de tarifas, catálogos y FAQs del negocio'}], activo: true },
+                { concepto: 'Desarrollo de integraciones nativas y sincronizaciones', precio: 600, descuento: 0, plazo: '7 días', mantenimiento: true, mantenimiento_precio: 150, sublineas: [{concepto: 'Integración en Web Widget y WhatsApp Business API'}, {concepto: 'Sincronización con Cal.com y CRM Google Sheets'}], activo: true }
+            ]
+        },
+        {
+            titulo: 'Plataforma Web Clientes B2B',
+            subtitulo: 'Portal corporativo premium con base de datos en tiempo real',
+            descripcion: 'Construcción de una aplicación web corporativa modular premium de alto impacto estético. Cuenta con diseño ultra-moderno responsivo, panel de control de clientes, base de datos Postgres de Supabase para seguridad y área privada protegida por contraseña.',
+            categoria: 'apps_web',
+            precio_alta: 2400,
+            precio_mensual: 190,
+            precio_tipo: 'fijo',
+            es_plantilla: true,
+            activo: true,
+            orden: 3,
+            badge: 'PREMIUM',
+            formas_pago_ofrecidas: ['giro', 'transferencia'],
+            lineas: [
+                { concepto: 'Diseño UX/UI responsive en Vanilla HTML/CSS e interactividad', precio: 1100, descuento: 0, plazo: '20 días', mantenimiento: false, mantenimiento_precio: 0, sublineas: [{concepto: 'Diseño de marca, micro-animaciones e interactividad fluidas'}, {concepto: 'Estructuración SEO e indexación de páginas corporativas'}], activo: true },
+                { concepto: 'Arquitectura Backend Serverless y Panel Administrativo', precio: 1300, descuento: 0, plazo: '15 días', mantenimiento: true, mantenimiento_precio: 190, sublineas: [{concepto: 'Base de datos en la nube Supabase Postgres'}, {concepto: 'Consola privada de gestión interna y perfiles de usuarios'}], activo: true }
+            ]
+        },
+        {
+            titulo: 'Ecosistema de Automatización CRM',
+            subtitulo: 'Sincronización automática de calendarios, leads y notificaciones',
+            descripcion: 'Diseño y despliegue de flujos automatizados que conectan tu sistema de leads con tu calendario de reservas, actualizando tu base de datos central en Supabase de forma instantánea y disparando alertas en WhatsApp/Telegram al equipo comercial en tiempo real.',
+            categoria: 'automatizacion',
+            precio_alta: 850,
+            precio_mensual: 50,
+            precio_tipo: 'fijo',
+            es_plantilla: true,
+            activo: true,
+            orden: 4,
+            badge: 'EFICIENCIA OUTBOUND',
+            formas_pago_ofrecidas: ['giro', 'transferencia', 'bizum'],
+            lineas: [
+                { concepto: 'Sincronización bidireccional Cal.com y base de datos Supabase', precio: 450, descuento: 0, plazo: '5 días', mantenimiento: false, mantenimiento_precio: 0, sublineas: [{concepto: 'Actualización en tiempo real de estados de leads'}, {concepto: 'Prevención de duplicados e histórico de reuniones'}], activo: true },
+                { concepto: 'Canales de notificación instantáneos y alertas automáticas', precio: 400, descuento: 0, plazo: '5 días', mantenimiento: true, mantenimiento_precio: 50, sublineas: [{concepto: 'Disparadores webhook en WhatsApp al agendar citas'}, {concepto: 'Generación automatizada de enlaces y PDFs de seguimiento'}], activo: true }
+            ]
+        },
+        {
+            titulo: 'Ecosistema Digital Kombo',
+            subtitulo: 'Propuesta completa de Web Corporativa + Agente IA + CRM Automatizado',
+            descripcion: 'El paquete definitivo para la digitalización B2B comercial. Incluye el portal corporativo premium responsivo, el agente inteligente IA conversacional para calificar y reservar citas, y la automatización del CRM central conectando notificaciones instantáneas de WhatsApp.',
+            categoria: 'personalizada',
+            precio_alta: 3900,
+            precio_mensual: 290,
+            precio_tipo: 'fijo',
+            es_plantilla: true,
+            activo: true,
+            orden: 5,
+            badge: 'ECOSISTEMA RECOMENDADO',
+            formas_pago_ofrecidas: ['giro', 'transferencia'],
+            lineas: [
+                { concepto: 'Módulo 1: Portal Web Corporativo Premium Responsivo', precio: 1800, descuento: 10, plazo: '20 días', mantenimiento: false, mantenimiento_precio: 0, sublineas: [{concepto: 'Diseño UI Apple-style Glassmorphism ultra premium'}], activo: true },
+                { concepto: 'Módulo 2: Agente de IA Conversacional (Cal.com + Gemini)', precio: 1200, descuento: 10, plazo: '14 días', mantenimiento: false, mantenimiento_precio: 0, sublineas: [{concepto: 'Entrenamiento experto e ingesta de conocimiento de marca'}], activo: true },
+                { concepto: 'Módulo 3: Automatización CRM y Alertas de WhatsApp instantáneas', precio: 900, descuento: 10, plazo: '7 días', mantenimiento: true, mantenimiento_precio: 290, sublineas: [{concepto: 'Sincronizaciones webhooks y canalizaciones de correos de seguimiento'}], activo: true }
+            ]
+        }
+    ];
+
+    for (const seed of seeds) {
+        try {
+            const { data, error } = await _supabase.from('presupuestos').insert(seed).select();
+            if (error) throw error;
+            if (data?.[0]) presupuestos.push(data[0]);
+        } catch (e) {
+            seed.id = genUUID();
+            presupuestos.push(seed);
+        }
+    }
+    
+    // Save locally
+    localStorage.setItem('gf_presupuestos', JSON.stringify(presupuestos));
+}
+
+// --- 5. Support helpers ---
+function genUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+function showToast(msg, isError = false) {
+    // Add dynamically a toast container if not present
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.style.cssText = 'position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 100000; pointer-events: none;';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        background: ${isError ? 'rgba(255, 59, 48, 0.95)' : 'rgba(28, 28, 30, 0.92)'};
+        backdrop-filter: blur(12px);
+        color: #ffffff;
+        padding: 12px 20px;
+        border-radius: 12px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+        border: 1px solid ${isError ? 'rgba(255, 59, 48, 0.3)' : 'rgba(255,255,255,0.08)'};
+        transform: translateY(20px);
+        opacity: 0;
+        transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        pointer-events: auto;
+    `;
+    toast.innerHTML = `<span>${isError ? '❌' : '✅'}</span> <span>${msg}</span>`;
+    container.appendChild(toast);
+
+    // Trigger animation
+    setTimeout(() => {
+        toast.style.transform = 'translateY(0)';
+        toast.style.opacity = '1';
+    }, 10);
+
+    // Kill toast after 3.5 seconds
+    setTimeout(() => {
+        toast.style.transform = 'translateY(15px)';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 400);
+    }, 3500);
+}
+
+// Log custom actions to supporto/logs
+function logToSystemSupport(msg) {
+    const logEl = document.querySelector('#sec-support .stat-card-glass');
+    if (logEl) {
+        const time = new Date().toISOString().split('T')[0] + ' ' + new Date().toLocaleTimeString('es-ES');
+        logEl.innerHTML += `[PROPOSALS LOG - ${time}] ${msg}<br>`;
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+}
+
+// --- 6. Rendering: Plantillas view ---
+function filterTemplatesByCategory(cat) {
+    presCat = cat;
+    
+    // UI selection
+    document.querySelectorAll('.category-pills-bar .cat-pill').forEach(btn => btn.classList.remove('active'));
+    const btn = document.querySelector(`.category-pills-bar .cat-pill[data-cat="${cat}"]`);
+    if (btn) btn.classList.add('active');
+
+    renderPresupuestos();
+}
+
+function filterTemplates() {
+    renderPresupuestos();
+}
+
+function renderPresupuestos() {
+    const searchVal = document.getElementById('pres-search').value.toLowerCase().trim();
+    const container = document.getElementById('pres-templates-container');
+    container.innerHTML = '';
+
+    const categories = Object.keys(ALL_CATEGORIES_METADATA);
+    const visibleCategories = categories.filter(c => presCat === 'all' || presCat === c);
+
+    // Templates Filtered List
+    const searchFiltered = presupuestos.filter(p => 
+        !searchVal 
+        || p.titulo.toLowerCase().includes(searchVal) 
+        || (p.descripcion || '').toLowerCase().includes(searchVal)
+    );
+
+    // Selections filter (Todos only shows active ones, category view shows all)
+    const filtered = presCat === 'all' ? searchFiltered.filter(p => p.activo !== false) : searchFiltered;
+
+    // Build categories sequence maps
+    let globalTplNum = 0;
+    const tplNumMap = new Map();
+    categories.forEach(catKey => {
+        presupuestos.filter(p => p.categoria === catKey && p.es_plantilla !== false).forEach(p => {
+            globalTplNum++;
+            tplNumMap.set(p.id, globalTplNum);
+        });
+    });
+
+    visibleCategories.forEach(catKey => {
+        const meta = ALL_CATEGORIES_METADATA[catKey];
+        const items = filtered.filter(p => p.categoria === catKey).sort((a,b) => (a.orden || 0) - (b.orden || 0));
+
+        if (items.length === 0 && presCat === 'all') return;
+
+        // Render Category block Header
+        const catHeaderHtml = (presCat === 'all' && items.length > 0) ? `
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px; margin-top: 10px;">
+                <span style="font-size:1.15rem;">${meta.icon}</span>
+                <h3 style="margin:0; font-size:0.95rem; font-weight:700; color:var(--text-main);">${meta.label}</h3>
+                <span style="font-size:0.75rem; color:var(--text-grey); font-weight:500;">· ${items.length}</span>
+            </div>
+        ` : '';
+
+        // Render Empty state if no items
+        let gridHtml = '';
+        if (items.length === 0) {
+            gridHtml = `
+                <div style="display:flex; flex-direction:column; align-items:center; padding:50px 24px; background:rgba(255,255,255,0.01); border-radius:20px; border:2px dashed var(--border-color); width: 100%;">
+                    <span style="font-size:2.4rem; margin-bottom:12px;">${meta.icon}</span>
+                    <h3 style="margin:0 0 6px; font-size:1rem; font-weight:700; color:var(--text-main);">${meta.label}</h3>
+                    <p style="margin:0 0 20px; font-size:0.8rem; color:var(--text-grey); text-align:center; line-height: 1.5;">No hay plantillas en esta categoría.<br/>Crea la primera para empezar.</p>
+                    <button class="btn-primary" style="padding:10px 20px; font-size:0.8rem;" onclick="openCreateTemplateModal('${catKey}')">
+                        + Crear primera plantilla
+                    </button>
+                </div>
+            `;
+        } else {
+            const cardsHtml = items.map(p => {
+                const isClient = p.es_plantilla === false;
+                const cardBorder = isClient ? '2px solid var(--accent)' : `1px solid ${meta.accent}30`;
+                const cardBg = isClient ? 'rgba(10, 132, 255, 0.04)' : meta.bg;
+
+                // Price Math
+                const hasLineas = p.lineas && p.lineas.length > 0;
+                let realPrice = 0;
+                if (hasLineas) {
+                    realPrice = p.lineas.filter(l => l.activo !== false && !l.recomendado).reduce((s,l) => s + l.precio * (1 - (l.descuento || 0)/100), 0);
+                } else {
+                    realPrice = (p.descuento_pct > 0 && p.precio_alta) ? p.precio_alta * (1 - p.descuento_pct/100) : (p.precio_alta || 0);
+                }
+
+                // Payment Badges
+                let paymentBadges = '';
+                if (p.formas_pago_ofrecidas && p.formas_pago_ofrecidas.length > 0) {
+                    paymentBadges = `
+                        <div style="margin-top:10px; display:flex; gap:4px; flex-wrap:wrap;">
+                            ${p.formas_pago_ofrecidas.map(fp => {
+                                const labels = { sin_iva:'Sin IVA', giro:'Giro', transferencia:'Transf.', stripe:'Stripe', bizum:'Bizum', efectivo:'Efectivo' };
+                                return `<span style="font-size:0.65rem; color:var(--text-grey); background:rgba(255,255,255,0.06); padding:2px 8px; border-radius:6px; border: 1px solid var(--card-border);">${labels[fp] || fp}</span>`;
+                            }).join('')}
+                        </div>
+                    `;
+                } else if (p.forma_pago) {
+                    const labels = { sin_iva:'Sin IVA', giro:'Giro bancario', transferencia:'Transferencia', stripe:'Stripe', bizum:'Bizum', efectivo:'Efectivo' };
+                    paymentBadges = `<div style="margin-top:10px; font-size:0.7rem; color:var(--text-grey);">💳 ${labels[p.forma_pago] || p.forma_pago}</div>`;
+                }
+
+                // Active switch & test modes
+                const actState = p.activo !== false;
+                const actColor = actState ? 'var(--accent-green)' : 'var(--text-grey)';
+                const actLeft = actState ? '18px' : '2px';
+
+                return `
+                    <div class="pres-card" id="pres-card-${p.id}" style="border: ${p.es_prueba ? '2px dashed #ff9500' : cardBorder}; background: ${cardBg};"
+                         onmouseenter="this.style.borderColor='rgba(255,255,255,0.15)'" onmouseleave="this.style.borderColor='${p.es_prueba ? '#ff9500' : isClient ? 'var(--accent)' : meta.accent + '30'}'">
+                        
+                        ${p.es_prueba ? '<div class="test-mode-stripes"></div>' : ''}
+                        
+                        <!-- Top Header bar -->
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px 0; position:relative; z-index:2;">
+                            ${isClient 
+                                ? `<span class="pres-cat-badge" style="background:var(--accent); color:#fff;">👤 Propuesta Lead</span>`
+                                : `<span class="pres-cat-badge" style="background:${meta.accent}18; color:${meta.accent}; border: 1px solid ${meta.accent}30;">Plantilla #${tplNumMap.get(p.id) || '?'}</span>`
+                            }
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <button type="button" title="${p.es_prueba ? 'Quitar modo prueba' : 'Marcar como prueba'}"
+                                    onclick="togglePresTestMode('${p.id}')"
+                                    style="padding:2px 6px; border-radius:6px; border: ${p.es_prueba ? '1.5px solid #ff9500' : '1px solid var(--card-border)'}; background: ${p.es_prueba ? 'rgba(255,149,0,0.1)' : 'transparent'}; cursor:pointer; font-size:0.68rem; font-weight:700; color:${p.es_prueba ? '#ff9500' : 'var(--text-grey)'}; transition:all 0.2s;">
+                                    🧪
+                                </button>
+                                <div class="pres-tooltip-wrap">
+                                    <button class="pres-switch-btn" onclick="togglePresActive('${p.id}')" style="background:${actColor};">
+                                        <span style="left:${actLeft};"></span>
+                                    </button>
+                                    <div class="pres-tooltip-content">${actState ? 'Activo' : 'Inactivo'}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${p.badge ? `
+                            <div style="text-align:center; padding-top:8px; position:relative; z-index:2;">
+                                <span style="padding:4px 14px; border-radius:20px; background:${meta.accent}; color:#fff; font-size:0.64rem; font-weight:700; letter-spacing:0.08em; box-shadow:0 2px 6px rgba(0,0,0,0.1);">${p.badge}</span>
+                            </div>
+                        ` : ''}
+
+                        <!-- Content Area -->
+                        <div style="padding: 10px 20px 18px; flex:1; position:relative; z-index:2; opacity: ${actState ? 1 : 0.45};">
+                            <h3 style="font-size:1.1rem; font-weight:800; color:var(--text-main); margin-bottom: 4px; letter-spacing:-0.01em;">${p.titulo}</h3>
+                            ${p.subtitulo ? `<div style="font-size:0.75rem; color:var(--text-grey); margin-bottom:6px; line-height:1.3;">${p.subtitulo}</div>` : ''}
+                            ${p.lead_nombre ? `<div style="font-size:0.74rem; color:${meta.accent}; font-weight:700; margin-bottom:6px;">👤 Lead: ${p.lead_nombre}${p.fecha ? ` · ${new Date(p.fecha).toLocaleDateString('es-ES')}` : ''}</div>` : ''}
+                            
+                            <!-- Price Tag -->
+                            <div style="margin: 12px 0 10px;">
+                                <span style="font-size:0.7rem; color:var(--text-grey);">${p.precio_tipo === 'desde' ? 'Desde ' : ''}</span>
+                                <span style="font-size:1.8rem; font-weight:900; color:var(--text-main); letter-spacing:-0.03em;">${Math.round(realPrice).toLocaleString('es-ES')}€</span>
+                                <span style="font-size:0.76rem; color:var(--text-grey);">${p.forma_pago === 'sin_iva' ? '' : ' + IVA'}</span>
+                                ${(!hasLineas && p.descuento_pct > 0) ? `<span style="font-size:0.72rem; color:var(--accent-green); font-weight:700; margin-left:6px;">-${p.descuento_pct}%</span>` : ''}
+                                
+                                ${p.precio_mensual ? `
+                                    <div style="font-size:0.78rem; color:var(--text-grey); margin-top:2px; font-weight:600;">
+                                        ${p.precio_alta ? 'Mantenimiento: ' : ''}${p.precio_mensual}€/mes
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <p style="font-size:0.78rem; color:var(--text-grey); line-height:1.5; margin:0; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${p.descripcion || 'Sin descripción'}</p>
+                            ${paymentBadges}
+                        </div>
+
+                        <!-- Card Footer actions -->
+                        <div style="padding:10px 18px 14px; border-top:1px solid var(--border-color); display:flex; gap:6px; align-items:center; position:relative; z-index:2;">
+                            <button class="btn-primary" style="flex:1; font-size:0.75rem; padding:8px 12px; border-radius:9px; font-weight:700;" onclick="openEditPresupuestoModal('${p.id}')">
+                                ✏️ Editar
+                            </button>
+                            
+                            <div class="pres-tooltip-wrap">
+                                <button class="pres-tool-btn" onclick="openSendPropuestaModal('${p.id}')">✈️</button>
+                                <div class="pres-tooltip-content">Enviar Propuesta</div>
+                            </div>
+                            <div class="pres-tooltip-wrap">
+                                <button class="pres-tool-btn" onclick="triggerPDFDownload('${p.id}')">⬇️</button>
+                                <div class="pres-tooltip-content">Imprimir PDF</div>
+                            </div>
+                            <div class="pres-tooltip-wrap">
+                                <button class="pres-tool-btn" onclick="openDuplicateModal('${p.id}')">➕</button>
+                                <div class="pres-tooltip-content">Duplicar copia</div>
+                            </div>
+                            <div class="pres-tooltip-wrap">
+                                <button class="pres-tool-btn" onclick="deletePresupuestoAction('${p.id}')" style="color:var(--accent-red); background:rgba(255,59,48,0.06);">🗑</button>
+                                <div class="pres-tooltip-content">Eliminar</div>
+                            </div>
+                        </div>
+
+                    </div>
+                `;
+            }).join('');
+
+            gridHtml = `<div class="pres-templates-grid">${cardsHtml}</div>`;
+        }
+
+        container.innerHTML += `
+            <div style="margin-bottom:8px;">
+                ${catHeaderHtml}
+                ${gridHtml}
+            </div>
+        `;
+    });
+}
+
+// Quick state toggles
+async function togglePresTestMode(id) {
+    const pres = presupuestos.find(p => p.id === id);
+    if (!pres) return;
+    pres.es_prueba = !pres.es_prueba;
+    await savePresupuesto(id, { es_prueba: pres.es_prueba });
+    renderPresupuestos();
+    showToast(pres.es_prueba ? 'Modo prueba activado (marcado en naranja)' : 'Modo prueba desactivado');
+}
+
+async function togglePresActive(id) {
+    const pres = presupuestos.find(p => p.id === id);
+    if (!pres) return;
+    pres.activo = pres.activo === false ? true : false;
+    await savePresupuesto(id, { activo: pres.activo });
+    renderPresupuestos();
+    showToast(pres.activo ? 'Plantilla activada' : 'Plantilla desactivada');
+}
+
+// Persist updates
+async function savePresupuesto(id, updates) {
+    try {
+        const { error } = await _supabase
+            .from('presupuestos')
+            .update(updates)
+            .eq('id', id);
+
+        if (error) throw error;
+    } catch (e) {
+        console.warn('Supabase savePresupuesto failed, writing local storage:', e);
+    }
+    
+    // Always sync locally
+    localStorage.setItem('gf_presupuestos', JSON.stringify(presupuestos));
+}
+
+// --- 7. Modal Plantilla Editor: Tab & Panel routing ---
+function switchEditorTab(tab) {
+    document.querySelectorAll('#modal-edit-presupuesto .tab-btn').forEach(btn => btn.classList.remove('active'));
+    const btn = document.getElementById(`editor-tab-${tab}`);
+    if (btn) btn.classList.add('active');
+
+    // Panels toggle
+    document.querySelectorAll('.editor-panel').forEach(p => p.style.display = 'none');
+    document.getElementById(`editor-panel-${tab}`).style.display = 'flex';
+}
+
+function toggleEditPresLeadField() {
+    const isTpl = document.getElementById('edit-pres-es-plantilla').checked;
+    document.getElementById('edit-pres-lead-field-wrap').style.display = isTpl ? 'none' : 'grid';
+}
+
+// Opening edit modal
+function openCreateTemplateModal(defaultCat = 'consultoria') {
+    document.getElementById('edit-pres-id').value = '';
+    document.getElementById('edit-pres-modal-title').textContent = 'Crear Plantilla';
+    
+    // Clear inputs
+    document.getElementById('edit-pres-titulo').value = '';
+    document.getElementById('edit-pres-subtitulo').value = '';
+    document.getElementById('edit-pres-descripcion').value = '';
+    document.getElementById('edit-pres-categoria').value = defaultCat;
+    document.getElementById('edit-pres-badge').value = '';
+    document.getElementById('edit-pres-orden').value = '1';
+    
+    document.getElementById('edit-pres-precio-alta').value = '';
+    document.getElementById('edit-pres-precio-mensual').value = '';
+    document.getElementById('edit-pres-precio-tipo').value = 'fijo';
+    
+    document.getElementById('edit-pres-es-plantilla').checked = true;
+    document.getElementById('edit-pres-activo').checked = true;
+    document.getElementById('edit-pres-es-prueba').checked = false;
+    document.getElementById('edit-pres-lead-nombre').value = '';
+    document.getElementById('edit-pres-fecha').value = new Date().toISOString().split('T')[0];
+    
+    document.getElementById('edit-pres-descuento-pct').value = '0';
+    document.getElementById('edit-pres-fecha-entrega').value = '';
+    document.getElementById('edit-pres-link-pago').value = '';
+    document.getElementById('edit-pres-bonus').value = '';
+    document.getElementById('edit-pres-notas-internas').value = '';
+    document.getElementById('edit-pres-contenido-ia').value = '';
+    
+    // Check payment checkboxes
+    document.querySelectorAll('.pres-fp-offered').forEach(chk => {
+        chk.checked = ['giro', 'transferencia', 'bizum'].includes(chk.value);
+    });
+
+    // Finance defaults
+    document.getElementById('edit-pres-pc-inv-min').value = '15';
+    document.getElementById('edit-pres-pc-cuotas').value = '24';
+    document.getElementById('edit-pres-pc-dto-b').value = '4';
+    document.getElementById('edit-pres-pc-dto-c').value = '8';
+    document.getElementById('edit-pres-pc-show-a').checked = true;
+    document.getElementById('edit-pres-pc-show-b').checked = true;
+    document.getElementById('edit-pres-pc-show-c').checked = true;
+
+    lineasTempList = [];
+    renderEditPresLineas();
+    
+    toggleEditPresLeadField();
+    switchEditorTab('basico');
+    
+    document.getElementById('modal-edit-presupuesto').classList.add('active');
+    document.getElementById('modal-edit-presupuesto').style.display = 'flex';
+}
+
+function openEditPresupuestoModal(id) {
+    const p = presupuestos.find(pr => pr.id === id);
+    if (!p) return;
+
+    document.getElementById('edit-pres-id').value = p.id;
+    document.getElementById('edit-pres-modal-title').textContent = 'Editar Propuesta';
+
+    document.getElementById('edit-pres-titulo').value = p.titulo || '';
+    document.getElementById('edit-pres-subtitulo').value = p.subtitulo || '';
+    document.getElementById('edit-pres-descripcion').value = p.descripcion || '';
+    document.getElementById('edit-pres-categoria').value = p.categoria || 'consultoria';
+    document.getElementById('edit-pres-badge').value = p.badge || '';
+    document.getElementById('edit-pres-orden').value = p.orden || '1';
+
+    document.getElementById('edit-pres-precio-alta').value = p.precio_alta || '';
+    document.getElementById('edit-pres-precio-mensual').value = p.precio_mensual || '';
+    document.getElementById('edit-pres-precio-tipo').value = p.precio_tipo || 'fijo';
+
+    document.getElementById('edit-pres-es-plantilla').checked = p.es_plantilla !== false;
+    document.getElementById('edit-pres-activo').checked = p.activo !== false;
+    document.getElementById('edit-pres-es-prueba').checked = !!p.es_prueba;
+    document.getElementById('edit-pres-lead-nombre').value = p.lead_nombre || '';
+    document.getElementById('edit-pres-fecha').value = p.fecha ? p.fecha.split('T')[0] : new Date().toISOString().split('T')[0];
+
+    document.getElementById('edit-pres-descuento-pct').value = p.descuento_pct || '0';
+    document.getElementById('edit-pres-fecha-entrega').value = p.fecha_entrega ? p.fecha_entrega.split('T')[0] : '';
+    document.getElementById('edit-pres-link-pago').value = p.link_pago || '';
+    document.getElementById('edit-pres-bonus').value = p.bonus || '';
+    document.getElementById('edit-pres-notas-internas').value = p.notas_internas || '';
+    document.getElementById('edit-pres-contenido-ia').value = p.contenido_ia || '';
+
+    // Check payment checkboxes
+    const offered = p.formas_pago_ofrecidas || [];
+    document.querySelectorAll('.pres-fp-offered').forEach(chk => {
+        chk.checked = offered.length > 0 ? offered.includes(chk.value) : (p.forma_pago === chk.value || ['giro', 'transferencia', 'bizum'].includes(chk.value));
+    });
+
+    // Finance
+    const pc = p.pago_config || { inv_min_pct: 15, num_cuotas: 24, descuento_b_pct: 4, descuento_c_pct: 8, show_a: true, show_b: true, show_c: true };
+    document.getElementById('edit-pres-pc-inv-min').value = pc.inv_min_pct != null ? pc.inv_min_pct : '15';
+    document.getElementById('edit-pres-pc-cuotas').value = pc.num_cuotas != null ? pc.num_cuotas : '24';
+    document.getElementById('edit-pres-pc-dto-b').value = pc.descuento_b_pct != null ? pc.descuento_b_pct : '4';
+    document.getElementById('edit-pres-pc-dto-c').value = pc.descuento_c_pct != null ? pc.descuento_c_pct : '8';
+    document.getElementById('edit-pres-pc-show-a').checked = pc.show_a !== false;
+    document.getElementById('edit-pres-pc-show-b').checked = pc.show_b !== false;
+    document.getElementById('edit-pres-pc-show-c').checked = pc.show_c !== false;
+
+    // Deep copy lineas to temp
+    lineasTempList = p.lineas ? JSON.parse(JSON.stringify(p.lineas)) : [];
+    renderEditPresLineas();
+
+    toggleEditPresLeadField();
+    switchEditorTab('basico');
+
+    document.getElementById('modal-edit-presupuesto').classList.add('active');
+    document.getElementById('modal-edit-presupuesto').style.display = 'flex';
+}
+
+function closeEditPresupuestoModal() {
+    document.getElementById('modal-edit-presupuesto').classList.remove('active');
+    document.getElementById('modal-edit-presupuesto').style.display = 'none';
+}
+
+// Line items editor renderer
+function renderEditPresLineas() {
+    const container = document.getElementById('edit-pres-lineas-container');
+    container.innerHTML = '';
+
+    if (lineasTempList.length === 0) {
+        container.innerHTML = `<div style="text-align:center; color:var(--text-grey); font-size:0.8rem; padding:20px;">No hay líneas de desglose. Agrega la primera para habilitar la cotización dinámica modular en el PDF.</div>`;
+        return;
+    }
+
+    lineasTempList.forEach((linea, index) => {
+        const item = document.createElement('div');
+        item.className = 'edit-linea-item';
+        
+        // Build sublineas HTML
+        const sublineasHtml = (linea.sublineas || []).map((sub, sIdx) => `
+            <div class="sublinea-row">
+                <span style="font-size:0.75rem; color:var(--text-grey);">└</span>
+                <input type="text" placeholder="Concepto de sub-línea..." value="${sub.concepto || ''}" 
+                       oninput="lineasTempList[${index}].sublineas[${sIdx}].concepto = this.value"
+                       class="modal-input" style="flex:1; font-size:0.78rem; padding:4px 8px; height: 28px;">
+                <button onclick="removeEditPresSublinea(${index}, ${sIdx})" 
+                        style="border:none; background:transparent; color:var(--accent-red); cursor:pointer; font-size:0.8rem; padding:4px;">✕</button>
+            </div>
+        `).join('');
+
+        item.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:6px; margin-bottom:4px;">
+                <span style="font-size:0.72rem; font-weight:700; color:var(--accent); text-transform:uppercase;">Línea #${index + 1}</span>
+                <button onclick="removeEditPresLinea(${index})" 
+                        style="border:none; background:rgba(255,59,48,0.1); color:var(--accent-red); padding:4px 8px; border-radius:6px; font-size:0.7rem; font-weight:700; cursor:pointer;">✕ Eliminar Línea</button>
+            </div>
+            
+            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:8px;">
+                <div>
+                    <label style="font-size:0.68rem; color:var(--text-grey); display:block; margin-bottom:2px;">Concepto/Servicio</label>
+                    <input type="text" placeholder="Ej: Fase 1: Desarrollo de Widget corporativo..." value="${linea.concepto || ''}" 
+                           oninput="lineasTempList[${index}].concepto = this.value"
+                           class="modal-input" style="font-size:0.8rem; padding:6px 10px; height: 32px;">
+                </div>
+                <div>
+                    <label style="font-size:0.68rem; color:var(--text-grey); display:block; margin-bottom:2px;">Precio (€)</label>
+                    <input type="number" placeholder="0" value="${linea.precio != null ? linea.precio : ''}" 
+                           oninput="lineasTempList[${index}].precio = Number(this.value)"
+                           class="modal-input" style="font-size:0.8rem; padding:6px 10px; height: 32px;">
+                </div>
+                <div>
+                    <label style="font-size:0.68rem; color:var(--text-grey); display:block; margin-bottom:2px;">Descuento (%)</label>
+                    <input type="number" placeholder="0" value="${linea.descuento != null ? linea.descuento : ''}" 
+                           oninput="lineasTempList[${index}].descuento = Number(this.value)"
+                           class="modal-input" style="font-size:0.8rem; padding:6px 10px; height: 32px;" min="0" max="100">
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1.2fr 1.8fr; gap:8px; margin-top:4px;">
+                <div>
+                    <label style="font-size:0.68rem; color:var(--text-grey); display:block; margin-bottom:2px;">Plazo entrega</label>
+                    <input type="text" placeholder="Ej: 10 días, 2 semanas..." value="${linea.plazo || ''}" 
+                           oninput="lineasTempList[${index}].plazo = this.value"
+                           class="modal-input" style="font-size:0.8rem; padding:6px 10px; height: 32px;">
+                </div>
+                
+                <div style="display:flex; gap:10px; align-items:center; padding-top:14px;">
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; cursor:pointer; color:var(--text-main);">
+                        <input type="checkbox" ${linea.mantenimiento ? 'checked' : ''} 
+                               onchange="lineasTempList[${index}].mantenimiento = this.checked; renderEditPresLineas();"> Mantenimiento mensual?
+                    </label>
+                    
+                    ${linea.mantenimiento ? `
+                        <input type="number" placeholder="€/mes" value="${linea.mantenimiento_precio != null ? linea.mantenimiento_precio : ''}" 
+                               oninput="lineasTempList[${index}].mantenimiento_precio = Number(this.value)"
+                               class="modal-input" style="font-size:0.75rem; padding:4px 8px; width:70px; height:28px;">
+                    ` : ''}
+                </div>
+            </div>
+
+            <!-- Optional check -->
+            <div style="display:flex; gap:12px; align-items:center; margin-top:2px;">
+                <label style="display:flex; align-items:center; gap:6px; font-size:0.72rem; cursor:pointer; color:var(--accent-purple);">
+                    <input type="checkbox" ${linea.recomendado ? 'checked' : ''} 
+                           onchange="lineasTempList[${index}].recomendado = this.checked; renderEditPresLineas();"> ⭐ Módulo recomendado complementario (No incluido en precio base)
+                </label>
+            </div>
+
+            <!-- Sublineas wrapper -->
+            <div style="margin-top:6px; padding-left:14px; border-left:1.5px solid var(--border-color);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span style="font-size:0.7rem; font-weight:700; color:var(--text-grey);">Desglose Detallado / Puntos Clave</span>
+                    <button onclick="addEditPresSublinea(${index})" 
+                            style="border:none; background:transparent; color:var(--accent); font-size:0.7rem; font-weight:700; cursor:pointer;">+ Añadir punto</button>
+                </div>
+                ${sublineasHtml}
+            </div>
+        `;
+        container.appendChild(item);
+    });
+}
+
+function addEditPresLinea() {
+    lineasTempList.push({
+        concepto: '',
+        precio: 0,
+        descuento: 0,
+        plazo: '',
+        mantenimiento: false,
+        mantenimiento_precio: 0,
+        recomendado: false,
+        sublineas: [],
+        activo: true
+    });
+    renderEditPresLineas();
+}
+
+function removeEditPresLinea(index) {
+    lineasTempList.splice(index, 1);
+    renderEditPresLineas();
+}
+
+function addEditPresSublinea(lineIdx) {
+    if (!lineasTempList[lineIdx].sublineas) {
+        lineasTempList[lineIdx].sublineas = [];
+    }
+    lineasTempList[lineIdx].sublineas.push({ concepto: '' });
+    renderEditPresLineas();
+}
+
+function removeEditPresSublinea(lineIdx, subIdx) {
+    lineasTempList[lineIdx].sublineas.splice(subIdx, 1);
+    renderEditPresLineas();
+}
+
+// Action: Save Proposal/Template from modal
+async function savePresupuestoAction() {
+    const id = document.getElementById('edit-pres-id').value;
+    const isPlantilla = document.getElementById('edit-pres-es-plantilla').checked;
+
+    const offeredPayMethods = [];
+    document.querySelectorAll('.pres-fp-offered:checked').forEach(chk => offeredPayMethods.push(chk.value));
+
+    // Compile Pago Config
+    const pagoConfig = {
+        inv_min_pct: Number(document.getElementById('edit-pres-pc-inv-min').value || 15),
+        num_cuotas: Number(document.getElementById('edit-pres-pc-cuotas').value || 24),
+        descuento_b_pct: Number(document.getElementById('edit-pres-pc-dto-b').value || 4),
+        descuento_c_pct: Number(document.getElementById('edit-pres-pc-dto-c').value || 8),
+        show_a: document.getElementById('edit-pres-pc-show-a').checked,
+        show_b: document.getElementById('edit-pres-pc-show-b').checked,
+        show_c: document.getElementById('edit-pres-pc-show-c').checked
+    };
+
+    const record = {
+        titulo: document.getElementById('edit-pres-titulo').value.trim(),
+        subtitulo: document.getElementById('edit-pres-subtitulo').value.trim() || null,
+        descripcion: document.getElementById('edit-pres-descripcion').value.trim() || null,
+        categoria: document.getElementById('edit-pres-categoria').value,
+        badge: document.getElementById('edit-pres-badge').value.trim() || null,
+        orden: Number(document.getElementById('edit-pres-orden').value || 1),
+
+        precio_alta: document.getElementById('edit-pres-precio-alta').value ? Number(document.getElementById('edit-pres-precio-alta').value) : null,
+        precio_mensual: document.getElementById('edit-pres-precio-mensual').value ? Number(document.getElementById('edit-pres-precio-mensual').value) : null,
+        precio_tipo: document.getElementById('edit-pres-precio-tipo').value,
+
+        es_plantilla: isPlantilla,
+        activo: document.getElementById('edit-pres-activo').checked,
+        es_prueba: document.getElementById('edit-pres-es-prueba').checked,
+        
+        lead_nombre: isPlantilla ? null : document.getElementById('edit-pres-lead-nombre').value.trim() || null,
+        fecha: isPlantilla ? null : new Date(document.getElementById('edit-pres-fecha').value).toISOString(),
+
+        descuento_pct: Number(document.getElementById('edit-pres-descuento-pct').value || 0),
+        fecha_entrega: document.getElementById('edit-pres-fecha-entrega').value ? new Date(document.getElementById('edit-pres-fecha-entrega').value).toISOString() : null,
+        link_pago: document.getElementById('edit-pres-link-pago').value.trim() || null,
+        bonus: document.getElementById('edit-pres-bonus').value.trim() || null,
+        notas_internas: document.getElementById('edit-pres-notas-internas').value.trim() || null,
+        contenido_ia: document.getElementById('edit-pres-contenido-ia').value.trim() || null,
+
+        formas_pago_ofrecidas: offeredPayMethods,
+        pago_config: pagoConfig,
+        lineas: lineasTempList
+    };
+
+    if (!record.titulo) {
+        showToast('El título de la propuesta es obligatorio', true);
+        return;
+    }
+
+    if (id) {
+        // Edit
+        const idx = presupuestos.findIndex(p => p.id === id);
+        if (idx !== -1) {
+            presupuestos[idx] = { ...presupuestos[idx], ...record };
+        }
+        await savePresupuesto(id, record);
+        logToSystemSupport(`Propuesta editada: "${record.titulo}"`);
+        showToast('Propuesta guardada correctamente');
+    } else {
+        // Create new
+        const newId = genUUID();
+        const fullRecord = { id: newId, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...record };
+        
+        try {
+            const { data, error } = await _supabase.from('presupuestos').insert(fullRecord).select();
+            if (error) throw error;
+            if (data?.[0]) presupuestos.push(data[0]);
+        } catch (e) {
+            console.warn('Supabase insert failed, writing local cache:', e);
+            presupuestos.push(fullRecord);
+        }
+
+        localStorage.setItem('gf_presupuestos', JSON.stringify(presupuestos));
+        logToSystemSupport(`Propuesta creada: "${record.titulo}"`);
+        showToast('Propuesta creada con éxito');
+    }
+
+    closeEditPresupuestoModal();
+    renderPresupuestos();
+}
+
+// Delete action
+async function deletePresupuestoAction(id) {
+    const pres = presupuestos.find(p => p.id === id);
+    if (!pres) return;
+
+    const confirmed = await showConfirm(
+        'Eliminar propuesta',
+        `¿Seguro que deseas eliminar la propuesta "${pres.titulo}"? Esta acción no se puede deshacer.`,
+        '🗑️',
+        'Eliminar'
+    );
+
+    if (!confirmed) return;
+
+    // Delete in cache
+    presupuestos = presupuestos.filter(p => p.id !== id);
+    localStorage.setItem('gf_presupuestos', JSON.stringify(presupuestos));
+
+    try {
+        const { error } = await _supabase.from('presupuestos').delete().eq('id', id);
+        if (error) throw error;
+    } catch(e) {
+        console.warn('Supabase delete failed, cache synced.');
+    }
+
+    logToSystemSupport(`Propuesta eliminada: "${pres.titulo}"`);
+    showToast('Propuesta eliminada correctamente');
+    renderPresupuestos();
+}
+
+// --- 8. Duplication Module ---
+let duplicateTargetId = null;
+
+function openDuplicateModal(id) {
+    const p = presupuestos.find(pr => pr.id === id);
+    if (!p) return;
+
+    duplicateTargetId = id;
+    document.getElementById('dup-pres-titulo').value = `Copia de ${p.titulo}`;
+    document.getElementById('dup-pres-es-plantilla').checked = p.es_plantilla !== false;
+
+    document.getElementById('modal-dup-propuesta').classList.add('active');
+    document.getElementById('modal-dup-propuesta').style.display = 'flex';
+}
+
+function closeDupPropuestaModal() {
+    document.getElementById('modal-dup-propuesta').classList.remove('active');
+    document.getElementById('modal-dup-propuesta').style.display = 'none';
+}
+
+async function executeDuplicatePresAction() {
+    const p = presupuestos.find(pr => pr.id === duplicateTargetId);
+    if (!p) return;
+
+    const newTitle = document.getElementById('dup-pres-titulo').value.trim();
+    const isTpl = document.getElementById('dup-pres-es-plantilla').checked;
+
+    if (!newTitle) {
+        showToast('El título es obligatorio', true);
+        return;
+    }
+
+    const newId = genUUID();
+    const copy = JSON.parse(JSON.stringify(p));
+    
+    copy.id = newId;
+    copy.titulo = newTitle;
+    copy.es_plantilla = isTpl;
+    copy.created_at = new Date().toISOString();
+    copy.updated_at = new Date().toISOString();
+
+    try {
+        const { data, error } = await _supabase.from('presupuestos').insert(copy).select();
+        if (error) throw error;
+        if (data?.[0]) presupuestos.push(data[0]);
+    } catch(e) {
+        presupuestos.push(copy);
+    }
+
+    localStorage.setItem('gf_presupuestos', JSON.stringify(presupuestos));
+    showToast('Propuesta duplicada con éxito');
+    
+    closeDupPropuestaModal();
+    renderPresupuestos();
+}
+
+// --- 9. Sending Proposals Modal ---
+let sendProposalTargetId = null;
+
+function openSendPropuestaModal(id) {
+    const p = presupuestos.find(pr => pr.id === id);
+    if (!p) return;
+
+    sendProposalTargetId = id;
+    document.getElementById('send-pres-titulo-label').textContent = p.titulo;
+    document.getElementById('send-pres-sub-label').textContent = p.subtitulo || 'Sin subtítulo';
+
+    // Price Net Estimation
+    const hasLineas = p.lineas && p.lineas.length > 0;
+    let realPrice = 0;
+    if (hasLineas) {
+        realPrice = p.lineas.filter(l => l.activo !== false && !l.recomendado).reduce((s,l) => s + l.precio * (1 - (l.descuento || 0)/100), 0);
+    } else {
+        realPrice = (p.descuento_pct > 0 && p.precio_alta) ? p.precio_alta * (1 - p.descuento_pct/100) : (p.precio_alta || 0);
+    }
+    
+    document.getElementById('send-pres-precio-neto').textContent = Math.round(realPrice).toLocaleString('es-ES') + '€ + IVA';
+    document.getElementById('send-pres-descuento-pct').textContent = p.descuento_pct > 0 ? `-${p.descuento_pct}%` : '0%';
+
+    // Clear inputs
+    document.getElementById('send-pres-lead-search').value = '';
+    document.getElementById('send-pres-cc-emails').value = '';
+    document.getElementById('send-pres-notes').value = '';
+    
+    currentSelectedLeadForSend = null;
+
+    document.getElementById('modal-send-propuesta').classList.add('active');
+    document.getElementById('modal-send-propuesta').style.display = 'flex';
+}
+
+function closeSendPropuestaModal() {
+    document.getElementById('modal-send-propuesta').classList.remove('active');
+    document.getElementById('modal-send-propuesta').style.display = 'none';
+}
+
+// Leads dropdown triggers in Send modal
+function showSendLeadDropdown() {
+    const dd = document.getElementById('send-pres-lead-dropdown');
+    dd.style.display = 'block';
+    filterSendLeadDropdown();
+}
+
+function filterSendLeadDropdown() {
+    const val = document.getElementById('send-pres-lead-search').value.toLowerCase().trim();
+    const dd = document.getElementById('send-pres-lead-dropdown');
+    dd.innerHTML = '';
+
+    const filtered = leadsList.filter(l => 
+        l.email && 
+        (!val || (l.first_name || '').toLowerCase().includes(val) || l.email.toLowerCase().includes(val))
+    );
+
+    if (filtered.length === 0) {
+        dd.innerHTML = `<div style="padding:10px; color:var(--text-grey); font-size:0.8rem; text-align:center;">No se encontraron leads con email</div>`;
+        return;
+    }
+
+    filtered.slice(0, 10).forEach(lead => {
+        const item = document.createElement('div');
+        item.style.cssText = 'padding:8px 12px; cursor:pointer; font-size:0.8rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;';
+        item.innerHTML = `
+            <div>
+                <strong style="color:var(--text-main);">${lead.first_name || 'Prospecto'}</strong> 
+                <span style="color:var(--text-grey);">(${lead.company_name || 'Sin empresa'})</span>
+            </div>
+            <div style="font-size:0.7rem; color:var(--text-grey);">${lead.email}</div>
+        `;
+        
+        item.onclick = () => {
+            currentSelectedLeadForSend = lead;
+            document.getElementById('send-pres-lead-search').value = `${lead.first_name || 'Prospecto'} (${lead.email})`;
+            dd.style.display = 'none';
+        };
+
+        item.onmouseenter = () => item.style.background = 'rgba(255,255,255,0.06)';
+        item.onmouseleave = () => item.style.background = 'transparent';
+
+        dd.appendChild(item);
+    });
+}
+
+// Close dropdown on click outside
+document.addEventListener('click', (e) => {
+    if (e.target && !e.target.closest('#send-pres-lead-search')) {
+        const dd = document.getElementById('send-pres-lead-dropdown');
+        if (dd) dd.style.display = 'none';
+    }
+    if (e.target && !e.target.closest('#seg-lead-search')) {
+        const dd = document.getElementById('seg-lead-dropdown');
+        if (dd) dd.style.display = 'none';
+    }
+});
+
+// Action: execute sending proposals
+async function executeSendPropuestaAction() {
+    if (!currentSelectedLeadForSend) {
+        showToast('Por favor, busca y selecciona un Lead destinatario de la lista', true);
+        return;
+    }
+
+    const p = presupuestos.find(pr => pr.id === sendProposalTargetId);
+    if (!p) return;
+
+    const emailChannel = document.getElementById('send-channel-email').checked;
+    const whatsappChannel = document.getElementById('send-channel-whatsapp').checked;
+    const crmChannel = document.getElementById('send-channel-crm').checked;
+    const ccText = document.getElementById('send-pres-cc-emails').value.trim();
+    const ccNotes = document.getElementById('send-pres-notes').value.trim();
+
+    const ccEmails = ccText ? ccText.split(',').map(e => e.trim()).filter(e => e.includes('@')) : [];
+
+    // Calculate price final
+    const hasLineas = p.lineas && p.lineas.length > 0;
+    let realPrice = 0;
+    if (hasLineas) {
+        realPrice = p.lineas.filter(l => l.activo !== false && !l.recomendado).reduce((s,l) => s + l.precio * (1 - (l.descuento || 0)/100), 0);
+    } else {
+        realPrice = (p.descuento_pct > 0 && p.precio_alta) ? p.precio_alta * (1 - p.descuento_pct/100) : (p.precio_alta || 0);
+    }
+
+    // 1. Insert in "propuestas_enviadas" table
+    const sentRecord = {
+        id: genUUID(),
+        presupuesto_id: p.id,
+        lead_id: currentSelectedLeadForSend.id,
+        lead_nombre: currentSelectedLeadForSend.first_name || 'Prospecto',
+        lead_email: currentSelectedLeadForSend.email,
+        titulo: p.titulo,
+        precio_final: realPrice,
+        precio_mensual_final: p.precio_mensual || null,
+        descuento_pct: p.descuento_pct || 0,
+        canal: emailChannel ? 'email' : 'whatsapp',
+        estado: 'entregada',
+        lineas: p.lineas || [],
+        enviado_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    };
+
+    try {
+        const { error } = await _supabase.from('propuestas_enviadas').insert(sentRecord);
+        if (error) throw error;
+        propuestasEnviadas.unshift(sentRecord);
+    } catch (e) {
+        console.warn('Supabase proposals_enviadas insert failed, local only:', e);
+        propuestasEnviadas.unshift(sentRecord);
+    }
+    localStorage.setItem('gf_propuestas_enviadas', JSON.stringify(propuestasEnviadas));
+
+    // 2. Activate CRM sequence tracker if checked
+    if (crmChannel) {
+        const already = seguimientos.some(s => s.lead_id === currentSelectedLeadForSend.id);
+        if (!already) {
+            const segRecord = {
+                id: genUUID(),
+                lead_id: currentSelectedLeadForSend.id,
+                lead_nombre: currentSelectedLeadForSend.first_name || 'Prospecto',
+                lead_email: currentSelectedLeadForSend.email,
+                presupuesto_id: p.id,
+                categoria: p.categoria || 'personalizada',
+                columna: 'enviada',
+                fecha_propuesta_enviada: new Date().toISOString(),
+                pausada: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+
+            try {
+                const { error } = await _supabase.from('propuesta_seguimiento').insert(segRecord);
+                if (error) throw error;
+                seguimientos.unshift(segRecord);
+            } catch (e) {
+                seguimientos.unshift(segRecord);
+            }
+            localStorage.setItem('gf_seguimiento', JSON.stringify(seguimientos));
+        }
+    }
+
+    // 3. Channels outreach integrations
+    let outreachLogged = '';
+    
+    // A. WhatsApp Link opener
+    if (whatsappChannel) {
+        const leadPhone = currentSelectedLeadForSend.phone || '';
+        const linkPDF = `https://cerebrocomercial-ai.iadebarrio.com/api/download?id=${p.id}`;
+        
+        let ctcMsg = `¡Hola ${currentSelectedLeadForSend.first_name || 'prospecto'}! Te escribo para enviarte la propuesta de ${p.titulo} que preparamos para tu negocio. Puedes descargar el desglose en PDF directamente aquí: ${linkPDF}`;
+        if (ccNotes) ctcMsg += `\n\nNotas: ${ccNotes}`;
+        
+        const wsUrl = `https://wa.me/${leadPhone ? leadPhone.replace(/[\s\+\-]/g, '') : ''}?text=${encodeURIComponent(ctcMsg)}`;
+        window.open(wsUrl, '_blank');
+        outreachLogged += ' y WhatsApp abierto';
+    }
+
+    // B. Email dispatch Mailto Fallback
+    if (emailChannel) {
+        const linkPDF = `https://cerebrocomercial-ai.iadebarrio.com/api/download?id=${p.id}`;
+        const emailSubject = `Tu propuesta personalizada para ${p.titulo}`;
+        
+        let emailBody = `Hola ${currentSelectedLeadForSend.first_name || 'prospecto'},\n\nEspero que estés muy bien.\n\nTe adjunto el enlace para ver y descargar la propuesta comercial de ${p.titulo} que hemos diseñado para optimizar tu negocio.\n\nEnlace PDF: ${linkPDF}\n\n`;
+        if (ccNotes) emailBody += `Notas adicionales:\n${ccNotes}\n\n`;
+        emailBody += `Revísala y quedo a tu entera disposición para resolver cualquier duda.\n\nUn saludo,\nGerard Fanals\nCerebroComercial AI`;
+
+        const ccQuery = ccEmails.length > 0 ? `&cc=${encodeURIComponent(ccEmails.join(','))}` : '';
+        const mailtoUrl = `mailto:${currentSelectedLeadForSend.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}${ccQuery}`;
+        window.open(mailtoUrl, '_blank');
+        outreachLogged += ' y Correo local levantado';
+    }
+
+    logToSystemSupport(`Propuesta "${p.titulo}" emitida a ${currentSelectedLeadForSend.first_name} (${currentSelectedLeadForSend.email})${outreachLogged}`);
+    showToast('Propuesta emitida con éxito');
+
+    closeSendPropuestaModal();
+    
+    // Switch to Enviadas to check
+    switchPresTab('enviadas');
+}
+
+// --- 10. Sent Proposals Spreadsheet Rendering ---
+function filterSentProposals() {
+    renderPropuestasEnviadas();
+}
+
+function renderPropuestasEnviadas() {
+    const searchVal = document.getElementById('pres-enviada-search').value.toLowerCase().trim();
+    const tbody = document.getElementById('pres-enviadas-tbody');
+    tbody.innerHTML = '';
+
+    const filtered = propuestasEnviadas.filter(pe => 
+        !searchVal ||
+        (pe.lead_nombre || '').toLowerCase().includes(searchVal) ||
+        (pe.lead_email || '').toLowerCase().includes(searchVal) ||
+        (pe.titulo || '').toLowerCase().includes(searchVal)
+    );
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text-grey); padding:30px;">${searchVal ? 'No se encontraron resultados para su búsqueda.' : 'No se han registrado propuestas emitidas aún.'}</td></tr>`;
+        return;
+    }
+
+    filtered.forEach(pe => {
+        const isPrueba = !!presupuestos.find(pr => pr.id === pe.presupuesto_id)?.es_prueba;
+        
+        // Status configurations matching original community project perfectly
+        const estadoColors = { entregada: '#0a84ff', aceptada: '#34c759', rechazada: '#ff3b30', visto: '#bf5af2', pendiente: '#ff9f0a' };
+        const stateVal = pe.estado || 'entregada';
+        const stColor = estadoColors[stateVal] || '#86868b';
+
+        const row = document.createElement('tr');
+        if (isPrueba) {
+            row.style.background = 'rgba(255,149,0,0.04)';
+            row.style.borderLeft = '3px solid #ff9500';
+        }
+
+        row.innerHTML = `
+            <td>
+                <div style="font-weight: 700; color:var(--text-main);">${pe.lead_nombre}</div>
+                <div style="font-size: 0.75rem; color: var(--text-grey);">${pe.lead_email}</div>
+            </td>
+            <td style="font-weight: 700; color:var(--text-main);">${pe.titulo}</td>
+            <td>
+                <span style="font-weight: 800; color:var(--text-main);">${Math.round(pe.precio_final || 0).toLocaleString('es-ES')}€</span>
+                ${pe.precio_mensual_final ? `<div style="font-size: 0.72rem; color: var(--text-grey); font-weight: 600;">+ ${pe.precio_mensual_final}€/mes</div>` : ''}
+            </td>
+            <td style="text-align: center;">${pe.descuento_pct > 0 ? `<span style="color: var(--accent-green); font-weight: 700;">-${pe.descuento_pct}%</span>` : '—'}</td>
+            <td><span style="font-size:0.75rem; font-weight:700; color:var(--text-main); text-transform:uppercase;">${pe.canal === 'whatsapp' ? '📱 WhatsApp' : '📧 Email'}</span></td>
+            <td>
+                <select class="pres-sent-status-select" onchange="updateSentProposalStatus('${pe.id}', this.value)"
+                    style="border: 1.5px solid ${stColor}35; background: ${stColor}08; color: ${stColor};">
+                    <option value="entregada" ${stateVal === 'entregada' ? 'selected' : ''}>📄 Entregada</option>
+                    <option value="aceptada" ${stateVal === 'aceptada' ? 'selected' : ''}>✅ Aceptada</option>
+                    <option value="rechazada" ${stateVal === 'rechazada' ? 'selected' : ''}>❌ Rechazada</option>
+                </select>
+            </td>
+            <td style="font-size: 0.78rem;">${pe.enviado_at ? new Date(pe.enviado_at).toLocaleDateString('es-ES', {day:'2-digit', month:'2-digit', year:'numeric'}) : '—'}</td>
+            <td style="text-align: center;">
+                ${isPrueba ? '<span style="font-size: 0.85rem;" title="Prueba — No contabilizado">🧪</span>' : '<span style="color:var(--border-color)">—</span>'}
+            </td>
+            <td style="text-align: center; vertical-align: middle;">
+                <button onclick="deleteSentProposalAction('${pe.id}')"
+                    style="background: rgba(255,59,48,0.06); border: 1px solid rgba(255,59,48,0.15); border-radius: 8px; padding: 5px 12px; cursor: pointer; font-size: 0.72rem; font-weight: 700; color: var(--accent-red); transition: all 0.2s;"
+                    onmouseenter="this.style.background='rgba(255,59,48,0.12)'" onmouseleave="this.style.background='rgba(255,59,48,0.06)'">
+                    🗑 Eliminar
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+async function updateSentProposalStatus(id, newStatus) {
+    const pe = propuestasEnviadas.find(p => p.id === id);
+    if (!pe) return;
+
+    pe.estado = newStatus;
+    pe.updated_at = new Date().toISOString();
+    
+    try {
+        const { error } = await _supabase
+            .from('propuestas_enviadas')
+            .update({ estado: newStatus, updated_at: pe.updated_at })
+            .eq('id', id);
+
+        if (error) throw error;
+    } catch (e) {
+        console.warn('Supabase propuestas_enviadas update failed, writing cache:', e);
+    }
+    
+    localStorage.setItem('gf_propuestas_enviadas', JSON.stringify(propuestasEnviadas));
+    showToast(`Estado de propuesta actualizado a "${newStatus.toUpperCase()}"`);
+    renderPropuestasEnviadas();
+}
+
+async function deleteSentProposalAction(id) {
+    const pe = propuestasEnviadas.find(p => p.id === id);
+    if (!pe) return;
+
+    const confirmed = await showConfirm(
+        'Eliminar propuesta emitida',
+        `¿Seguro que deseas eliminar el registro de envío a "${pe.lead_nombre}"? Esta acción no afectará al lead, pero borrará el histórico.`,
+        '🗑️',
+        'Eliminar'
+    );
+
+    if (!confirmed) return;
+
+    propuestasEnviadas = propuestasEnviadas.filter(p => p.id !== id);
+    localStorage.setItem('gf_propuestas_enviadas', JSON.stringify(propuestasEnviadas));
+
+    try {
+        const { error } = await _supabase.from('propuestas_enviadas').delete().eq('id', id);
+        if (error) throw error;
+    } catch(e) {
+        console.warn('Supabase delete failed, cache synced.');
+    }
+
+    showToast('Registro eliminado con éxito');
+    renderPropuestasEnviadas();
+}
+
+// --- 11. B2B Follow-up Kanban Board Rendering ---
+function showSegLeadDropdown() {
+    const dd = document.getElementById('seg-lead-dropdown');
+    dd.style.display = 'block';
+    filterSegLeadDropdown();
+}
+
+function filterSegLeadDropdown() {
+    const val = document.getElementById('seg-lead-search').value.toLowerCase().trim();
+    const dd = document.getElementById('seg-lead-dropdown');
+    dd.innerHTML = '';
+
+    const filtered = leadsList.filter(l => 
+        l.email && 
+        (!val || (l.first_name || '').toLowerCase().includes(val) || l.email.toLowerCase().includes(val))
+    );
+
+    if (filtered.length === 0) {
+        dd.innerHTML = `<div style="padding:10px; color:var(--text-grey); font-size:0.8rem; text-align:center;">No se encontraron leads con email</div>`;
+        return;
+    }
+
+    filtered.slice(0, 10).forEach(lead => {
+        const already = seguimientos.some(s => s.lead_id === lead.id);
+        const item = document.createElement('div');
+        item.style.cssText = `padding:8px 12px; cursor:${already ? 'default' : 'pointer'}; font-size:0.8rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; opacity:${already ? 0.45 : 1};`;
+        item.innerHTML = `
+            <div>
+                <strong style="color:var(--text-main);">${lead.first_name || 'Prospecto'}</strong> 
+                <span style="color:var(--text-grey);">(${lead.company_name || 'Sin empresa'})</span>
+            </div>
+            <div style="font-size:0.7rem; color:var(--text-grey);">${already ? 'Ya en seguimiento' : lead.email}</div>
+        `;
+        
+        if (!already) {
+            item.onclick = () => {
+                currentSelectedLeadForSeg = lead;
+                document.getElementById('seg-lead-search').value = `${lead.first_name || 'Prospecto'} (${lead.email})`;
+                dd.style.display = 'none';
+            };
+            item.onmouseenter = () => item.style.background = 'rgba(255,255,255,0.06)';
+            item.onmouseleave = () => item.style.background = 'transparent';
+        }
+
+        dd.appendChild(item);
+    });
+}
+
+async function addLeadToSeguimiento() {
+    if (!currentSelectedLeadForSeg) {
+        showToast('Seleccione un lead válido de la lista dropdown', true);
+        return;
+    }
+
+    const cat = document.getElementById('seg-add-category').value;
+    
+    // Find if has linked proposal
+    const linkedPres = presupuestos.find(p => p.es_plantilla === false && p.lead_nombre === currentSelectedLeadForSeg.first_name);
+
+    const segRecord = {
+        id: genUUID(),
+        lead_id: currentSelectedLeadForSeg.id,
+        lead_nombre: currentSelectedLeadForSeg.first_name || 'Prospecto',
+        lead_email: currentSelectedLeadForSeg.email,
+        presupuesto_id: linkedPres ? linkedPres.id : null,
+        categoria: cat || 'personalizada',
+        columna: 'enviada',
+        fecha_propuesta_enviada: new Date().toISOString(),
+        pausada: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    };
+
+    try {
+        const { error } = await _supabase.from('propuesta_seguimiento').insert(segRecord);
+        if (error) throw error;
+        seguimientos.unshift(segRecord);
+    } catch(e) {
+        seguimientos.unshift(segRecord);
+    }
+
+    localStorage.setItem('gf_seguimiento', JSON.stringify(seguimientos));
+    showToast(`${currentSelectedLeadForSeg.first_name} añadido al seguimiento Kanban`);
+    
+    // Reset search
+    document.getElementById('seg-lead-search').value = '';
+    currentSelectedLeadForSeg = null;
+
+    renderSeguimientoKanban();
+}
+
+function renderSeguimientoKanban() {
+    const cols = ['enviada', 'inmediato', 'mensual', 'anual', 'stop'];
+    
+    // Clear lists
+    cols.forEach(c => {
+        document.getElementById(`seg-cards-${c}`).innerHTML = '';
+        document.getElementById(`seg-badge-${c}`).textContent = '0';
+    });
+
+    const counts = { enviada: 0, inmediato: 0, mensual: 0, anual: 0, stop: 0 };
+
+    seguimientos.forEach(seg => {
+        const col = seg.columna || 'enviada';
+        if (counts[col] !== undefined) {
+            counts[col]++;
+
+            const meta = ALL_CATEGORIES_METADATA[seg.categoria || 'personalizada'] || ALL_CATEGORIES_METADATA.personalizada;
+
+            const card = document.createElement('div');
+            card.className = 'pres-kanban-card';
+            card.draggable = true;
+            card.id = `seg-card-${seg.id}`;
+            card.ondragstart = (e) => {
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', seg.id);
+            };
+
+            // Sequence meta text
+            let seqMetaHtml = '';
+            if (seg.secuencia_activa) {
+                const stepsMax = { inmediato: 5, mensual: 4, anual: 12 };
+                seqMetaHtml = `
+                    <div style="font-size:0.72rem; color:var(--text-main); font-weight:600; margin-top:6px;">
+                        Paso ${seg.paso_actual || 0}/${stepsMax[seg.secuencia_activa] || 12} 
+                        <span style="color:var(--text-grey);">· cada ${seg.frecuencia_dias || 2}d</span>
+                    </div>
+                `;
+            }
+
+            // Date meta text
+            let dateMetaHtml = '';
+            if (seg.ultimo_envio_at) {
+                const lastD = new Date(seg.ultimo_envio_at).toLocaleDateString('es-ES', {day:'2-digit', month:'short'});
+                let nextDHtml = '';
+                if (seg.proximo_envio_at && !seg.pausada && col !== 'stop' && col !== 'enviada') {
+                    const nextD = new Date(seg.proximo_envio_at).toLocaleDateString('es-ES', {day:'2-digit', month:'short'});
+                    nextDHtml = ` · ⏰ ${nextD}`;
+                }
+                dateMetaHtml = `<div style="font-size:0.68rem; color:var(--text-grey); margin-top:4px;">📤 ${lastD}${nextDHtml}</div>`;
+            } else if (seg.fecha_propuesta_enviada) {
+                const addD = new Date(seg.fecha_propuesta_enviada).toLocaleDateString('es-ES', {day:'2-digit', month:'short'});
+                dateMetaHtml = `<div style="font-size:0.68rem; color:var(--text-grey); margin-top:4px;">📅 Añadido: ${addD}</div>`;
+            }
+
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+                    <div style="font-size:0.82rem; font-weight:700; color:var(--text-main); max-width: 110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${seg.lead_nombre}</div>
+                    <span style="font-size:0.64rem; padding:2px 6px; border-radius:6px; background:${meta.bg}; color:${meta.accent}; border: 1px solid ${meta.accent}20; font-weight:600; white-space:nowrap;">${meta.label}</span>
+                </div>
+                <div style="font-size:0.7rem; color:var(--text-grey); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${seg.lead_email}</div>
+                ${seqMetaHtml}
+                ${dateMetaHtml}
+                <div style="display:flex; gap:4px; margin-top:10px;">
+                    <button onclick="deleteSeguimientoCard('${seg.id}')"
+                        style="font-size:0.68rem; padding:3px 8px; border-radius:6px; border:1px solid rgba(255,59,48,0.15); background:rgba(255,59,48,0.04); color:var(--accent-red); cursor:pointer; font-family:inherit; transition: all 0.2s;"
+                        onmouseenter="this.style.background='rgba(255,59,48,0.1)'" onmouseleave="this.style.background='rgba(255,59,48,0.04)'">
+                        🗑 Retirar
+                    </button>
+                </div>
+            `;
+
+            document.getElementById(`seg-cards-${col}`).appendChild(card);
+        }
+    });
+
+    cols.forEach(c => {
+        document.getElementById(`seg-badge-${c}`).textContent = counts[c];
+    });
+}
+
+function allowDropSegCard(e) {
+    e.preventDefault();
+}
+
+async function handleDropSegCard(e, targetCol) {
+    e.preventDefault();
+    const id = e.dataTransfer.getData('text/plain');
+    if (!id) return;
+
+    const seg = seguimientos.find(s => s.id === id);
+    if (!seg) return;
+
+    // Optimistic update
+    seg.columna = targetCol;
+    seg.updated_at = new Date().toISOString();
+
+    const patchBody = { id, columna: targetCol };
+
+    if (targetCol === 'inmediato' || targetCol === 'mensual' || targetCol === 'anual') {
+        const defaultFreqs = { inmediato: 2, mensual: 7, anual: 30 };
+        seg.secuencia_activa = targetCol;
+        seg.paso_actual = 0;
+        seg.pausada = false;
+        seg.frecuencia_dias = defaultFreqs[targetCol];
+        seg.proximo_envio_at = new Date(Date.now() + 60000).toISOString(); // first email scheduled in 60s for simulation
+
+        patchBody.secuencia_activa = targetCol;
+        patchBody.paso_actual = 0;
+        patchBody.pausada = false;
+        patchBody.frecuencia_dias = defaultFreqs[targetCol];
+        patchBody.proximo_envio_at = seg.proximo_envio_at;
+    } else if (targetCol === 'stop') {
+        seg.secuencia_activa = null;
+        seg.pausada = true;
+        seg.proximo_envio_at = null;
+
+        patchBody.secuencia_activa = null;
+        patchBody.pausada = true;
+        patchBody.proximo_envio_at = null;
+    } else if (targetCol === 'enviada') {
+        seg.secuencia_activa = null;
+        seg.pausada = false;
+        seg.proximo_envio_at = null;
+
+        patchBody.secuencia_activa = null;
+        patchBody.pausada = false;
+        patchBody.proximo_envio_at = null;
+    }
+
+    try {
+        const { error } = await _supabase.from('propuesta_seguimiento').update(patchBody).eq('id', id);
+        if (error) throw error;
+    } catch (err) {
+        console.warn('Supabase propuesta_seguimiento update failed, local synced:', err);
+    }
+
+    localStorage.setItem('gf_seguimiento', JSON.stringify(seguimientos));
+    
+    const messages = { 
+        stop: 'Secuencia detenida', 
+        enviada: 'Lead en espera de seguimiento', 
+        inmediato: 'Secuencia Inmediata activada', 
+        mensual: 'Secuencia Mensual semanal activada', 
+        anual: 'Secuencia Anual mensual activada' 
+    };
+    showToast(messages[targetCol] || 'Estado de seguimiento actualizado');
+    
+    renderSeguimientoKanban();
+}
+
+async function deleteSeguimientoCard(id) {
+    const seg = seguimientos.find(s => s.id === id);
+    if (!seg) return;
+
+    const confirmed = await showConfirm(
+        'Retirar de seguimiento',
+        `¿Seguro que deseas retirar a "${seg.lead_nombre}" del seguimiento de secuencias?`,
+        '🗑️',
+        'Retirar'
+    );
+
+    if (!confirmed) return;
+
+    seguimientos = seguimientos.filter(s => s.id !== id);
+    localStorage.setItem('gf_seguimiento', JSON.stringify(seguimientos));
+
+    try {
+        const { error } = await _supabase.from('propuesta_seguimiento').delete().eq('id', id);
+        if (error) throw error;
+    } catch(e) {}
+
+    showToast('Lead retirado del seguimiento');
+    renderSeguimientoKanban();
+}
+
+// --- 12. Email Sequence Configurations Builder ---
+let presSeqFreqs = JSON.parse(localStorage.getItem('presSeqFreqs') || '{"inmediato":2,"mensual":7,"anual":30}');
+
+function selectSequenceConfig(seqId) {
+    activeSeqConfigId = seqId;
+    
+    // UI active classes
+    document.querySelectorAll('#seg-container-configurar .cat-pill').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.getElementById(`btn-seq-${seqId}`);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    renderConfigurarSecuencias();
+}
+
+function renderConfigurarSecuencias() {
+    const box = document.getElementById('seq-details-box');
+    box.innerHTML = '';
+
+    const seq = PRES_SEQUENCES.find(s => s.seqId === activeSeqConfigId);
+    if (!seq) return;
+
+    // Header block with Frequency selector
+    const currentFreq = presSeqFreqs[seq.seqId] || parseInt(seq.defaultFreq);
+    const headerHtml = `
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px; padding:14px 20px; background:${seq.seqColor}08; border-radius:14px; border:1px solid ${seq.seqColor}20; flex-wrap:wrap;">
+            <span style="font-size:1.4rem;">${seq.seqIcon}</span>
+            <div style="flex:1; min-width:180px;">
+                <div style="font-size:0.92rem; font-weight:700; color:var(--text-main);">${seq.seqLabel}</div>
+                <div style="font-size:0.75rem; color:var(--text-grey); margin-top:2px;">${seq.seqDesc}</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; background:var(--bg-secondary); padding:6px 12px; border-radius:10px; border:1px solid var(--card-border);">
+                <span style="font-size:0.72rem; font-weight:600; color:var(--text-grey); white-space:nowrap;">⏱ Frecuencia:</span>
+                <select id="seq-freq-${seq.seqId}" onchange="updateSequenceFrequency('${seq.seqId}', this.value)"
+                    style="font-size:0.78rem; padding:4px 8px; font-weight:700; color:${seq.seqColor}; min-width:84px; background:transparent; border:1px solid ${seq.seqColor}30; border-radius:6px; outline:none; font-family:inherit; cursor:pointer;">
+                    <option value="1" ${currentFreq === 1 ? 'selected' : ''}>1 día</option>
+                    <option value="2" ${currentFreq === 2 ? 'selected' : ''}>2 días</option>
+                    <option value="3" ${currentFreq === 3 ? 'selected' : ''}>3 días</option>
+                    <option value="5" ${currentFreq === 5 ? 'selected' : ''}>5 días</option>
+                    <option value="7" ${currentFreq === 7 ? 'selected' : ''}>7 días</option>
+                    <option value="10" ${currentFreq === 10 ? 'selected' : ''}>10 días</option>
+                    <option value="14" ${currentFreq === 14 ? 'selected' : ''}>14 días</option>
+                    <option value="21" ${currentFreq === 21 ? 'selected' : ''}>21 días</option>
+                    <option value="30" ${currentFreq === 30 ? 'selected' : ''}>30 días</option>
+                </select>
+            </div>
+        </div>
+    `;
+
+    box.innerHTML = headerHtml;
+
+    // Render Categories & Accordions
+    seq.categories.forEach(cat => {
+        const catHtml = `
+            <div style="margin-bottom:18px;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; padding:8px 14px; background:${cat.bg}; border-radius:10px; border-left:3px solid ${cat.color};">
+                    <span style="font-size:1rem;">${cat.icon}</span>
+                    <span style="font-size:0.82rem; font-weight:700; color:var(--text-main);">${cat.label}</span>
+                    <span style="font-size:0.7rem; color:var(--text-grey); margin-left:auto; font-weight:600;">${cat.emails.length} emails</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:6px;" id="seq-emails-list-${cat.key}">
+                    <!-- Accordions loaded dynamically -->
+                </div>
+            </div>
+        `;
+        box.innerHTML += catHtml;
+    });
+
+    // Populate emails accordions
+    seq.categories.forEach(cat => {
+        const listDiv = document.getElementById(`seq-emails-list-${cat.key}`);
+        if (!listDiv) return;
+
+        cat.emails.forEach(email => {
+            const isOpen = presEmailExpandedId === email.id;
+            const item = document.createElement('div');
+            item.className = 'seq-email-item';
+
+            item.innerHTML = `
+                <button class="seq-email-header" onclick="toggleSeqEmailAccordion('${email.id}')">
+                    <div style="width:26px; height:26px; border-radius:7px; background:${cat.color}18; display:flex; align-items:center; justify-content:center; fontSize:0.72rem; font-weight:800; color:${cat.color}; flex-shrink:0;">
+                        ${email.step}
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-size:0.82rem; font-weight:700; color:var(--text-main);">${email.name}</div>
+                        <div style="font-size:0.68rem; color:var(--text-grey); margin-top:1px;">⏱ ${email.step === 1 ? 'Inmediato' : `${currentFreq * (email.step - 1)} días después`}</div>
+                    </div>
+                    
+                    <button onclick="openQuickSendSequenceForm(event, '${email.id}')"
+                        style="padding:6px 12px; border-radius:8px; border:1px solid var(--card-border); background:rgba(255,255,255,0.06); font-size:0.7rem; font-weight:700; color:var(--text-main); cursor:pointer; font-family:inherit; flex-shrink:0; margin-right:8px;">
+                        📤 Enviar
+                    </button>
+                    
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-grey)" stroke-width="2" style="transform:${isOpen ? 'rotate(180deg)' : 'rotate(0)'}; transition:transform 0.2s; flex-shrink:0;">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </button>
+                
+                <!-- Email expanded content preview -->
+                <div class="seq-email-body" style="display: ${isOpen ? 'block' : 'none'};">
+                    <div style="border-bottom:1px dashed var(--border-color); padding-bottom:8px; margin-bottom:8px;">
+                        <strong style="color:var(--text-grey); font-size:0.75rem;">Asunto:</strong> 
+                        <span style="font-weight:600; font-size:0.82rem; color:var(--text-main);">${email.asunto}</span>
+                    </div>
+                    <div style="font-size:0.82rem; line-height:1.6; color:var(--text-main); font-family: inherit;">
+                        ${email.contenido}
+                    </div>
+                </div>
+
+                <!-- Mini Send Form -->
+                <div id="quick-send-form-${email.id}" style="display:none; padding:14px; border-top:1px solid var(--border-color); background:rgba(0,113,227,0.03);">
+                    <div style="font-size:0.78rem; font-weight:700; color:var(--text-main); margin-bottom:8px;">📤 Enviar email individual a lead (Con PDF adjunto)</div>
+                    <div style="display:flex; gap:8px;">
+                        <div style="position:relative; flex:1;">
+                            <input type="text" id="quick-send-input-${email.id}" class="modal-input" placeholder="🔍 Escribe nombre o email del lead..."
+                                onfocus="showQuickSendDropdown('${email.id}')" oninput="filterQuickSendDropdown('${email.id}')" style="font-size:0.78rem; height:32px;">
+                            <div id="quick-send-dropdown-${email.id}" class="seq-lead-dd-menu" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--bg-secondary); border:1px solid var(--card-border); border-radius:10px; max-height:160px; overflow-y:auto; z-index:100; box-shadow:var(--glass-shadow); padding:4px;">
+                                <!-- Populate quick search -->
+                            </div>
+                        </div>
+                        <button class="btn-primary" onclick="executeQuickSendSequence('${email.id}', '${cat.key}')" style="font-size:0.75rem; padding:0 14px; height:32px; border-radius:8px;">
+                            Enviar
+                        </button>
+                        <button class="modal-cancel-btn" onclick="closeQuickSendForm('${email.id}')" style="font-size:0.75rem; padding:0 12px; height:32px; border-radius:8px;">
+                            ✕
+                        </button>
+                    </div>
+                </div>
+            `;
+            listDiv.appendChild(item);
+        });
+    });
+}
+
+function toggleSeqEmailAccordion(id) {
+    presEmailExpandedId = presEmailExpandedId === id ? null : id;
+    renderConfigurarSecuencias();
+}
+
+function updateSequenceFrequency(seqId, val) {
+    presSeqFreqs[seqId] = Number(val);
+    localStorage.setItem('presSeqFreqs', JSON.stringify(presSeqFreqs));
+    showToast('Frecuencia de envío actualizada');
+    renderConfigurarSecuencias();
+}
+
+// Mini send email form
+function openQuickSendSequenceForm(e, emailId) {
+    e.stopPropagation();
+    
+    // Hide all other forms
+    document.querySelectorAll('[id^="quick-send-form-"]').forEach(f => f.style.display = 'none');
+    
+    // Open targeted form
+    const form = document.getElementById(`quick-send-form-${emailId}`);
+    if (form) {
+        form.style.display = 'block';
+        document.getElementById(`quick-send-input-${emailId}`).value = '';
+        document.getElementById(`quick-send-input-${emailId}`).setAttribute('data-selected-lead', '');
+    }
+}
+
+function closeQuickSendForm(emailId) {
+    const form = document.getElementById(`quick-send-form-${emailId}`);
+    if (form) form.style.display = 'none';
+}
+
+let quickSelectedLead = null;
+
+function showQuickSendDropdown(emailId) {
+    const dd = document.getElementById(`quick-send-dropdown-${emailId}`);
+    dd.style.display = 'block';
+    filterQuickSendDropdown(emailId);
+}
+
+function filterQuickSendDropdown(emailId) {
+    const val = document.getElementById(`quick-send-input-${emailId}`).value.toLowerCase().trim();
+    const dd = document.getElementById(`quick-send-dropdown-${emailId}`);
+    dd.innerHTML = '';
+
+    const filtered = leadsList.filter(l => 
+        l.email && 
+        (!val || (l.first_name || '').toLowerCase().includes(val) || l.email.toLowerCase().includes(val))
+    );
+
+    if (filtered.length === 0) {
+        dd.innerHTML = `<div style="padding:8px; color:var(--text-grey); font-size:0.75rem; text-align:center;">Sin resultados</div>`;
+        return;
+    }
+
+    filtered.slice(0, 6).forEach(lead => {
+        const item = document.createElement('div');
+        item.style.cssText = 'padding:6px 10px; cursor:pointer; font-size:0.78rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;';
+        
+        // Check linked proposal
+        const linked = presupuestos.some(p => p.es_plantilla === false && p.lead_nombre === lead.first_name);
+
+        item.innerHTML = `
+            <div>
+                <strong style="color:var(--text-main);">${lead.first_name || 'Prospecto'}</strong> 
+                <span style="color:var(--text-grey);">(${lead.company_name || 'Sin empresa'})</span>
+            </div>
+            <div style="font-size:0.68rem; color:var(--text-grey);">${lead.email}${linked ? ' ✅' : ' ⚠️'}</div>
+        `;
+
+        item.onclick = () => {
+            quickSelectedLead = lead;
+            const inp = document.getElementById(`quick-send-input-${emailId}`);
+            inp.value = `${lead.first_name || 'Prospecto'} (${lead.email})`;
+            inp.setAttribute('data-selected-lead', JSON.stringify(lead));
+            dd.style.display = 'none';
+        };
+
+        item.onmouseenter = () => item.style.background = 'rgba(255,255,255,0.06)';
+        item.onmouseleave = () => item.style.background = 'transparent';
+
+        dd.appendChild(item);
+    });
+}
+
+// Execute the quick send sequence dispatch
+async function executeQuickSendSequence(emailId, catKey) {
+    const inp = document.getElementById(`quick-send-input-${emailId}`);
+    const leadVal = inp.getAttribute('data-selected-lead');
+    
+    if (!leadVal) {
+        showToast('Busca y selecciona un lead destinatario', true);
+        return;
+    }
+
+    const lead = JSON.parse(leadVal);
+    const seq = PRES_SEQUENCES.find(s => s.categories.some(c => c.key === catKey));
+    if (!seq) return;
+
+    const cat = seq.categories.find(c => c.key === catKey);
+    const email = cat.emails.find(e => e.id === emailId);
+    if (!email) return;
+
+    // Find linked proposal
+    const linkedPres = presupuestos.find(p => p.es_plantilla === false && p.lead_nombre === lead.first_name && p.categoria === catKey) 
+                     || presupuestos.find(p => p.es_plantilla === false && p.lead_nombre === lead.first_name)
+                     || presupuestos.find(p => p.categoria === catKey);
+
+    if (!linkedPres) {
+        showToast('No se encontró propuesta para asociar al lead', true);
+        return;
+    }
+
+    // Replace templates
+    const linkPDF = `https://cerebrocomercial-ai.iadebarrio.com/api/download?id=${linkedPres.id}`;
+    const linkConfirmar = `https://cerebrocomercial-ai.iadebarrio.com/api/propuestas/confirmar?id=${linkedPres.id}`;
+
+    let subject = email.asunto.replace(/\{\{nombre\}\}/g, lead.first_name || 'Prospecto');
+    let body = email.contenido
+        .replace(/\{\{nombre\}\}/g, lead.first_name || 'Prospecto')
+        .replace(/\{\{link_pdf\}\}/g, linkPDF)
+        .replace(/\{\{link_confirmar\}\}/g, linkConfirmar);
+
+    // mailto fallback
+    const mailtoUrl = `mailto:${lead.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.replace(/<[^>]*>/g, '\n'))}`;
+    window.open(mailtoUrl, '_blank');
+
+    // Register proposal log
+    const peRecord = {
+        id: genUUID(),
+        presupuesto_id: linkedPres.id,
+        lead_id: lead.id,
+        lead_nombre: lead.first_name,
+        lead_email: lead.email,
+        titulo: `${linkedPres.titulo} (${email.name})`,
+        precio_final: linkedPres.precio_alta || 0,
+        precio_mensual_final: linkedPres.precio_mensual || null,
+        descuento_pct: linkedPres.descuento_pct || 0,
+        canal: 'email',
+        estado: 'entregada',
+        lineas: linkedPres.lineas || [],
+        enviado_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    };
+
+    try {
+        await _supabase.from('propuestas_enviadas').insert(peRecord);
+        propuestasEnviadas.unshift(peRecord);
+    } catch(e) {
+        propuestasEnviadas.unshift(peRecord);
+    }
+
+    localStorage.setItem('gf_propuestas_enviadas', JSON.stringify(propuestasEnviadas));
+    showToast(`Secuencia dispatcheada a ${lead.first_name}`);
+    closeQuickSendForm(emailId);
+}
+
+// --- 13. Nativo A4 PDF Print Generator: downloadPDF ---
+function triggerPDFDownload(id) {
+    const p = presupuestos.find(pr => pr.id === id);
+    if (!p) return;
+
+    downloadPDF(p);
+}
+
+function downloadPDF(p) {
+    const formasPago = { sin_iva: 'Sin IVA', giro: 'Giro bancario', transferencia: 'Transferencia bancaria', stripe: 'Pago con Stripe', bizum: 'Bizum al 609 160 403', efectivo: 'Efectivo' };
+    const isPers = p.lineas && p.lineas.length > 0;
+    const lineasActivas = isPers ? (p.lineas || []).filter(l => l.activo !== false && !l.recomendado) : [];
+    
+    const totalBruto = isPers ? lineasActivas.reduce((s, l) => s + (l.precio || 0), 0) : p.precio_alta;
+    const precioFinal = isPers ? lineasActivas.reduce((s, l) => s + (l.precio || 0) * (1 - (l.descuento || 0) / 100), 0) : (p.descuento_pct > 0 && p.precio_alta ? p.precio_alta * (1 - p.descuento_pct / 100) : (p.precio_alta || 0));
+    const hasDsc = isPers ? totalBruto !== precioFinal : (p.descuento_pct > 0 && p.precio_alta);
+    
+    const fecha = p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'}) : new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'});
+    const catL = {consultoria:'Consultoría',agentes_ia:'Agentes de IA',apps_web:'Aplicación Web',automatizacion:'Automatización',personalizada:'Propuesta Personalizada'};
+
+    let lineasH = '';
+    if (isPers && lineasActivas.length > 0) {
+        const totalMant = lineasActivas.reduce((s, l) => s + (l.mantenimiento && l.mantenimiento_precio ? l.mantenimiento_precio : 0), 0);
+        
+        const rows = lineasActivas.map(l => {
+            const imp = l.precio * (1 - (l.descuento || 0) / 100);
+            const subRows = (l.sublineas || []).filter(s => s.concepto).map(s => `<div style="padding-left:14px;font-size:9pt;color:#6e6e73;margin-top:3px;line-height:1.4">└ ${s.concepto}</div>`).join('');
+            
+            const metaLines = [];
+            if (l.plazo) metaLines.push(`<div style="color:#6e6e73;font-size:8.5pt">⏱ Plazo: ${l.plazo}</div>`);
+            if (l.mantenimiento && l.mantenimiento_precio) metaLines.push(`<div style="color:#0071e3;font-size:8.5pt;font-weight:600">🔄 Mantenimiento: ${l.mantenimiento_precio}€/mes</div><div style="color:#aeaeb2;font-size:7.5pt;font-style:italic">* Se activa una vez entregado y finalizado el trabajo</div>`);
+            
+            const metaHtml = metaLines.length ? `<div style="margin-top:5px;padding-top:4px;border-top:1px dashed #f0f0f2;display:flex;flex-direction:column;gap:2px">${metaLines.join('')}</div>` : '';
+            return `<tr><td>${l.concepto || '—'}${subRows}${metaHtml}</td><td style="text-align:right;vertical-align:top">${(l.precio || 0).toLocaleString('es-ES')}€</td><td style="text-align:right;vertical-align:top">${l.descuento > 0 ? `-${l.descuento}%` : '—'}</td><td style="text-align:right;font-weight:600;vertical-align:top">${Math.round(imp).toLocaleString('es-ES')}€</td></tr>`;
+        }).join('');
+
+        const mantRow = totalMant > 0 ? `<div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:4px 12px;color:#0071e3;font-size:9pt;font-weight:600">🔄 Mantenimiento mensual total: ${totalMant.toLocaleString('es-ES')}€/mes</div>` : '';
+        const mantNote = totalMant > 0 ? '<div style="text-align:right;font-size:7.5pt;color:#aeaeb2;font-style:italic;padding:0 12px 4px">* El mantenimiento se activa una vez entregado y finalizado el trabajo</div>' : '';
+        
+        const summaryRows = `<div style="margin-top:2px;border-top:2px solid #e5e5ea">${hasDsc ? `<div style="display:flex;justify-content:flex-end;gap:40px;padding:7px 12px;font-size:8.5pt;color:#86868b"><span>Subtotal</span><span>${(totalBruto || 0).toLocaleString('es-ES', { maximumFractionDigits: 0 })}€</span></div><div style="display:flex;justify-content:flex-end;gap:40px;padding:4px 12px;font-size:8.5pt;color:#34c759"><span>Descuentos</span><span>-${(totalBruto - precioFinal).toLocaleString('es-ES', { maximumFractionDigits: 0 })}€</span></div>` : ''}<div style="display:flex;justify-content:flex-end;gap:40px;padding:10px 12px;border-top:2px solid #1d1d1f;font-size:11pt;font-weight:800"><span>Total</span><span>${Math.round(precioFinal).toLocaleString('es-ES')}€</span></div>${mantRow}${mantNote}</div>`;
+        lineasH = `<div class="sec"><div class="st">DESGLOSE DE SERVICIOS</div><table class="lt"><thead><tr><th style="text-align:left;width:50%">Concepto</th><th style="text-align:right">Precio</th><th style="text-align:right">Dto.</th><th style="text-align:right">Importe</th></tr></thead><tbody>${rows}</tbody></table>${summaryRows}</div>`;
+    }
+
+    const w = window.open('', '_blank');
+    if (!w) {
+        showToast('Ventana emergente bloqueada por el navegador', true);
+        return;
+    }
+
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Propuesta - ${p.titulo}</title><style>
+@page{size:A4;margin:20mm 0 0 0}*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Helvetica Neue',-apple-system,system-ui,sans-serif;color:#1d1d1f;width:210mm;min-height:297mm;margin:0 auto;padding:72px 52px 90px;font-size:10pt;line-height:1.5}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:14px;border-bottom:3px solid #1d1d1f}
+.br{font-size:22pt;font-weight:800;letter-spacing:-0.03em}.br span{font-weight:300}
+.brsub{font-size:7.5pt;color:#86868b;margin-top:2px;letter-spacing:0.04em}
+.mt{text-align:right;font-size:8.5pt;color:#6e6e73;line-height:1.6}
+.mtn{font-weight:700;color:#1d1d1f;font-size:11pt}
+.mtl{font-size:7pt;text-transform:uppercase;letter-spacing:0.08em;color:#aeaeb2;margin-top:5px}
+.cb{display:inline-block;padding:3px 12px;border-radius:6px;background:#f5f5f7;font-size:7.5pt;font-weight:700;color:#6e6e73;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px}
+.bdg{display:inline-block;padding:3px 14px;border-radius:20px;background:#0071e3;color:#fff;font-size:7pt;font-weight:700;letter-spacing:0.08em;margin-left:8px;vertical-align:middle}
+h1{font-size:19pt;font-weight:800;letter-spacing:-0.03em;margin-bottom:4px;line-height:1.2}
+.sub{font-size:10.5pt;color:#6e6e73;margin-bottom:18px}
+.psub{font-size:9pt;color:#6e6e73;margin-top:6px}
+.st{font-size:7.5pt;font-weight:700;color:#6e6e73;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid #e5e5ea}
+.dsc2{font-size:9.5pt;line-height:1.65;color:#3a3a3c}
+.lt{width:100%;border-collapse:collapse;font-size:9pt;margin-top:4px}
+.lt thead th{font-size:7pt;text-transform:uppercase;letter-spacing:0.08em;color:#86868b;font-weight:600;padding:8px 12px;border-bottom:2px solid #e5e5ea}
+.lt tbody td{padding:10px 12px;border-bottom:1px solid #f0f0f2;font-size:9pt}
+.lt tbody tr{page-break-inside:avoid;break-inside:avoid}
+.lt tbody tr:last-child td{border-bottom:2px solid #e5e5ea}
+.lt tfoot td{padding:7px 12px;font-size:9pt}
+.lt .sub td{color:#86868b;font-size:8.5pt}
+.lt .tot td{font-weight:800;font-size:11pt;color:#1d1d1f;border-top:2px solid #1d1d1f;padding-top:10px}
+.ig{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+.ii{background:#f5f5f7;border-radius:10px;padding:12px 16px}
+.il{font-size:7pt;color:#86868b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px}
+.iv{font-size:9pt;font-weight:600}
+.nt{background:transparent;border-radius:10px;padding:14px 18px;margin:14px 0;border-left:3px solid #f59e0b}
+.ai{background:transparent;border-radius:10px;padding:14px 18px;margin:14px 0;border-left:3px solid #0055d4}
+.ft{position:fixed;bottom:0;left:0;right:0;padding:14px 52px;background:#1d1d1f;color:#fff;display:flex;justify-content:space-between;align-items:center}
+.fb{font-size:9pt;font-weight:700;letter-spacing:-0.02em}
+.fc{font-size:7.5pt;color:#aeaeb2;display:flex;gap:14px}
+.fc a{color:#86868b;text-decoration:none}
+.fd{font-size:7pt;color:#86868b}
+.nb{page-break-inside:avoid;break-inside:avoid}
+.pb{background:#f5f5f7;border-radius:12px;padding:18px 26px;margin:18px 0 22px;page-break-inside:avoid;break-inside:avoid}
+.pr{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.p{font-size:30pt;font-weight:900;letter-spacing:-0.03em;line-height:1}
+.pl{font-size:9pt;color:#6e6e73}.dsc{color:#34c759;font-weight:700;font-size:10pt}
+.og{text-decoration:line-through;color:#aeaeb2;font-size:14pt;font-weight:500}
+.sec{margin:18px 0;page-break-inside:avoid;break-inside:avoid}
+@media print{body{padding:72px 52px 100px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.ft{position:fixed;bottom:0}tr{page-break-inside:avoid;break-inside:avoid}}
+</style></head><body>
+<div class="hdr"><div><div class="br">Gerard<span>Fanals</span></div><div class="brsub">Senior Software IA Architect · Automatización de Procesos · Estratega de IA Generativa</div></div>
+<div class="mt">${p.lead_nombre ? `<div class="mtn">${p.lead_nombre}</div>` : ''}<div>${fecha}</div>${p.numero ? `<div class="mtl">Ref: ${p.numero}</div>` : ''}</div></div>
+<div class="cb">${catL[p.categoria] || p.categoria}</div>${p.badge ? `<span class="bdg">${p.badge}</span>` : ''}
+<h1>${p.titulo}</h1>${p.subtitulo ? `<div class="sub">${p.subtitulo}</div>` : ''}
+${!isPers ? `<div class="pb nb"><div class="pr">${hasDsc && p.precio_alta ? `<span class="og">${p.precio_alta.toLocaleString('es-ES')}€</span>` : ''}<span class="p">${precioFinal ? Math.round(precioFinal).toLocaleString('es-ES') : '—'}€</span><span class="pl">${p.forma_pago==='sin_iva'?'':'+ IVA'}</span>${p.descuento_pct>0?`<span class="dsc">-${p.descuento_pct}% dto.</span>`:''}</div>${p.precio_mensual?`<div class="psub">Mantenimiento: ${p.precio_mensual}€/mes${p.forma_pago==='sin_iva'?'':' + IVA'}</div>`:''}</div>` : ''}
+<div class="sec nb"><div class="st">DESCRIPCIÓN DEL SERVICIO</div><div class="dsc2">${(p.descripcion||'').replace(/\n/g,'<br>')}</div></div>
+${lineasH}
+${isPers ? (() => {
+    const pc = p.pago_config || { inv_min_pct: 15, num_cuotas: 24, descuento_b_pct: 4, descuento_c_pct: 8, show_a: true, show_b: true, show_c: true };
+    const fE = (n) => Math.round(n || 0).toLocaleString('es-ES');
+    const fD = (d) => d.toLocaleDateString('es-ES',{month:'long',year:'numeric'});
+    const fb = p.fecha ? new Date(p.fecha) : new Date();
+    
+    const f2 = new Date(fb); f2.setMonth(f2.getMonth()+6);
+    const f3 = new Date(fb); f3.setMonth(f3.getMonth()+12);
+    
+    const invMin = (precioFinal || 0) * pc.inv_min_pct/100;
+    const cuota = ((precioFinal || 0) - invMin)/(pc.num_cuotas || 1);
+    const totB = (precioFinal || 0) * (1-pc.descuento_b_pct/100);
+    const p3 = totB/3;
+    const totC = (precioFinal || 0) * (1-pc.descuento_c_pct/100);
+    const hasAny = (pc.show_a !== false) || (pc.show_b !== false) || (pc.show_c !== false);
+    
+    const optA = pc.show_a !== false ? `<div style="border-left:3px solid #0071e3;padding:10px 14px;border-radius:0 8px 8px 0;background:#f5f7ff;margin-bottom:8px"><div style="font-size:8pt;font-weight:700;color:#0071e3;margin-bottom:4px">A) Financiación a plazos</div><div style="font-size:9pt;color:#3a3a3c;line-height:1.6">Inversión mínima ${fE(invMin)}€ + IVA al comienzo del proyecto (${fD(fb)})<br>Pago mensual x ${pc.num_cuotas} meses de <strong>${fE(cuota)}€ + IVA / mes</strong> (sin intereses)</div></div>` : '';
+    const optB = pc.show_b !== false ? `<div style="border-left:3px solid #34c759;padding:10px 14px;border-radius:0 8px 8px 0;background:#f0fdf4;margin-bottom:8px"><div style="font-size:8pt;font-weight:700;color:#34c759;margin-bottom:4px">B) Pago parcial anticipado · ${pc.descuento_b_pct}% dto.</div><div style="font-size:9pt;color:#3a3a3c;line-height:1.6">Pago inicial ${fE(p3)}€ + IVA · ${fD(fb)}<br>Pago medio ${fE(p3)}€ + IVA · ${fD(f2)}<br>Pago final ${fE(p3)}€ + IVA · ${fD(f3)}<br><strong>Total: ${fE(totB)}€ + IVA</strong> <span style="text-decoration:line-through;color:#aeaeb2;font-size:8pt">${fE(precioFinal||0)}€</span></div></div>` : '';
+    const optC = pc.show_c !== false ? `<div style="border-left:3px solid #ff9500;padding:10px 14px;border-radius:0 8px 8px 0;background:#fffbeb"><div style="font-size:8pt;font-weight:700;color:#ff9500;margin-bottom:4px">C) Pago total anticipado · ${pc.descuento_c_pct}% dto.</div><div style="font-size:9pt;color:#3a3a3c;line-height:1.6">Pago único al inicio del proyecto<br><strong>Total: ${fE(totC)}€ + IVA</strong> <span style="text-decoration:line-through;color:#aeaeb2;font-size:8pt">${fE(precioFinal||0)}€</span> · Ahorro de ${fE((precioFinal||0)-totC)}€</div></div>` : '';
+    
+    return `<div class="pb nb" style="margin-top:14px"><div style="font-size:7.5pt;color:#86868b;text-transform:uppercase;letter-spacing:0.08em">Total del proyecto</div><div style="font-size:22pt;font-weight:900;letter-spacing:-0.03em">${fE(precioFinal||0)}&#8364; <span style="font-size:9pt;color:#6e6e73;font-weight:400">${p.forma_pago==='sin_iva'?'':'+ IVA'}</span></div>${hasAny ? `<div style="margin-top:14px;padding-top:12px;border-top:1px solid #e5e5ea"><div style="font-size:7.5pt;color:#86868b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Opciones de pago</div>${optA}${optB}${optC}</div>` : ''}</div>`;
+})() : ''}
+${p.bonus ? `<div class="nb" style="margin:14px 0;padding:16px 20px;border-radius:12px;background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:1px solid #bbf7d0"><div style="font-size:7.5pt;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">🎁 BONUS INCLUIDOS</div><div style="font-size:9.5pt;line-height:1.65;color:#15803d;white-space:pre-line">${p.bonus}</div></div>` : ''}
+${(() => {
+    const recomendadas = isPers ? (p.lineas || []).filter(l => l.activo !== false && l.recomendado) : [];
+    if (recomendadas.length === 0) return '';
+    const fE2 = (n) => Math.round(n || 0).toLocaleString('es-ES');
+    return `<div class="nb" style="margin:14px 0;padding:20px;border-radius:12px;background:#fffbf0;border:1px solid #fed7aa;page-break-inside:avoid"><div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><div style="font-size:8pt;font-weight:800;color:#ea580c;text-transform:uppercase;letter-spacing:0.1em">⭐ SERVICIOS RECOMENDADOS</div><div style="display:inline-block;padding:2px 10px;border-radius:12px;background:#ff3b30;color:#fff;font-size:6.5pt;font-weight:700;letter-spacing:0.06em">NO INCLUIDOS EN ESTA PROPUESTA</div></div><div style="font-size:8.5pt;color:#9a3412;margin-bottom:12px;line-height:1.5">Los siguientes servicios complementarios están recomendados para maximizar los resultados del proyecto. Pueden contratarse de forma independiente.</div>${recomendadas.map(r => { const pf = r.precio * (1-(r.descuento||0)/100); const subs = (r.sublineas || []).filter((s) => s.concepto); return `<div style="padding:12px 14px;background:#fff;border-radius:8px;border:1px solid #fed7aa;margin-bottom:6px"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1"><div style="font-size:9.5pt;font-weight:700;color:#1d1d1f">${r.concepto || 'Servicio'}</div>${subs.length > 0 ? subs.map((s) => `<div style="font-size:8pt;color:#6e6e73;margin-top:2px;padding-left:10px">↳ ${s.concepto}</div>`).join('') : ''}${r.plazo ? `<div style="font-size:7.5pt;color:#9a3412;margin-top:3px">⏱ Plazo: ${r.plazo}</div>` : ''}${r.mantenimiento && r.mantenimiento_precio ? `<div style="font-size:7.5pt;color:#0071e3;font-weight:700;margin-top:3px">🔄 Mantenimiento: ${fE2(r.mantenimiento_precio)}€/mes</div><div style="font-size:6.5pt;color:#aeaeb2;font-style:italic">* Se activa una vez finalizado el trabajo</div>` : ''}</div><div style="text-align:right;min-width:80px"><div style="font-size:11pt;font-weight:800;color:#ea580c">${fE2(pf)}€</div>${r.descuento > 0 ? `<div style="font-size:7pt;color:#aeaeb2;text-decoration:line-through">${fE2(r.precio)}€</div><div style="font-size:6.5pt;color:#34c759;font-weight:600">-${r.descuento}%</div>` : ''}<div style="font-size:6.5pt;color:#6e6e73">${p.forma_pago==='sin_iva'?'':'+ IVA'}</div></div></div></div>`; }).join('')}</div>`;
+})()}
+<div class="ig nb">
+${(p.formas_pago_ofrecidas && p.formas_pago_ofrecidas.length > 0) ? `<div class="ii"><div class="il">Formas de pago</div><div class="iv">💳 ${p.formas_pago_ofrecidas.map((fp) => formasPago[fp] || fp).join(' · ')}</div></div>` : p.forma_pago?`<div class="ii"><div class="il">Forma de pago</div><div class="iv">💳 ${formasPago[p.forma_pago]||p.forma_pago}</div></div>`:''}
+${p.link_pago?`<div class="ii"><div class="il">Enlace de pago</div><div class="iv"><a href="${p.link_pago}" style="color:#0071e3;font-size:8.5pt;word-break:break-all">${p.link_pago}</a></div></div>`:''}
+${p.fecha_entrega?`<div class="ii"><div class="il">📅 Fecha de entrega</div><div class="iv">${new Date(p.fecha_entrega).toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'})}</div></div>`:''}
+<div class="ii"><div class="il">Validez</div><div class="iv">30 días desde la fecha de emisión</div></div>
+<div class="ii"><div class="il">Contacto</div><div class="iv">📱 629 494 167 · ✉️ gerard@iartesana.es</div></div>
+</div>
+${p.notas_internas ? `<div class="nt nb"><div class="st">📝 NOTAS</div><div class="dsc2">${p.notas_internas.replace(/\n/g,'<br>')}</div></div>` : ''}
+${p.contenido_ia ? `<div class="ai nb"><div class="st">📋 DETALLE</div><div class="dsc2">${p.contenido_ia.replace(/\n/g,'<br>')}</div></div>` : ''}
+<div class="ft"><div><div class="fb">GerardFanals</div><div class="fd">${fecha}</div></div><div class="fc"><span>📱 629 494 167</span><a href="mailto:gerard@iartesana.es">✉️ gerard@iartesana.es</a><span>🌐 gerardfanals.online</span></div></div>
+</body></html>`);
+    w.document.close();
+    setTimeout(() => w.print(), 400);
+}
+
