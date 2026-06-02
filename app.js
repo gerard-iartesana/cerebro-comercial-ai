@@ -197,6 +197,51 @@ async function initializeDashboard() {
         document.getElementById('metrics-enriched').textContent = enriched;
         document.getElementById('metrics-replied').textContent = replied;
         document.getElementById('metrics-booked').textContent = booked;
+
+        // Fetch and display Hunter.io API credits
+        try {
+            const creditsRes = await fetch('/api/brain-chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_credits', message: 'check' })
+            });
+            if (creditsRes.ok) {
+                const creditsData = await creditsRes.json();
+                const used = creditsData.hunter_credits_used || 0;
+                const limit = creditsData.hunter_credits_limit || 50;
+
+                const usedEl = document.getElementById('hunter-credits-used');
+                const limitEl = document.getElementById('hunter-credits-limit');
+                if (usedEl) usedEl.textContent = used;
+                if (limitEl) limitEl.textContent = limit;
+
+                const pct = Math.min(100, Math.round((used / limit) * 100));
+                const progressFill = document.getElementById('hunter-credits-progress');
+                if (progressFill) {
+                    progressFill.style.width = pct + '%';
+                    if (pct >= 80) {
+                        progressFill.style.background = 'var(--accent-red)';
+                    } else if (pct >= 50) {
+                        progressFill.style.background = '#ff9500';
+                    } else {
+                        progressFill.style.background = 'linear-gradient(90deg, var(--accent-green), #ffcc00)';
+                    }
+                }
+
+                const margin = Math.max(0, limit - used);
+                const marginEl = document.getElementById('hunter-credits-margin');
+                if (marginEl) {
+                    marginEl.textContent = `${margin} créditos libres`;
+                    if (margin < 10) {
+                        marginEl.style.color = 'var(--accent-red)';
+                    } else {
+                        marginEl.style.color = 'var(--accent-green)';
+                    }
+                }
+            }
+        } catch (creditsErr) {
+            console.error('Error cargando créditos de Hunter:', creditsErr);
+        }
     } catch (e) {
         console.error('Error cargando métricas:', e);
         showAlert('Error de Base de Datos', `Error al cargar métricas del dashboard: ${e.message || JSON.stringify(e)}`);

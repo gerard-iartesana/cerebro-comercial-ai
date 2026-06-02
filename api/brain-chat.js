@@ -85,11 +85,30 @@ const implementations = {
     const { count: replied } = await supabase.from('outreach_leads').select('*', { count: 'exact', head: true }).eq('status', 'replied');
     const { count: booked } = await supabase.from('outreach_leads').select('*', { count: 'exact', head: true }).eq('status', 'booked');
 
+    let hunter_credits_used = 0;
+    let hunter_credits_limit = 50;
+    if (HUNTER_API_KEY) {
+      try {
+        const hRes = await fetch(`https://api.hunter.io/v2/account?api_key=${HUNTER_API_KEY}`);
+        if (hRes.ok) {
+          const hJson = await hRes.json();
+          if (hJson.data && hJson.data.requests) {
+            hunter_credits_used = hJson.data.requests.searches.used;
+            hunter_credits_limit = hJson.data.requests.searches.limit;
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching Hunter account credits:', err);
+      }
+    }
+
     return {
       leads_totales: total || 0,
       leads_enriquecidos: enriched || 0,
       contestados_replied: replied || 0,
-      citas_agendadas: booked || 0
+      citas_agendadas: booked || 0,
+      hunter_credits_used,
+      hunter_credits_limit
     };
   },
 
@@ -180,8 +199,8 @@ const implementations = {
     // Sort by score (decision-makers first, then by confidence)
     scored.sort((a, b) => b.score - a.score);
 
-    // Take up to 10 best personal leads (decision-makers first) to maximize Hunter.io credit value
-    const topLeads = scored.slice(0, 10);
+    // Take up to 3 best personal leads (decision-makers first) to maximize Hunter.io credit value and prevent credit drain
+    const topLeads = scored.slice(0, 3);
 
     if (topLeads.length === 0) {
       return { success: true, message: `Se encontraron ${hunterData.emails.length} emails en ${cleanDomain} pero ninguno personal de un decisor`, insertedCount: 0 };
@@ -241,13 +260,32 @@ const implementations = {
       ? `✅ Se encontraron e insertaron ${insertedCount} leads en ${cleanDomain} (ej: ${firstLead.name || ''} - ${firstLead.email || ''})`
       : `⚠️ Se encontraron leads en ${cleanDomain} pero ya existían en la base de datos (0 nuevos registrados).`;
 
+    let hunter_credits_used = 0;
+    let hunter_credits_limit = 50;
+    if (HUNTER_API_KEY) {
+      try {
+        const hRes = await fetch(`https://api.hunter.io/v2/account?api_key=${HUNTER_API_KEY}`);
+        if (hRes.ok) {
+          const hJson = await hRes.json();
+          if (hJson.data && hJson.data.requests) {
+            hunter_credits_used = hJson.data.requests.searches.used;
+            hunter_credits_limit = hJson.data.requests.searches.limit;
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching Hunter account credits:', err);
+      }
+    }
+
     return {
       success: true,
       message,
       totalFound: hunterData.emails.length,
       personalFound: personalEmails.length,
       insertedCount,
-      leads: insertedLeads
+      leads: insertedLeads,
+      hunter_credits_used,
+      hunter_credits_limit
     };
   },
 
@@ -314,7 +352,30 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { message, history } = req.body || {};
+  const { message, history, action } = req.body || {};
+  if (action === 'get_credits') {
+    let hunter_credits_used = 0;
+    let hunter_credits_limit = 50;
+    if (HUNTER_API_KEY) {
+      try {
+        const hRes = await fetch(`https://api.hunter.io/v2/account?api_key=${HUNTER_API_KEY}`);
+        if (hRes.ok) {
+          const hJson = await hRes.json();
+          if (hJson.data && hJson.data.requests) {
+            hunter_credits_used = hJson.data.requests.searches.used;
+            hunter_credits_limit = hJson.data.requests.searches.limit;
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching Hunter account credits:', err);
+      }
+    }
+    return res.status(200).json({
+      hunter_credits_used,
+      hunter_credits_limit
+    });
+  }
+
   if (!message) {
     return res.status(400).json({ error: 'Falta el mensaje' });
   }
@@ -342,7 +403,7 @@ REGLAS CRÍTICAS PARA BÚSQUEDA DE LEADS:
 - Si el usuario te pide leads de una INDUSTRIA, SECTOR, TIPO DE NEGOCIO o DEPORTE (ej: "gestorías", "baloncesto", "fútbol", "abogados", etc.):
   - Tu objetivo absoluto es encontrar, registrar y acumular un total de **27 NUEVOS leads** en la base de datos (es decir, leads cuyo 'insertedCount' en la respuesta de la herramienta 'searchLeads' sea mayor que 0).
   - Los leads recuperados que ya existían o que eran duplicados devuelven 'insertedCount: 0' en la herramienta. **Estos leads con insertedCount de 0 NO cuentan para tu cuota de 27 nuevos leads.**
-  - Para garantizar que completas la cuota de 27 leads nuevos en una sola interacción y maximizas el valor de cada crédito de Hunter.io (el cual permite extraer hasta 10 leads por dominio), **debes identificar y buscar en al menos 5 o 6 dominios diferentes en paralelo desde tu primera llamada a herramientas**.
+  - Para garantizar que completas la cuota de 27 leads nuevos en una sola interacción y previenes el consumo excesivo de créditos de la API (extrayendo un máximo de 3 leads por dominio), **debes identificar y buscar en hasta 9 dominios diferentes en paralelo desde tu primera llamada a herramientas** (3 leads × 9 dominios = 27 leads).
   - Si se trata de un DEPORTE (ej: "baloncesto", "fútbol", "balonmano", "voleibol", "hockey", etc.) en una región, provincia o comunidad autónoma de España:
     * Para asegurar que encuentras suficientes leads cualificados y aprovechas la densidad deportiva real de cada zona (como los 60+ clubes de baloncesto en Baleares), **debes seguir un orden jerárquico estricto de búsqueda de arriba a abajo (ACB -> Ligas FEB -> Regionales/Amateur)**.
     * Genera y busca en paralelo los dominios web correspondientes a estas categorías en orden de prioridad:
@@ -371,7 +432,11 @@ OTRAS HERRAMIENTAS:
 - Si te piden enriquecer un lead, usa enrichLead.
 - Si te piden enviar un email o secuencia, usa sendSequence.
 - Si te piden estadísticas, usa getOutboxStats.
-- Si te piden listar leads, usa listLeads.` }]
+- Si te piden listar leads, usa listLeads.
+
+REGLA DE ADVERTENCIA DE CRÉDITOS:
+- Siempre que el usuario te pida buscar leads o consultar estadísticas, revisa los datos de créditos retornados por las herramientas ('hunter_credits_used' y 'hunter_credits_limit').
+- Si los créditos consumidos superan el 80% del límite total (es decir, si quedan menos de 10 créditos libres de los 50 mensuales), DEBES inyectar una advertencia proactiva y visible al final de tu respuesta (ej: "⚠️ **Aviso del Sistema**: Nos estamos acercando al límite mensual de créditos de Hunter.io (X/50 usados). Por favor, tenlo en cuenta para no agotar la cuota de prospección.").` }]
     };
 
     contents.push({
