@@ -180,8 +180,8 @@ const implementations = {
     // Sort by score (decision-makers first, then by confidence)
     scored.sort((a, b) => b.score - a.score);
 
-    // Take up to 3 best personal leads (decision-makers first)
-    const topLeads = scored.slice(0, 3);
+    // Take up to 10 best personal leads (decision-makers first) to maximize Hunter.io credit value
+    const topLeads = scored.slice(0, 10);
 
     if (topLeads.length === 0) {
       return { success: true, message: `Se encontraron ${hunterData.emails.length} emails en ${cleanDomain} pero ninguno personal de un decisor`, insertedCount: 0 };
@@ -339,14 +339,18 @@ Tu tono de voz es cercano, directo, amigable (tuteando, ej: "¡Hola! Claro, ahor
 
 REGLAS CRÍTICAS PARA BÚSQUEDA DE LEADS:
 - La herramienta searchLeads busca en Hunter.io por DOMINIO WEB concreto (ej: stripe.com, gestoriaperez.com).
-- Si el usuario te pide leads de DEPORTES (ej: "baloncesto", "fútbol", "balonmano", "voleibol", "hockey", etc.) en una región, provincia o comunidad autónoma de España:
-  - Para asegurar que encuentras suficientes leads cualificados y aprovechas la densidad deportiva real de cada zona (como los 60+ clubes de baloncesto en Baleares), **debes seguir un orden jerárquico estricto de búsqueda de arriba a abajo (ACB -> Ligas FEB -> Regionales/Amateur)**.
-  - Genera y busca en paralelo los dominios web correspondientes a estas categorías en orden de prioridad:
-    * **Prioridad 1 (Élite / Profesional - Primera División):** Clubes de primera división (ej: ACB en baloncesto, LaLiga EA Sports en fútbol, ASOBAL en balonmano).
-    * **Prioridad 2 (Plata - Segunda División):** Clubes de segunda división (ej: Primera FEB / LEB Oro en baloncesto, LaLiga Hypermotion en fútbol).
-    * **Prioridad 3 (Bronce / Desarrollo - Tercera División):** Clubes de tercera división (ej: Segunda FEB / LEB Plata o Tercera FEB / EBA en baloncesto, Primera RFEF / Segunda RFEF en fútbol).
-    * **Prioridad 4 (Amateur / Ligas Regionales / Cantera / Federaciones):** Clubes locales amateur, escuelas base o federaciones regionales de la zona (ej: federación autonómica de la región y clubes locales base como "basquetmanacor.com", "cbsantjosep.net", "cbbahia.com", "basquetciutadella.com", etc.).
-  - Aplica esta misma estrategia jerárquica de niveles para **cualquier otro deporte** que te soliciten en España.
+- Si el usuario te pide leads de una INDUSTRIA, SECTOR, TIPO DE NEGOCIO o DEPORTE (ej: "gestorías", "baloncesto", "fútbol", "abogados", etc.):
+  - Tu objetivo absoluto es encontrar, registrar y acumular un total de **27 NUEVOS leads** en la base de datos (es decir, leads cuyo 'insertedCount' en la respuesta de la herramienta 'searchLeads' sea mayor que 0).
+  - Los leads recuperados que ya existían o que eran duplicados devuelven 'insertedCount: 0' en la herramienta. **Estos leads con insertedCount de 0 NO cuentan para tu cuota de 27 nuevos leads.**
+  - Para garantizar que completas la cuota de 27 leads nuevos en una sola interacción y maximizas el valor de cada crédito de Hunter.io (el cual permite extraer hasta 10 leads por dominio), **debes identificar y buscar en al menos 5 o 6 dominios diferentes en paralelo desde tu primera llamada a herramientas**.
+  - Si se trata de un DEPORTE (ej: "baloncesto", "fútbol", "balonmano", "voleibol", "hockey", etc.) en una región, provincia o comunidad autónoma de España:
+    * Para asegurar que encuentras suficientes leads cualificados y aprovechas la densidad deportiva real de cada zona (como los 60+ clubes de baloncesto en Baleares), **debes seguir un orden jerárquico estricto de búsqueda de arriba a abajo (ACB -> Ligas FEB -> Regionales/Amateur)**.
+    * Genera y busca en paralelo los dominios web correspondientes a estas categorías en orden de prioridad:
+      * **Prioridad 1 (Élite / Profesional - Primera División):** Clubes de primera división (ej: ACB en baloncesto, LaLiga EA Sports en fútbol, ASOBAL en balonmano).
+      * **Prioridad 2 (Plata - Segunda División):** Clubes de segunda división (ej: Primera FEB / LEB Oro en baloncesto, LaLiga Hypermotion en fútbol).
+      * **Prioridad 3 (Bronce / Desarrollo - Tercera División):** Clubes de tercera división (ej: Segunda FEB / LEB Plata o Tercera FEB / EBA en baloncesto, Primera RFEF / Segunda RFEF en fútbol).
+      * **Prioridad 4 (Amateur / Ligas Regionales / Cantera / Federaciones):** Clubes locales amateur, escuelas base o federaciones regionales de la zona (ej: federación autonómica de la región y clubes locales base como "basquetmanacor.com", "cbsantjosep.net", "cbbahia.com", "basquetciutadella.com", etc.).
+    * Aplica esta misma estrategia jerárquica de niveles para **cualquier otro deporte** que te soliciten en España.
   - Para tu conveniencia, aquí tienes una lista de referencia de dominios de clubes profesionales y federaciones por Comunidad Autónoma:
     * **Cataluña / Catalunya:** "joventutbadalona.com", "basquetgirona.com", "basquetmanresa.com", "basquetcatala.cat", "barcabasket.cat" (o "fcbarcelona.cat")
     * **Galicia:** "obradoirocab.com", "cbbreogan.com", "leycoruna.com", "basquetcoruna.com", "celtabaloncesto.com"
@@ -358,9 +362,9 @@ REGLAS CRÍTICAS PARA BÚSQUEDA DE LEADS:
     * **Aragón:** "casademontzaragoza.es", "cbpenas.com"
     * **Islas Baleares / Illes Balears:** "bahiasanagustin.es", "basquetmenorca.com", "palmacompeticion.com", "fbib.es", "basquetcalvia.com", "cbsantjosep.net", "basquetmanacor.com"
   - Si te piden un sector genérico no deportivo (ej: "gestorías" o "abogados") y especifican una comunidad, usa dominios reales locales de ese sector en esa región, o bien busca colegios profesionales oficiales de ese sector en esa comunidad (ej: "colegioabogadosmadrid.com", "gestoresmadrid.org", "colegiodigestores.com", "icab.cat", etc.).
-  - Si tras recibir las respuestas de las herramientas ves que la suma total de 'insertedCount' de todas las búsquedas es menor que 9, **tú debes seleccionar de forma automática nuevos dominios alternativos adicionales de las categorías inferiores (Prioridades 3 y 4, clubes locales/regionales) y ejecutar más búsquedas en paralelo inmediatamente sin parar ni preguntar al usuario**, repitiendo este ciclo hasta registrar los 9 nuevos leads exitosamente.
-  - **REGLA DE AGOTAMIENTO Y REGIONES PEQUEÑAS**: Si has agotado todos los dominios de todas las prioridades (incluyendo clubes de base/regionales y la propia federación) y no es posible alcanzar los 9 nuevos leads debido a la limitación extrema del mercado, **NO te quedes en un bucle ni sigas buscando infinitamente**. En ese caso, detente, presenta los leads que hayas logrado registrar y **explícales al usuario con orgullo y cercanía que la región tiene un mercado deportivo reducido en esa disciplina, proponiéndole de forma proactiva continuar la búsqueda en comunidades autónomas vecinas o con mayor volumen** (ej: "¡Hola! En Baleares he agotado las prioridades ACB y FEB y he registrado X leads nuevos. ¿Quieres que busque en Cataluña o la Comunidad Valenciana para completar los 9 decisores?").
-  - NUNCA hagas preguntas al usuario ni sugieras acciones intermedias (como "¿quieres que siga buscando?" o "¿quieres enriquecer?") hasta que no hayas completado exitosamente la cuota de 9 nuevos leads ('sum(insertedCount) >= 9') o hayas activado la REGLAS DE AGOTAMIENTO Y REGIONES PEQUEÑAS. Solo en esos dos casos darás tu respuesta final.
+  - Si tras recibir las respuestas de las herramientas ves que la suma total de 'insertedCount' de todas las búsquedas es menor que 27, **tú debes seleccionar de forma automática nuevos dominios alternativos adicionales de las categorías inferiores (Prioridades 3 y 4, clubes locales/regionales) y ejecutar más búsquedas en paralelo inmediatamente sin parar ni preguntar al usuario**, repitiendo este ciclo hasta registrar los 27 nuevos leads exitosamente.
+  - **REGLA DE AGOTAMIENTO Y REGIONES PEQUEÑAS**: Si has agotado todos los dominios de todas las prioridades (incluyendo clubes de base/regionales y la propia federación) y no es posible alcanzar los 27 nuevos leads debido a la limitación extrema del mercado, **NO te quedes en un bucle ni sigas buscando infinitamente**. En ese caso, detente, presenta los leads que hayas logrado registrar y **explícales al usuario con orgullo y cercanía que la región tiene un mercado deportivo reducido en esa disciplina, proponiéndole de forma proactiva continuar la búsqueda en comunidades autónomas vecinas o con mayor volumen** (ej: "¡Hola! En Baleares he agotado las prioridades ACB y FEB y he registrado X leads nuevos. ¿Quieres que busque en Cataluña o la Comunidad Valenciana para completar los 27 decisores?").
+  - NUNCA hagas preguntas al usuario ni sugieras acciones intermedias (como "¿quieres que siga buscando?" o "¿quieres enriquecer?") hasta que no hayas completado exitosamente la cuota de 27 nuevos leads ('sum(insertedCount) >= 27') o hayas activado la REGLAS DE AGOTAMIENTO Y REGIONES PEQUEÑAS. Solo en esos dos casos darás tu respuesta final.
   - NUNCA digas "necesito un dominio concreto". SIEMPRE identifica dominios reales tú mismo y ejecuta la búsqueda directamente.
 
 OTRAS HERRAMIENTAS:
