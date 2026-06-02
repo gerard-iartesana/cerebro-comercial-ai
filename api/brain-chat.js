@@ -104,10 +104,44 @@ const implementations = {
   },
 
   async searchLeads({ domain }) {
+    if (!domain) {
+      return { error: 'No se especificó un dominio para buscar' };
+    }
+    const cleanDomain = domain.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0].trim().toLowerCase();
+
+    // 1. Check in Supabase first to avoid duplicate searches and save credits
+    try {
+      const { data: existingLeads, error: dbError } = await supabase
+        .from('outreach_leads')
+        .select('*')
+        .ilike('website', `%${cleanDomain}%`);
+
+      if (!dbError && existingLeads && existingLeads.length > 0) {
+        console.log(`[Cache Hit] Encontrados ${existingLeads.length} leads en la DB para el dominio ${cleanDomain}`);
+        const formattedLeads = existingLeads.map(l => ({
+          name: `${l.first_name} ${l.scraped_data?.last_name || ''}`.trim(),
+          email: l.email,
+          position: l.scraped_data?.position || '',
+          isDecisionMaker: l.scraped_data?.is_decision_maker || false
+        }));
+
+        return {
+          success: true,
+          message: `💡 Recuperados ${existingLeads.length} leads de la base de datos para ${cleanDomain} (sin consumir créditos de Hunter.io).`,
+          totalFound: existingLeads.length,
+          personalFound: existingLeads.length,
+          insertedCount: 0,
+          leads: formattedLeads
+        };
+      }
+    } catch (cacheErr) {
+      console.error('Error consultando caché en Supabase:', cacheErr);
+    }
+
     if (!HUNTER_API_KEY) {
       return { error: 'HUNTER_API_KEY no está configurada en las variables de entorno de Vercel' };
     }
-    const hunterUrl = `https://api.hunter.io/v2/domain-search?domain=${encodeURIComponent(domain)}&api_key=${HUNTER_API_KEY}`;
+    const hunterUrl = `https://api.hunter.io/v2/domain-search?domain=${encodeURIComponent(cleanDomain)}&api_key=${HUNTER_API_KEY}`;
     const response = await fetch(hunterUrl);
 
     if (!response.ok) {
@@ -119,7 +153,7 @@ const implementations = {
     const hunterData = json.data;
 
     if (!hunterData || !hunterData.emails || hunterData.emails.length === 0) {
-      return { success: true, message: `No se encontraron correos para ${domain}`, insertedCount: 0 };
+      return { success: true, message: `No se encontraron correos para ${cleanDomain}`, insertedCount: 0 };
     }
 
     // Filter: only personal emails (not generic like info@, admin@, comunicacion@)
@@ -150,7 +184,7 @@ const implementations = {
     const topLeads = scored.slice(0, 3);
 
     if (topLeads.length === 0) {
-      return { success: true, message: `Se encontraron ${hunterData.emails.length} emails en ${domain} pero ninguno personal de un decisor`, insertedCount: 0 };
+      return { success: true, message: `Se encontraron ${hunterData.emails.length} emails en ${cleanDomain} pero ninguno personal de un decisor`, insertedCount: 0 };
     }
 
     let insertedCount = 0;
@@ -160,8 +194,8 @@ const implementations = {
       const leadToInsert = {
         email: lead.value,
         first_name: lead.first_name || '',
-        company_name: hunterData.organization || domain.split('.')[0],
-        website: `https://${domain}`,
+        company_name: hunterData.organization || cleanDomain.split('.')[0],
+        website: `https://${cleanDomain}`,
         linkedin_url: lead.linkedin || '',
         status: 'lead',
         sequence_step: 0,
@@ -188,8 +222,8 @@ const implementations = {
 
     const firstLead = insertedLeads[0] || {};
     const message = insertedCount > 0
-      ? `✅ Se encontraron e insertaron ${insertedCount} leads en ${domain} (ej: ${firstLead.name || ''} - ${firstLead.email || ''})`
-      : `⚠️ Se encontraron ${topLeads.length} leads en ${domain} pero ya existían en la base de datos.`;
+      ? `✅ Se encontraron e insertaron ${insertedCount} leads en ${cleanDomain} (ej: ${firstLead.name || ''} - ${firstLead.email || ''})`
+      : `⚠️ Se encontraron ${topLeads.length} leads en ${cleanDomain} pero ya existían en la base de datos.`;
 
     return {
       success: true,
@@ -289,13 +323,22 @@ Tu tono de voz es cercano, directo, amigable (tuteando, ej: "¡Hola! Claro, ahor
 
 REGLAS CRÍTICAS PARA BÚSQUEDA DE LEADS:
 - La herramienta searchLeads busca en Hunter.io por DOMINIO WEB concreto (ej: stripe.com, gestoriaperez.com).
-- Si el usuario te pide leads de una INDUSTRIA o SECTOR (ej: "gestorías", "baloncesto", "abogados", "dentistas"):
+- Si el usuario te pide leads de una INDUSTRIA, SECTOR o TIPO DE NEGOCIO (ej: "gestorías", "baloncesto", "abogados", "dentistas"):
   - Tu objetivo absoluto es encontrar y registrar un total de **9 leads** en la base de datos (seleccionando e inyectando hasta 3 decisores personales por cada club o negocio).
-  - Para garantizar que completas la cuota de 9 leads en una sola interacción (evitando esperas y demoras), **debes identificar y buscar en al menos 5 o 6 dominios diferentes en paralelo desde tu primera llamada a herramientas**. Así te aseguras de cubrir la cuota de 9 leads incluso si algunas empresas o clubes no devuelven correos de decisores.
+  - Para garantizar que completas la cuota de 9 leads en una sola interacción (evitando esperas y demoras), **debes identificar y buscar en al menos 5 o 6 dominios diferentes en paralelo desde tu primera llamada a herramientas**.
+  - Si el usuario especifica una comunidad autónoma, provincia o región de España (ej: "en Galicia", "en Cataluña", "en Madrid", "de Andalucía", etc.), debes seleccionar dominios reales localizados en esa comunidad autónoma o región. Aquí tienes la lista de referencia de dominios reales por comunidad autónoma para clubs de baloncesto:
+    * **Cataluña / Catalunya:** "joventutbadalona.com", "basquetgirona.com", "basquetmanresa.com", "basquetcatala.cat", "barcabasket.cat" (o "fcbarcelona.cat")
+    * **Galicia:** "obradoirocab.com", "cbbreogan.com", "leycoruna.com", "basquetcoruna.com", "celtabaloncesto.com"
+    * **Madrid / Comunidad de Madrid:** "movistarestudiantes.com", "baloncestofuenlabrada.com", "realmadrid.com", "clubestudiantes.com", "fbm.es"
+    * **Andalucía:** "unicajabaloncesto.com", "cbgranada.com", "realbetisbaloncesto.com", "cdcoviran.es", "andaluzabaloncesto.org"
+    * **País Vasco / Euskadi:** "baskonia.com", "bilbaobasket.biz", "gipuzkoabasket.com", "iraurgisb.com"
+    * **Comunidad Valenciana:** "valenciabasket.com", "lucentumalicante.es", "taucastello.com", "fbcv.es"
+    * **Canarias:** "cbgrancanaria.net", "cbcanarias.net", "rcnautico.es"
+    * **Aragón:** "casademontzaragoza.es", "cbpenas.com"
+  - Si te piden un sector genérico (ej: "gestorías" o "abogados") y especifican una comunidad, usa dominios reales locales de ese sector en esa región, o bien busca colegios profesionales oficiales de ese sector en esa comunidad (ej: "colegioabogadosmadrid.com", "gestoresmadrid.org", "colegiodigestores.com", "icab.cat", etc.).
   - Si en los primeros resultados de las herramientas ves que no has logrado acumular al menos 9 leads insertados en total, **tú debes seguir buscando de forma automática con dominios alternativos adicionales sin parar ni preguntar al usuario**, hasta que logres registrar los 9 leads exitosamente.
   - NUNCA hagas preguntas al usuario ni sugieras acciones intermedias (como "¿quieres que siga buscando?" o "¿quieres enriquecer?") hasta que no hayas completado exitosamente el registro de los 9 leads. Solo cuando tengas los 9 leads confirmados en los resultados de las herramientas, puedes dar tu respuesta final enlistando todos los resultados y preguntar qué hacer a continuación.
   - NUNCA digas "necesito un dominio concreto". SIEMPRE identifica dominios reales tú mismo y ejecuta la búsqueda directamente.
-  - Ejemplo para baloncesto en España: identifica y busca en paralelo en dominios reales como "unicajabaloncesto.com", "valenciabasket.com", "joventutbadalona.com", "basquetgirona.com", "baskonia.com", "cbgrancanaria.net", "cbcanarias.net", "bilbaobasket.biz", "cbgranada.com", "casademontzaragoza.es".
 
 OTRAS HERRAMIENTAS:
 - Si te piden enriquecer un lead, usa enrichLead.
