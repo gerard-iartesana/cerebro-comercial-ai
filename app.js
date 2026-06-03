@@ -2596,38 +2596,47 @@ function renderOutreachSendList() {
 }
 
 window.openComposeForLead = function(email) {
-    if (sessionStorage.getItem('cc_role') === 'guest') {
-        showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
-        return;
+    try {
+        if (sessionStorage.getItem('cc_role') === 'guest') {
+            showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+            return;
+        }
+        const modal = document.getElementById('email-compose-modal');
+        const select = document.getElementById('compose-email-to');
+        const subjectEl = document.getElementById('compose-email-subject');
+        const bodyEl = document.getElementById('compose-email-body');
+
+        if (!modal) { alert('Error: No se encontró el modal email-compose-modal'); return; }
+        if (!select) { alert('Error: No se encontró el select compose-email-to'); return; }
+
+        select.innerHTML = '';
+
+        // Add target email as first option
+        const mainOpt = document.createElement('option');
+        mainOpt.value = email;
+        mainOpt.textContent = email;
+        mainOpt.selected = true;
+        select.appendChild(mainOpt);
+
+        // Add other leads
+        const seen = new Set([email]);
+        const sources = [...(typeof _allLeadsGridData !== 'undefined' ? _allLeadsGridData : []), ...(typeof outreachLeadsList !== 'undefined' ? outreachLeadsList : [])];
+        sources.forEach(l => {
+            if (!l.email || seen.has(l.email)) return;
+            seen.add(l.email);
+            const opt = document.createElement('option');
+            opt.value = l.email;
+            opt.textContent = `${l.first_name || 'Prospecto'} (${l.company_name || '—'}) — ${l.email}`;
+            select.appendChild(opt);
+        });
+
+        if (subjectEl) subjectEl.value = '';
+        if (bodyEl) bodyEl.value = '';
+        modal.style.display = 'flex';
+    } catch(err) {
+        alert('Error al abrir composición: ' + err.message);
+        console.error('openComposeForLead error:', err);
     }
-    const select = document.getElementById('compose-email-to');
-    if (!select) { showToast('Error: modal de composición no encontrado', true); return; }
-    select.innerHTML = '';
-
-    // Populate from all available lead sources
-    const seen = new Set();
-    const sources = [...(_allLeadsGridData || []), ...(outreachLeadsList || [])];
-    sources.forEach(l => {
-        if (!l.email || seen.has(l.email)) return;
-        seen.add(l.email);
-        const opt = document.createElement('option');
-        opt.value = l.email;
-        opt.textContent = `${l.first_name || 'Prospecto'} (${l.company_name || '—'}) — ${l.email}`;
-        select.appendChild(opt);
-    });
-
-    // If email not in list, add it
-    if (!seen.has(email)) {
-        const opt = document.createElement('option');
-        opt.value = email;
-        opt.textContent = email;
-        select.appendChild(opt);
-    }
-
-    select.value = email;
-    document.getElementById('compose-email-subject').value = '';
-    document.getElementById('compose-email-body').value = '';
-    document.getElementById('email-compose-modal').style.display = 'flex';
 };
 
 window.startOutreachSequence = async function(leadId) {
