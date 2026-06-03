@@ -571,7 +571,7 @@ html, body {
 .macos-lock-screen {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: radial-gradient(circle at center, rgba(40, 40, 45, 0.75) 0%, #000000 100%);
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.6) 0%, #f5f5f7 100%);
     backdrop-filter: blur(40px);
     z-index: 9999;
     display: flex;
@@ -748,32 +748,35 @@ html, body {
     filter: grayscale(80%);
 }
 /* Guest (Read-Only) Global Protection */
-body.role-guest .dashboard-main input,
-body.role-guest .dashboard-main textarea,
-body.role-guest .dashboard-main select {
+body.role-guest #dashboard-wrapper input,
+body.role-guest #dashboard-wrapper textarea,
+body.role-guest #dashboard-wrapper select,
+body.role-guest .modal-overlay input,
+body.role-guest .modal-overlay textarea,
+body.role-guest .modal-overlay select {
     pointer-events: none !important;
     opacity: 0.75 !important;
     background: var(--bg-secondary) !important;
     cursor: not-allowed !important;
 }
-body.role-guest .dashboard-main button:not(.sidebar-nav-item),
-body.role-guest .dashboard-main a.btn-primary,
-body.role-guest .dashboard-main a.btn-secondary,
-body.role-guest .dashboard-main .btn-primary,
-body.role-guest .dashboard-main .btn-secondary {
+body.role-guest #dashboard-wrapper button:not(.sidebar-nav-item):not(.modal-close):not(.modal-cancel-btn):not(.macos-alert-btn),
+body.role-guest .modal-overlay button:not(.modal-close):not(.modal-cancel-btn):not(.macos-alert-btn),
+body.role-guest a.btn-primary,
+body.role-guest a.btn-secondary,
+body.role-guest .btn-primary,
+body.role-guest .btn-secondary,
+body.role-guest .pres-kanban-card,
+body.role-guest .kanban-card,
+body.role-guest .edit-linea-item {
     pointer-events: none !important;
     opacity: 0.35 !important;
     cursor: not-allowed !important;
     filter: grayscale(40%);
 }
-body.role-guest .dashboard-main [contenteditable="true"] {
+body.role-guest [contenteditable="true"] {
     pointer-events: none !important;
 }
-body.role-guest .dashboard-main .kanban-card {
-    pointer-events: none !important;
-    cursor: not-allowed !important;
-}
-body.role-guest .dashboard-main td button {
+body.role-guest td button {
     pointer-events: none !important;
     opacity: 0.4 !important;
 }

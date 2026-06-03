@@ -82,10 +82,11 @@ async function validateLock() {
 
         const data = await res.json();
 
-        if (res.ok && data.success) {
+        if (data && data.success) {
             sessionStorage.setItem('cc_unlocked', 'true');
             sessionStorage.setItem('cc_token', pwd); // guardamos de forma segura localmente
             sessionStorage.setItem('cc_role', data.role);
+            sessionStorage.setItem('cc_email', data.email || '');
             sessionStorage.setItem('cc_modules', JSON.stringify(data.modules || 'all'));
             if (data.except) {
                 sessionStorage.setItem('cc_except_modules', JSON.stringify(data.except));
@@ -120,6 +121,7 @@ function shakeElement(el) {
 
 window.applyRolePermissions = function() {
     const role = sessionStorage.getItem('cc_role') || 'admin';
+    const email = sessionStorage.getItem('cc_email') || 'gerard@iartesana.es';
     let modules = 'all';
     try {
         const m = sessionStorage.getItem('cc_modules');
@@ -161,18 +163,25 @@ window.applyRolePermissions = function() {
     }
 
     // 3. Actualizar la tarjeta del usuario conectado en el pie del sidebar
-    const nameEl = document.querySelector('.connected-user-card div div div') || document.querySelector('.connected-user-card div[title="gerard@iartesana.es"]');
+    const nameEl = document.querySelector('.connected-user-card div div div') || 
+                   document.querySelector('.connected-user-card div:last-child div:first-child') ||
+                   document.querySelector('.connected-user-card div[title]');
     if (nameEl) {
         let roleLabel = 'Admin';
-        if (role === 'client') roleLabel = 'Cliente';
-        if (role === 'guest') roleLabel = 'Invitado';
+        if (email === 'gerard@iartesana.es') roleLabel = 'Superadmin';
+        else if (role === 'client') roleLabel = 'Cliente';
+        else if (role === 'guest') roleLabel = 'Invitado';
         
-        nameEl.innerHTML = `gerard@iartesana.es <span style="font-size:0.65rem; padding: 1px 5px; border-radius: 4px; background: var(--bg-secondary); border: 1px solid var(--card-border); font-weight:700; color:var(--text-grey); margin-left: 2px;">${roleLabel}</span>`;
+        nameEl.innerHTML = `${email} <span style="font-size:0.65rem; padding: 1px 5px; border-radius: 4px; background: var(--bg-secondary); border: 1px solid var(--card-border); font-weight:700; color:var(--text-grey); margin-left: 2px;">${roleLabel}</span>`;
+        nameEl.setAttribute('title', email);
     }
 
     const avatarEl = document.querySelector('.connected-user-card .user-avatar');
     if (avatarEl) {
-        if (role === 'admin') {
+        if (email === 'gerard@iartesana.es') {
+            avatarEl.textContent = 'G';
+            avatarEl.style.background = 'linear-gradient(135deg, var(--accent-purple), #ff5e3a)';
+        } else if (role === 'admin') {
             avatarEl.textContent = 'A';
             avatarEl.style.background = 'linear-gradient(135deg, #ff9500, #ff5e3a)';
         } else if (role === 'client') {
@@ -188,10 +197,21 @@ window.applyRolePermissions = function() {
 async function unlockDashboard() {
     try {
         const configRes = await fetch('/api/config');
+        let config = null;
         if (configRes.ok) {
-            const config = await configRes.json();
+            config = await configRes.json();
+        } else {
+            // Local dev fallback if router returns 404 but body contains config JSON
+            try {
+                const text = await configRes.text();
+                config = JSON.parse(text);
+            } catch(e) {}
+        }
+        if (config && config.supabaseUrl && config.supabaseAnonKey) {
             _supabase = supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
             console.log('Supabase client initialized dynamically with URL:', config.supabaseUrl);
+        } else {
+            throw new Error('Invalid config response');
         }
     } catch (configErr) {
         console.error('Error initializing dynamic Supabase client, using fallback:', configErr);
@@ -210,6 +230,7 @@ function lockPanel() {
     sessionStorage.removeItem('cc_unlocked');
     sessionStorage.removeItem('cc_token');
     sessionStorage.removeItem('cc_role');
+    sessionStorage.removeItem('cc_email');
     sessionStorage.removeItem('cc_modules');
     sessionStorage.removeItem('cc_except_modules');
     window.location.reload();
@@ -498,6 +519,10 @@ async function loadKanbanCRM() {
 }
 
 window.handleDragStart = function(event) {
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        event.preventDefault();
+        return;
+    }
     event.dataTransfer.setData('text/plain', event.target.id);
 };
 
@@ -507,6 +532,10 @@ window.allowDrop = function(event) {
 
 window.handleDrop = async function(event, targetStatus) {
     event.preventDefault();
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+        return;
+    }
     const id = event.dataTransfer.getData('text/plain').replace('lead-', '');
     
     try {
@@ -820,6 +849,10 @@ window.deleteFavoritePrompt = function(index) {
 
 // 10. Chat interactivo con "El Cerebro" (Multi-Agent Orchestrator)
 async function sendToBrain() {
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+        return;
+    }
     const input = document.getElementById('brain-chat-input');
     const msg = input.value.trim();
     if (!msg) return;
@@ -3865,6 +3898,10 @@ function recalcPaymentOptionsInModal() {
 let lineDragIndex = null;
 
 window.handleLineDragStart = function(e, index) {
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        e.preventDefault();
+        return;
+    }
     lineDragIndex = index;
     e.dataTransfer.effectAllowed = 'move';
     e.currentTarget.classList.add('dragging-line');
@@ -3882,6 +3919,10 @@ window.handleLineDragEnd = function(e) {
 
 window.handleLineDrop = function(e, index) {
     e.preventDefault();
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+        return;
+    }
     if (lineDragIndex !== null && lineDragIndex !== index) {
         const draggedLine = lineasTempList[lineDragIndex];
         lineasTempList.splice(lineDragIndex, 1);
@@ -4999,6 +5040,10 @@ function allowDropSegCard(e) {
 
 async function handleDropSegCard(e, targetCol) {
     e.preventDefault();
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+        return;
+    }
     const id = e.dataTransfer.getData('text/plain');
     if (!id) return;
 

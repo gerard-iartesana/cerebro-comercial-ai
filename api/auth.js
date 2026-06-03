@@ -31,24 +31,35 @@ module.exports = async function handler(req, res) {
 
   const u = username.toLowerCase().trim();
 
-  if (u === 'admin' && ((sysPassword && password === sysPassword) || password === adminPwd)) {
+  if (u === 'gerard@iartesana.es' && password === 'G2r1rd@2026') {
     return res.status(200).json({ 
       success: true, 
       role: 'admin', 
-      modules: 'all' 
+      isSuperAdmin: true,
+      modules: 'all',
+      email: 'gerard@iartesana.es'
+    });
+  } else if (u === 'admin' && ((sysPassword && password === sysPassword) || password === adminPwd)) {
+    return res.status(200).json({ 
+      success: true, 
+      role: 'admin', 
+      modules: 'all',
+      email: 'admin@iartesana.es'
     });
   } else if (u === 'cliente' && password === clientPwd) {
     return res.status(200).json({ 
       success: true, 
       role: 'client', 
-      modules: ['overview', 'leads', 'kanban', 'dashboard-client', 'whatsapp', 'support'] 
+      modules: ['overview', 'leads', 'kanban', 'dashboard-client', 'whatsapp', 'support'],
+      email: 'cliente@iartesana.es'
     });
   } else if (u === 'invitado' && password === guestPwd) {
     return res.status(200).json({ 
       success: true, 
       role: 'guest', 
       modules: 'all',
-      except: ['config-business']
+      except: ['config-business'],
+      email: 'invitado@iartesana.es'
     });
   } else {
     return res.status(401).json({ success: false, error: 'Usuario o contraseña incorrectos' });
