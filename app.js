@@ -2651,7 +2651,16 @@ async function openComposeEmailModal() {
     const select = document.getElementById('compose-email-to');
     select.innerHTML = '';
     
-    outreachLeadsList.forEach(l => {
+    // Merge leads from outreach + registry, deduplicate by email
+    const allLeads = [...(outreachLeadsList || [])];
+    if (_allLeadsGridData && _allLeadsGridData.length > 0) {
+        const existing = new Set(allLeads.map(l => l.email));
+        _allLeadsGridData.forEach(l => {
+            if (!existing.has(l.email)) allLeads.push(l);
+        });
+    }
+    
+    allLeads.forEach(l => {
         const opt = document.createElement('option');
         opt.value = l.email;
         opt.textContent = `${l.first_name || 'Prospecto'} (${l.company_name || '—'}) - ${l.email}`;
