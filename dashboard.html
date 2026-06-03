@@ -256,143 +256,110 @@
                     <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Outbound + Paid Ads + Ventas</span>
                 </div>
 
-                <!-- 10 KPI Cards Grid (Apple Inspired Layout) -->
-                <div class="stats-grid-kpis">
+                <!-- 14 Unified Stat Cards Grid (Apple Inspired Layout) -->
+                <div class="bottom-stats-grid">
                     <!-- 1. Total Leads -->
-                    <div class="kpi-card-glass">
-                        <div class="kpi-icon-circle color-blue">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                        </div>
-                        <div class="kpi-value" id="metrics-total">—</div>
-                        <div class="kpi-label">Total Leads</div>
+                    <div class="bottom-stat-card border-blue">
+                        <div class="bottom-stat-title">👥 Total Leads</div>
+                        <div class="bottom-stat-value color-blue" id="metrics-total">—</div>
+                        <div class="bottom-stat-subtext">Base activa de leads</div>
                     </div>
 
                     <!-- 2. Nuevos -->
-                    <div class="kpi-card-glass">
-                        <div class="kpi-icon-circle color-orange">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                        </div>
-                        <div class="kpi-value" id="metrics-new">—</div>
-                        <div class="kpi-label">Nuevos</div>
+                    <div class="bottom-stat-card border-orange">
+                        <div class="bottom-stat-title">➕ Nuevos</div>
+                        <div class="bottom-stat-value color-orange" id="metrics-new">—</div>
+                        <div class="bottom-stat-subtext">Prospectos sin procesar</div>
                     </div>
 
                     <!-- 3. Enviados -->
-                    <div class="kpi-card-glass">
-                        <div class="kpi-icon-circle color-green">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                        </div>
-                        <div class="kpi-value" id="metrics-sent">—</div>
-                        <div class="kpi-label">Enviados</div>
+                    <div class="bottom-stat-card border-green">
+                        <div class="bottom-stat-title">✈️ Enviados</div>
+                        <div class="bottom-stat-value color-green" id="metrics-sent">—</div>
+                        <div class="bottom-stat-subtext">Correos de prospección</div>
                     </div>
 
                     <!-- 4. Reuniones -->
-                    <div class="kpi-card-glass">
-                        <div class="kpi-icon-circle color-purple">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        </div>
-                        <div class="kpi-value" id="metrics-booked">—</div>
-                        <div class="kpi-label">Reuniones</div>
+                    <div class="bottom-stat-card border-purple">
+                        <div class="bottom-stat-title">📅 Reuniones</div>
+                        <div class="bottom-stat-value color-purple" id="metrics-booked">—</div>
+                        <div class="bottom-stat-subtext">Reuniones agendadas</div>
                     </div>
 
                     <!-- 5. Clientes -->
-                    <div class="kpi-card-glass">
-                        <div class="kpi-icon-circle color-green">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        </div>
-                        <div class="kpi-value" id="metrics-clients">—</div>
-                        <div class="kpi-label">Clientes</div>
+                    <div class="bottom-stat-card border-green">
+                        <div class="bottom-stat-title">✔ Clientes</div>
+                        <div class="bottom-stat-value color-green" id="metrics-clients">—</div>
+                        <div class="bottom-stat-subtext">Leads con trato cerrado</div>
                     </div>
 
                     <!-- 6. Seguimiento -->
-                    <div class="kpi-card-glass">
-                        <div class="kpi-icon-circle color-yellow">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-                        </div>
-                        <div class="kpi-value" id="metrics-followup">—</div>
-                        <div class="kpi-label">Seguimiento</div>
+                    <div class="bottom-stat-card border-yellow">
+                        <div class="bottom-stat-title">🔁 Seguimiento</div>
+                        <div class="bottom-stat-value color-yellow" id="metrics-followup">—</div>
+                        <div class="bottom-stat-subtext">En secuencias activas</div>
                     </div>
 
                     <!-- 7. Perdidos -->
-                    <div class="kpi-card-glass">
-                        <div class="kpi-icon-circle color-red">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                        </div>
-                        <div class="kpi-value" id="metrics-lost">—</div>
-                        <div class="kpi-label">Perdidos</div>
+                    <div class="bottom-stat-card border-red">
+                        <div class="bottom-stat-title">✖ Perdidos</div>
+                        <div class="bottom-stat-value color-red" id="metrics-lost">—</div>
+                        <div class="bottom-stat-subtext">Prospectos descartados</div>
                     </div>
 
-                    <!-- 8. Propuestas (Row 2, Column 1) -->
-                    <div class="kpi-card-glass">
-                        <div class="kpi-icon-circle color-blue">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        </div>
-                        <div class="kpi-value" id="metrics-proposals">—</div>
-                        <div class="kpi-label">Propuestas</div>
+                    <!-- 8. Propuestas -->
+                    <div class="bottom-stat-card border-blue">
+                        <div class="bottom-stat-title">📄 Propuestas</div>
+                        <div class="bottom-stat-value color-blue" id="metrics-proposals">—</div>
+                        <div class="bottom-stat-subtext">Propuestas comerciales</div>
                     </div>
 
-                    <!-- 9. Contratos (Row 2, Column 2) -->
-                    <div class="kpi-card-glass">
-                        <div class="kpi-icon-circle color-green">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                        </div>
-                        <div class="kpi-value" id="metrics-contracts">—</div>
-                        <div class="kpi-label">Contratos</div>
+                    <!-- 9. Contratos -->
+                    <div class="bottom-stat-card border-green">
+                        <div class="bottom-stat-title">✅ Contratos</div>
+                        <div class="bottom-stat-value color-green" id="metrics-contracts">—</div>
+                        <div class="bottom-stat-subtext">Contratos activos</div>
                     </div>
 
-                    <!-- 10. Pruebas (Row 2, Column 3) -->
-                    <div class="kpi-card-glass kpi-card-pruebas">
-                        <div class="kpi-icon-circle color-pruebas">
-                            🧪
-                        </div>
-                        <div class="kpi-value" id="metrics-pruebas">—</div>
-                        <div class="kpi-label" style="color: #ff9500;">Pruebas</div>
+                    <!-- 10. Pruebas -->
+                    <div class="bottom-stat-card border-orange dashed">
+                        <div class="bottom-stat-title">🧪 Pruebas</div>
+                        <div class="bottom-stat-value color-orange" id="metrics-pruebas">—</div>
                         <div class="kpi-pruebas-sub">
-                            <span class="sub-pill pill-l"><span id="metrics-pruebas-l">10</span> L</span>
-                            <span class="sub-pill pill-p"><span id="metrics-pruebas-p">16</span> P</span>
-                            <span class="sub-pill pill-c"><span id="metrics-pruebas-c">7</span> C</span>
+                            <span class="sub-pill pill-l"><span id="metrics-pruebas-l">0</span> L</span>
+                            <span class="sub-pill pill-p"><span id="metrics-pruebas-p">0</span> P</span>
+                            <span class="sub-pill pill-c"><span id="metrics-pruebas-c">0</span> C</span>
                         </div>
                     </div>
-                </div>
 
-                <!-- Bottom Row: Financial Accumulations -->
-                <div class="bottom-stats-grid">
-                    <!-- Card 1: Propuestas Acumulado -->
+                    <!-- 11. Propuestas Acumulado -->
                     <div class="bottom-stat-card border-purple">
-                        <div class="bottom-stat-title">
-                            📄 Propuestas Acumulado
-                        </div>
+                        <div class="bottom-stat-title">📄 Propuestas Acumulado</div>
                         <div class="bottom-stat-value color-purple" id="metrics-prop-accum-val">—</div>
                         <div class="bottom-stat-subtext" id="metrics-prop-accum-sub">—</div>
                     </div>
 
-                    <!-- Card 2: Propuestas Este Mes -->
+                    <!-- 12. Propuestas Este Mes -->
                     <div class="bottom-stat-card border-blue">
-                        <div class="bottom-stat-title">
-                            📊 Propuestas Este Mes
-                        </div>
+                        <div class="bottom-stat-title">📊 Propuestas Este Mes</div>
                         <div class="bottom-stat-value color-blue" id="metrics-prop-month-val">—</div>
                         <div class="bottom-stat-subtext" id="metrics-prop-month-sub">—</div>
                     </div>
 
-                    <!-- Card 3: Ventas Acumulado -->
+                    <!-- 13. Ventas Acumulado -->
                     <div class="bottom-stat-card border-green">
-                        <div class="bottom-stat-title">
-                            💰 Ventas Acumulado
-                        </div>
+                        <div class="bottom-stat-title">💰 Ventas Acumulado</div>
                         <div class="bottom-stat-value color-green" id="metrics-ventas-accum-val">—</div>
                         <div class="bottom-stat-subtext" id="metrics-ventas-accum-sub">—</div>
                     </div>
 
-                    <!-- Card 4: Ventas Este Mes -->
+                    <!-- 14. Ventas Este Mes -->
                     <div class="bottom-stat-card border-orange">
-                        <div class="bottom-stat-title">
-                            🏆 Ventas Este Mes
-                        </div>
+                        <div class="bottom-stat-title">🏆 Ventas Este Mes</div>
                         <div class="bottom-stat-value color-orange" id="metrics-ventas-month-val">—</div>
                         <div class="bottom-stat-subtext" id="metrics-ventas-month-sub">—</div>
                     </div>
                 </div>
-            </div>
 
             <!-- SECTION: Lead Registry (Spreadsheet view) -->
             <div class="dashboard-section" id="sec-leads">

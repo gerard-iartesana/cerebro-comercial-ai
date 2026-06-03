@@ -300,6 +300,15 @@ async function initializeDashboard() {
             if (propData) propuestasEnviadas = propData;
         } catch(e) {}
 
+        // Fetch presupuestos
+        try {
+            const { data: presData } = await _supabase.from('presupuestos').select('*').order('orden', { ascending: true });
+            if (presData) presupuestos = presData;
+        } catch(e) {
+            const cached = localStorage.getItem('gf_presupuestos');
+            if (cached) presupuestos = JSON.parse(cached);
+        }
+
         // Count metrics
         const total = leadsList.length;
         const nuevos = leadsList.filter(l => l.status === 'lead' || l.status === 'new').length;
@@ -321,29 +330,24 @@ async function initializeDashboard() {
         // Contratos: count of signed/accepted proposals
         const contratos = propuestasEnviadas.filter(p => p.estado === 'aceptada').length;
 
-        // Pruebas: simulated/dynamic test counts
+        // Pruebas: dynamic test counts
         const pruebasL = leadsList.filter(l => l.email && (l.email.includes('iartesana.es') || l.email.includes('test') || l.email.includes('prueba'))).length;
         let pruebasP = 0;
         try {
-            pruebasP = presupuestos.filter(p => p.es_prueba).length;
+            // Count templates/budgets that are marked as test
+            const testPresupuestosCount = presupuestos.filter(p => p.es_prueba).length;
+            // Also count proposals sent that are tests (lead_email has iartesana.es/test/prueba)
+            const testSentProposalsCount = propuestasEnviadas.filter(p => p.lead_email && (p.lead_email.includes('iartesana.es') || p.lead_email.includes('test') || p.lead_email.includes('prueba'))).length;
+            pruebasP = testPresupuestosCount + testSentProposalsCount;
         } catch(e) {}
-        const pruebasC = 7; 
-
-        // Apply fallbacks matching the user's photo if database is empty/zero
-        const dispTotal = total || 176;
-        const dispNuevos = nuevos || 110;
-        const dispEnviados = enviados || 54;
-        const dispReuniones = reuniones || 4;
-        const dispClientes = clientes || 1;
-        const dispSeguimiento = seguimiento || 0;
-        const dispPerdidos = perdidos || 4;
-        const dispPropuestas = propuestas || 5;
-        const dispContratos = contratos || 0;
         
-        const dispPruebasL = pruebasL || 10;
-        const dispPruebasP = pruebasP || 16;
-        const dispPruebasC = pruebasC || 7;
-        const dispPruebas = (dispPruebasL + dispPruebasP + dispPruebasC) || 33;
+        let pruebasC = 0;
+        try {
+            // Count accepted proposals from test emails
+            pruebasC = propuestasEnviadas.filter(p => p.estado === 'aceptada' && p.lead_email && (p.lead_email.includes('iartesana.es') || p.lead_email.includes('test') || p.lead_email.includes('prueba'))).length;
+        } catch(e) {}
+
+        const totalPruebas = pruebasL + pruebasP + pruebasC;
 
         // Helper function to safely set DOM text content
         const setVal = (id, val) => {
@@ -351,19 +355,19 @@ async function initializeDashboard() {
             if (el) el.textContent = val;
         };
 
-        setVal('metrics-total', dispTotal);
-        setVal('metrics-new', dispNuevos);
-        setVal('metrics-sent', dispEnviados);
-        setVal('metrics-booked', dispReuniones);
-        setVal('metrics-clients', dispClientes);
-        setVal('metrics-followup', dispSeguimiento);
-        setVal('metrics-lost', dispPerdidos);
-        setVal('metrics-proposals', dispPropuestas);
-        setVal('metrics-contracts', dispContratos);
-        setVal('metrics-pruebas', dispPruebas);
-        setVal('metrics-pruebas-l', dispPruebasL);
-        setVal('metrics-pruebas-p', dispPruebasP);
-        setVal('metrics-pruebas-c', dispPruebasC);
+        setVal('metrics-total', total);
+        setVal('metrics-new', nuevos);
+        setVal('metrics-sent', enviados);
+        setVal('metrics-booked', reuniones);
+        setVal('metrics-clients', clientes);
+        setVal('metrics-followup', seguimiento);
+        setVal('metrics-lost', perdidos);
+        setVal('metrics-proposals', propuestas);
+        setVal('metrics-contracts', contratos);
+        setVal('metrics-pruebas', totalPruebas);
+        setVal('metrics-pruebas-l', pruebasL);
+        setVal('metrics-pruebas-p', pruebasP);
+        setVal('metrics-pruebas-c', pruebasC);
 
         // Helper to format currency: 31.278€
         const formatEuro = (val) => {
@@ -399,33 +403,20 @@ async function initializeDashboard() {
         const ventasMonthVal = ventasMonthList.reduce((sum, p) => sum + parseFloat(p.precio_final || p.precio_mensual_final || 0), 0);
         const ventasMonthCount = ventasMonthList.length;
 
-        // Fallbacks from user's photo
-        const dispPropAccumVal = propAccumVal || 31278;
-        const dispPropAccumCount = propAccumCount || 5;
-
-        const dispPropMonthVal = propMonthVal || 0;
-        const dispPropMonthCount = propMonthCount || 0;
-
-        const dispVentasAccumVal = ventasAccumVal || 10187;
-        const dispVentasAccumCount = ventasAccumCount || 1;
-
-        const dispVentasMonthVal = ventasMonthVal || 0;
-        const dispVentasMonthCount = ventasMonthCount || 0;
-
         // Update DOM elements for financials
-        setVal('metrics-prop-accum-val', formatEuro(dispPropAccumVal));
-        setVal('metrics-prop-accum-sub', `${dispPropAccumCount} propuestas`);
+        setVal('metrics-prop-accum-val', formatEuro(propAccumVal));
+        setVal('metrics-prop-accum-sub', `${propAccumCount} propuestas`);
 
-        setVal('metrics-prop-month-val', formatEuro(dispPropMonthVal));
-        setVal('metrics-prop-month-sub', `${dispPropMonthCount} propuestas`);
+        setVal('metrics-prop-month-val', formatEuro(propMonthVal));
+        setVal('metrics-prop-month-sub', `${propMonthCount} propuestas`);
 
-        setVal('metrics-ventas-accum-val', formatEuro(dispVentasAccumVal));
-        setVal('metrics-ventas-accum-sub', `${dispVentasAccumCount} aceptadas`);
+        setVal('metrics-ventas-accum-val', formatEuro(ventasAccumVal));
+        setVal('metrics-ventas-accum-sub', `${ventasAccumCount} aceptadas`);
 
-        setVal('metrics-ventas-month-val', formatEuro(dispVentasMonthVal));
-        setVal('metrics-ventas-month-sub', `${dispVentasMonthCount} aceptadas`);
+        setVal('metrics-ventas-month-val', formatEuro(ventasMonthVal));
+        setVal('metrics-ventas-month-sub', `${ventasMonthCount} aceptadas`);
 
-        logToSystemSupport(`Dashboard cargado con nuevos KPIs. Real: ${total} leads. Simulado/Calculado: ${dispTotal} total leads, ${dispPropAccumVal}€ prop. acumulado.`);
+        logToSystemSupport(`Dashboard cargado con nuevos KPIs. Real: ${total} leads. Propuestas: ${propuestas}. Ventas acumuladas: ${formatEuro(ventasAccumVal)}.`);
 
         // Fetch and display Hunter.io API credits
         try {
