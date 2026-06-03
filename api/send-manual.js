@@ -21,7 +21,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email, subject, body, isTest } = req.body || {};
+  const { email, subject, body, isTest, attachments } = req.body || {};
 
   if (!email || !subject || !body) {
     return res.status(400).json({ error: 'Falta email, asunto o cuerpo' });
@@ -51,20 +51,31 @@ module.exports = async function handler(req, res) {
       </div>
     `;
 
-    // 2. Send email via Resend
+    // 2. Build Resend payload
+    const resendPayload = {
+      from: `${remitenteNombre} <${remitenteEmail}>`,
+      to: [email],
+      reply_to: replyTo,
+      subject: subject,
+      html: htmlEmail
+    };
+
+    // Add attachments if provided
+    if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+      resendPayload.attachments = attachments.map(att => ({
+        filename: att.filename,
+        content: att.content  // base64 string
+      }));
+    }
+
+    // 3. Send email via Resend
     const emailRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_KEY}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        from: `${remitenteNombre} <${remitenteEmail}>`,
-        to: [email],
-        reply_to: replyTo,
-        subject: subject,
-        html: htmlEmail
-      })
+      body: JSON.stringify(resendPayload)
     });
 
     if (!emailRes.ok) {

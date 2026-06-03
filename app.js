@@ -78,8 +78,12 @@ window.executeComposeAI = function() {
 
     // Get recipient name from select for personalization
     var select = document.getElementById('compose-email-to');
-    var recipientText = select ? select.options[select.selectedIndex].textContent : '';
-    var recipientName = recipientText.split('(')[0].split('—')[0].trim() || '';
+    var selectVal = select ? select.value : '';
+    var recipientName = '';
+    if (selectVal && selectVal !== '__custom__') {
+        var recipientText = select.options[select.selectedIndex].textContent || '';
+        recipientName = recipientText.split('(')[0].split('—')[0].trim();
+    }
 
     var prompt = 'Genera el contenido HTML de un email comercial. Instrucción: ' + instruction + '.\n\n' +
         'REGLAS ESTRICTAS:\n' +
@@ -2826,13 +2830,31 @@ async function sendManualEmail() {
     sendBtn.innerHTML = '⏳ Enviando...';
     
     try {
+        // Convert attachments to base64
+        const attachments = [];
+        if (window._composeAttachments && window._composeAttachments.length > 0) {
+            for (const file of window._composeAttachments) {
+                const base64 = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result.split(',')[1]);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+                attachments.push({
+                    filename: file.name,
+                    content: base64
+                });
+            }
+        }
+
         const res = await fetch('/api/send-manual', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 email: emailTo,
                 subject: subject,
-                body: body
+                body: body,
+                attachments: attachments.length > 0 ? attachments : undefined
             })
         });
         
