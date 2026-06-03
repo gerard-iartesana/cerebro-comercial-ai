@@ -41,11 +41,13 @@ module.exports = async function handler(req, res) {
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #333333; max-width: 600px; margin: 0 auto; padding: 20px;">
         ${htmlBody}
         <br><br>
-        <hr style="border: 0; border-top: 1px solid #eeeeee; margin: 24px 0;">
-        <p style="font-size: 12px; color: #888888; text-align: center; line-height: 1.4;">
-          Enviado por ${remitenteNombre} · Consultoría de IA y Automatización B2B<br>
-          ${config?.direccion_fisica || 'Avda Fort de Leau 131, Mahón'}
-        </p>
+        <div style="border-top: 1px solid #e0e0e0; padding-top: 16px; margin-top: 16px; font-size: 14px; color: #555555; line-height: 1.5;">
+          <strong style="color: #1d1d1f; font-size: 15px;">Gerard Fanals</strong><br>
+          629 49 41 67<br>
+          CEO &amp; Senior IA Architect and Automation<br>
+          IA de Barrio | <a href="https://iadebarrio.com" style="color: #0071e3; text-decoration: none;">iadebarrio.com</a> / <a href="https://gerardfanals.online" style="color: #0071e3; text-decoration: none;">gerardfanals.online</a><br>
+          <a href="mailto:gerard@iartesana.es" style="color: #0071e3; text-decoration: none;">gerard@iartesana.es</a>
+        </div>
       </div>
     `;
 
