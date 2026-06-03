@@ -56,6 +56,50 @@
         </div>
     </div>
 
+    <!-- Email Preview Modal -->
+    <div class="macos-modal-overlay" id="email-preview-modal">
+        <div class="email-preview-box">
+            <div class="email-preview-topbar">
+                <span class="email-preview-badge" id="preview-email-version">Versión A · Cadena 1 · Paso 1</span>
+                <button class="email-preview-close" onclick="closeEmailPreview()">✕</button>
+            </div>
+            <div class="email-preview-header">
+                <div class="email-preview-from">
+                    <div class="email-preview-avatar">GF</div>
+                    <div>
+                        <div style="font-weight:700;font-size:0.88rem;color:var(--text-main)">Gerard Fanals</div>
+                        <div style="font-size:0.75rem;color:var(--text-grey)">gerard@gerardfanals.online</div>
+                    </div>
+                </div>
+                <div class="email-preview-subject" id="preview-email-subject">—</div>
+            </div>
+            <div class="email-preview-content" id="preview-email-body">
+                <!-- Rendered email body -->
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Generate Dialog -->
+    <div class="macos-modal-overlay" id="ai-generate-modal">
+        <div class="ai-generate-box">
+            <div class="ai-generate-topbar">
+                <span style="font-size:1.1rem">✨</span>
+                <span style="font-weight:700;font-size:0.95rem;color:var(--text-main)">Generar con IA</span>
+                <button class="email-preview-close" onclick="closeAIGenerateDialog()">✕</button>
+            </div>
+            <div class="ai-generate-body">
+                <label style="font-size:0.78rem;font-weight:600;color:var(--text-grey);margin-bottom:6px;display:block">¿Qué quieres que la IA haga con este email?</label>
+                <textarea id="ai-generate-instructions" class="ai-generate-textarea" rows="3" placeholder="Ej: Hazlo más directo y enfocado en el ahorro de tiempo. Añade un dato estadístico sobre productividad..."></textarea>
+                <div style="display:flex;justify-content:flex-end;margin-top:10px">
+                    <button class="btn-primary" id="ai-generate-btn" style="padding:8px 20px;font-size:0.82rem;border-radius:10px;font-weight:700" onclick="executeAIGenerate()">✨ Generar</button>
+                </div>
+                <div id="ai-generate-result" style="display:none;margin-top:16px;padding:16px;background:rgba(255,255,255,0.02);border:1px solid var(--border-color);border-radius:12px">
+                    <!-- AI result rendered here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Email Rich Editor Link/Image Prompt Modal -->
     <div class="macos-modal-overlay" id="email-prompt-modal" style="display: none;">
         <div class="macos-modal-box" style="max-width: 400px; text-align: left;">

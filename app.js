@@ -1678,9 +1678,9 @@ function renderOutreachChains() {
             </div>
             <div class="nl-chain-body" style="display: ${isOpen ? 'block' : 'none'}; padding:16px;">
                 <div class="nl-version-tabs" style="display:flex; gap:6px; margin-bottom:16px;">
-                    <button class="nl-version-tab ${activeVersion === 'A' ? 'active' : ''}" onclick="window.switchOutreachVersion(${chain.num}, 'A')">Versión A (Conocidos)</button>
-                    <button class="nl-version-tab ${activeVersion === 'B' ? 'active' : ''}" onclick="window.switchOutreachVersion(${chain.num}, 'B')">Versión B (Desconocidos)</button>
-                    <button class="nl-version-tab ${activeVersion === 'C' ? 'active' : ''}" onclick="window.switchOutreachVersion(${chain.num}, 'C')">Versión C (Formularios)</button>
+                    <button class="nl-version-tab ${activeVersion === 'A' ? 'active' : ''}" data-version="A" onclick="window.switchOutreachVersion(${chain.num}, 'A')"><span class="nl-vtab-dot" style="background:#ff6b6b"></span> Versión A <span class="nl-vtab-label">Conocidos</span></button>
+                    <button class="nl-version-tab ${activeVersion === 'B' ? 'active' : ''}" data-version="B" onclick="window.switchOutreachVersion(${chain.num}, 'B')"><span class="nl-vtab-dot" style="background:#007aff"></span> Versión B <span class="nl-vtab-label">Desconocidos</span></button>
+                    <button class="nl-version-tab ${activeVersion === 'C' ? 'active' : ''}" data-version="C" onclick="window.switchOutreachVersion(${chain.num}, 'C')"><span class="nl-vtab-dot" style="background:#bf5af2"></span> Versión C <span class="nl-vtab-label">Formularios</span></button>
                 </div>
                 <div class="nl-steps" id="outreach-steps-${chain.num}">
                     <!-- Steps populated below -->
@@ -1702,7 +1702,8 @@ function renderOutreachChains() {
                     stepCard.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                             <span style="font-weight:700; font-size:0.92rem; color:var(--text-main)">Paso ${step.orden}: ${step.nombre}</span>
-                            <div style="display:flex; gap:8px;">
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                <button class="btn-outline-preview" onclick="window.previewOutreachEmail(${chain.num}, '${step.version}', ${step.orden})">👁 Vista previa</button>
                                 <button class="btn-secondary" style="padding:4px 8px; font-size:0.75rem; border-radius:6px;" onclick="window.sendTestEmail(${chain.num}, '${step.version}', ${step.orden}, 'outreach')">📧 Probar</button>
                                 <button class="btn-primary" style="padding:4px 8px; font-size:0.75rem; border-radius:6px;" onclick="window.saveOutreachTemplate(${chain.num}, '${step.version}', ${step.orden})">💾 Guardar</button>
                             </div>
@@ -1720,7 +1721,7 @@ function renderOutreachChains() {
                                     <button type="button" class="nl-toolbar-btn" style="padding:2px 6px; font-size:0.75rem; border-radius:4px; background:transparent; border:none; color:var(--text-main); cursor:pointer;" onclick="window.insertAtTemplateCursor(${chain.num}, '${step.version}', ${step.orden}, '{{first_name}}', '')">nombre</button>
                                     <button type="button" class="nl-toolbar-btn" style="padding:2px 6px; font-size:0.75rem; border-radius:4px; background:transparent; border:none; color:var(--text-main); cursor:pointer;" onclick="window.insertAtTemplateCursor(${chain.num}, '${step.version}', ${step.orden}, '{{company_name}}', '')">empresa</button>
                                     <button type="button" class="nl-toolbar-btn" style="padding:2px 6px; font-size:0.75rem; border-radius:4px; background:transparent; border:none; color:var(--text-main); cursor:pointer;" onclick="window.insertAtTemplateCursor(${chain.num}, '${step.version}', ${step.orden}, '{{booking_url}}', '')">calendario</button>
-                                    <button type="button" class="btn-secondary" style="margin-left:auto; padding:2px 8px; font-size:0.7rem; border-radius:6px;" onclick="window.generateAIOutreachVariant(${chain.num}, '${step.version}', ${step.orden})">✨ Generar con IA</button>
+                                    <button type="button" class="btn-ai-generate" onclick="window.openAIGenerateDialog(${chain.num}, '${step.version}', ${step.orden})">✨ Generar con IA</button>
                                 </div>
                                 <textarea class="nl-editor-textarea" id="outreach-body-${chain.num}-${step.version}-${step.orden}" rows="8" style="width:100%; font-family:monospace; font-size:0.82rem; padding:8px 10px; border-radius:8px; background:var(--bg-card); border:1px solid var(--border-color); color:var(--text-main); line-height:1.4">${step.contenido_html || ''}</textarea>
                             </div>
@@ -2448,21 +2449,109 @@ async function sendProposalTestEmail(secuenciaId, categoryKey, stepNum) {
     }
 }
 
-async function generateAIOutreachVariant(cadenaNum, version, stepNum) {
+// --- Email Preview Modal ---
+function previewOutreachEmail(cadenaNum, version, stepNum) {
+    const subjectEl = document.getElementById(`outreach-subject-${cadenaNum}-${version}-${stepNum}`);
+    const bodyEl = document.getElementById(`outreach-body-${cadenaNum}-${version}-${stepNum}`);
+    if (!subjectEl || !bodyEl) return;
+
+    const vars = {
+        '{{first_name}}': 'Carlos',
+        '{{company_name}}': 'Empresa Demo S.L.',
+        '{{booking_url}}': '<a href="https://calendar.app.google/QMiJY3UbKChYgEcu6" style="color:#007aff;text-decoration:none;font-weight:600">📅 Reservar reunión aquí</a>'
+    };
+    let subject = subjectEl.value;
+    let body = bodyEl.value;
+    for (const [k, v] of Object.entries(vars)) {
+        const re = new RegExp(k.replace(/[{}]/g, '\\$&'), 'g');
+        subject = subject.replace(re, v);
+        body = body.replace(re, v);
+    }
+    // Convert line breaks
+    body = body.replace(/\n/g, '<br>');
+
+    const modal = document.getElementById('email-preview-modal');
+    document.getElementById('preview-email-subject').textContent = subject;
+    document.getElementById('preview-email-body').innerHTML = `
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.65;color:#333;max-width:560px;margin:0 auto;padding:24px">
+            ${body}
+            <br><br>
+            <hr style="border:0;border-top:1px solid #eee;margin:20px 0">
+            <p style="font-size:11px;color:#999;text-align:center;line-height:1.4">
+                Enviado por Gerard Fanals · Consultoría de IA y Automatización B2B<br>
+                Si no deseas recibir más correos, puedes <a href="#" style="color:#007aff;text-decoration:none">darte de baja aquí</a>.<br>
+                Avda Fort de Leau 131, Mahón
+            </p>
+        </div>
+    `;
+    document.getElementById('preview-email-version').textContent = `Versión ${version} · Cadena ${cadenaNum} · Paso ${stepNum}`;
+    modal.classList.add('active');
+}
+
+function closeEmailPreview() {
+    document.getElementById('email-preview-modal').classList.remove('active');
+}
+
+// --- AI Generate Dialog ---
+let _aiDialogTarget = null;
+
+function openAIGenerateDialog(cadenaNum, version, stepNum) {
     if (sessionStorage.getItem('cc_role') === 'guest') {
         showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
         return;
     }
+    _aiDialogTarget = { cadenaNum, version, stepNum };
+    const modal = document.getElementById('ai-generate-modal');
+    const input = document.getElementById('ai-generate-instructions');
+    const resultDiv = document.getElementById('ai-generate-result');
+    input.value = '';
+    resultDiv.style.display = 'none';
+    resultDiv.innerHTML = '';
+    document.getElementById('ai-generate-btn').disabled = false;
+    document.getElementById('ai-generate-btn').textContent = '✨ Generar';
+    modal.classList.add('active');
+    setTimeout(() => input.focus(), 150);
+}
+
+function closeAIGenerateDialog() {
+    document.getElementById('ai-generate-modal').classList.remove('active');
+    _aiDialogTarget = null;
+}
+
+async function executeAIGenerate() {
+    if (!_aiDialogTarget) return;
+    const { cadenaNum, version, stepNum } = _aiDialogTarget;
+    const instructions = document.getElementById('ai-generate-instructions').value.trim();
+    if (!instructions) {
+        showToast('Escribe instrucciones para la IA', true);
+        return;
+    }
+
     const subjectEl = document.getElementById(`outreach-subject-${cadenaNum}-${version}-${stepNum}`);
     const bodyEl = document.getElementById(`outreach-body-${cadenaNum}-${version}-${stepNum}`);
-    const subject = subjectEl.value.trim();
-    const body = bodyEl.value.trim();
-    
-    showToast('Generando variante persuasiva con IA...');
-    const promptMsg = `Escribe una variante alternativa persuasiva y directa en español para este correo de prospección comercial. Mantén los mismos marcadores o variables como {{first_name}}, {{company_name}} y {{booking_url}} exactamente igual.
-Asunto original: "${subject}"
-Cuerpo original: "${body}"
-Devuelve tu respuesta únicamente en formato JSON con dos campos de texto planos: "subject" y "body" (que contenga el cuerpo con saltos de línea codificados como <br>). No añadas bloques de código markdown, explicaciones ni comentarios.`;
+    const currentSubject = subjectEl ? subjectEl.value.trim() : '';
+    const currentBody = bodyEl ? bodyEl.value.trim() : '';
+
+    const btn = document.getElementById('ai-generate-btn');
+    const resultDiv = document.getElementById('ai-generate-result');
+    btn.disabled = true;
+    btn.textContent = '⏳ Generando...';
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-grey)">Generando con IA...</div>';
+
+    const promptMsg = `Eres un experto en copywriting B2B en español. El usuario te da las siguientes instrucciones para crear o modificar un email de prospección comercial:
+
+Instrucciones del usuario: "${instructions}"
+
+Asunto actual: "${currentSubject}"
+Cuerpo actual: "${currentBody}"
+
+Reglas:
+- Mantén los marcadores {{first_name}}, {{company_name}} y {{booking_url}} exactamente igual.
+- Escribe en español natural, persuasivo y directo.
+- El asunto debe ser en minúsculas, corto y sin emojis.
+- El cuerpo debe ser conciso (máximo 150 palabras) y terminar con "Un abrazo,\nGerard".
+- Devuelve ÚNICAMENTE un JSON con dos campos: "subject" y "body" (con saltos de línea como <br>). Sin markdown, sin explicaciones.`;
 
     try {
         const res = await fetch('/api/brain-chat', {
@@ -2472,23 +2561,56 @@ Devuelve tu respuesta únicamente en formato JSON con dos campos de texto planos
         });
         const data = await res.json();
         if (res.ok && data.text) {
-            let text = data.text;
-            text = text.replace(/```json/i, '').replace(/```/g, '').trim();
+            let text = data.text.replace(/```json/i, '').replace(/```/g, '').trim();
             const parsed = JSON.parse(text);
             if (parsed.subject && parsed.body) {
-                subjectEl.value = parsed.subject;
-                bodyEl.value = parsed.body.replace(/<br\s*\/?>/gi, '\n');
-                showToast('Variante generada con éxito');
+                const previewBody = parsed.body.replace(/<br\s*\/?>/gi, '\n');
+                resultDiv.innerHTML = `
+                    <div style="margin-bottom:8px">
+                        <label style="font-size:0.72rem;color:var(--text-grey);font-weight:600">Asunto generado:</label>
+                        <div style="font-weight:700;font-size:0.88rem;color:var(--text-main);margin-top:2px">${parsed.subject}</div>
+                    </div>
+                    <div style="margin-bottom:12px">
+                        <label style="font-size:0.72rem;color:var(--text-grey);font-weight:600">Cuerpo generado:</label>
+                        <div style="font-size:0.82rem;color:var(--text-main);margin-top:4px;line-height:1.5;white-space:pre-wrap;max-height:200px;overflow-y:auto">${previewBody}</div>
+                    </div>
+                    <div style="display:flex;gap:8px;justify-content:flex-end">
+                        <button class="btn-secondary" style="padding:6px 14px;font-size:0.78rem;border-radius:8px" onclick="window.executeAIGenerate()">🔄 Regenerar</button>
+                        <button class="btn-primary" style="padding:6px 14px;font-size:0.78rem;border-radius:8px" onclick="window.applyAIResult()">✅ Aplicar</button>
+                    </div>
+                `;
+                // Store result for applying
+                window._aiLastResult = parsed;
+                btn.textContent = '✨ Generar';
+                btn.disabled = false;
             } else {
-                throw new Error('Formato de respuesta incorrecto');
+                throw new Error('Formato incorrecto');
             }
         } else {
-            showToast('Error al generar variante con IA', true);
+            throw new Error('Error API');
         }
     } catch(e) {
-        console.error('Error in AI variant:', e);
-        showToast('Error de conexión o respuesta no válida', true);
+        console.error('AI generate error:', e);
+        resultDiv.innerHTML = '<div style="text-align:center;padding:12px;color:#ff3b30;font-size:0.82rem">Error al generar. Inténtalo de nuevo.</div>';
+        btn.textContent = '✨ Generar';
+        btn.disabled = false;
     }
+}
+
+function applyAIResult() {
+    if (!_aiDialogTarget || !window._aiLastResult) return;
+    const { cadenaNum, version, stepNum } = _aiDialogTarget;
+    const subjectEl = document.getElementById(`outreach-subject-${cadenaNum}-${version}-${stepNum}`);
+    const bodyEl = document.getElementById(`outreach-body-${cadenaNum}-${version}-${stepNum}`);
+    if (subjectEl) subjectEl.value = window._aiLastResult.subject;
+    if (bodyEl) bodyEl.value = window._aiLastResult.body.replace(/<br\s*\/?>/gi, '\n');
+    showToast('Contenido aplicado. Recuerda guardar 💾');
+    closeAIGenerateDialog();
+}
+
+// Keep old function name for backward compatibility
+async function generateAIOutreachVariant(cadenaNum, version, stepNum) {
+    openAIGenerateDialog(cadenaNum, version, stepNum);
 }
 
 async function generateAIProposalVariant(secuenciaId, categoryKey, stepNum) {
@@ -2642,6 +2764,12 @@ window.filterOutreachHistorial = filterOutreachHistorial;
 window.changeOutreachHistPage = changeOutreachHistPage;
 window.filterProposalHistorial = filterProposalHistorial;
 window.renderOutreachSendList = renderOutreachSendList;
+window.previewOutreachEmail = previewOutreachEmail;
+window.closeEmailPreview = closeEmailPreview;
+window.openAIGenerateDialog = openAIGenerateDialog;
+window.closeAIGenerateDialog = closeAIGenerateDialog;
+window.executeAIGenerate = executeAIGenerate;
+window.applyAIResult = applyAIResult;
 
 // =============================================
 // 10. CUSTOM CALENDAR GRID
