@@ -2787,13 +2787,13 @@ async function sendManualEmail() {
     const body = document.getElementById('compose-email-body').value.trim();
     
     if (!emailTo || !subject || !body) {
-        showToast('Por favor, rellena todos los campos del correo', true);
+        showAlert('Campos incompletos', 'Por favor, rellena todos los campos del correo (destinatario, asunto y mensaje).', '⚠️');
         return;
     }
     
     // Basic email validation
     if (!emailTo.includes('@') || !emailTo.includes('.')) {
-        showToast('El email introducido no es válido', true);
+        showAlert('Email no válido', 'El email introducido no tiene un formato correcto.', '❌');
         return;
     }
     
@@ -2815,15 +2815,15 @@ async function sendManualEmail() {
         
         const data = await res.json();
         if (res.ok && data.success) {
-            showToast('✅ Email enviado a ' + emailTo);
             closeComposeEmailModal();
+            showAlert('Correo enviado', 'El email se ha enviado correctamente a ' + emailTo, '✅');
             if (typeof loadBandejaInbox === 'function') await loadBandejaInbox();
         } else {
-            showToast(data.error || 'Error al enviar email', true);
+            showAlert('Error de envío', data.error || 'No se pudo enviar el correo. Verifica la configuración de Resend.', '❌');
         }
     } catch(e) {
         console.error('Error sending manual email:', e);
-        showToast('Error de conexión', true);
+        showAlert('Error de conexión', 'No se pudo conectar con el servidor de envío.', '🔌');
     } finally {
         sendBtn.disabled = false;
         sendBtn.innerHTML = originalHTML;
