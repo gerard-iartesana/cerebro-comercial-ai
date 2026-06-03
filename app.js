@@ -731,6 +731,51 @@ window.sendFormToLead = function(formId, email, name) {
     showToast(`Formulario "${formNames[formId]}" preparado para ${name || email}`);
 };
 
+// Compose email for a lead - opens the Resend compose modal
+window.openComposeForLead = function(email) {
+    try {
+        if (sessionStorage.getItem('cc_role') === 'guest') {
+            showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+            return;
+        }
+        const modal = document.getElementById('email-compose-modal');
+        const select = document.getElementById('compose-email-to');
+        const subjectEl = document.getElementById('compose-email-subject');
+        const bodyEl = document.getElementById('compose-email-body');
+
+        if (!modal) { alert('Error: No se encontró el modal de email'); return; }
+        if (!select) { alert('Error: No se encontró el selector de destinatario'); return; }
+
+        select.innerHTML = '';
+
+        // Add target email as first option
+        const mainOpt = document.createElement('option');
+        mainOpt.value = email;
+        mainOpt.textContent = email;
+        mainOpt.selected = true;
+        select.appendChild(mainOpt);
+
+        // Add other leads from available sources
+        const seen = new Set([email]);
+        const sources = [...(typeof _allLeadsGridData !== 'undefined' && _allLeadsGridData ? _allLeadsGridData : []), ...(typeof outreachLeadsList !== 'undefined' && outreachLeadsList ? outreachLeadsList : [])];
+        sources.forEach(l => {
+            if (!l.email || seen.has(l.email)) return;
+            seen.add(l.email);
+            const opt = document.createElement('option');
+            opt.value = l.email;
+            opt.textContent = `${l.first_name || 'Prospecto'} (${l.company_name || '—'}) — ${l.email}`;
+            select.appendChild(opt);
+        });
+
+        if (subjectEl) subjectEl.value = '';
+        if (bodyEl) bodyEl.value = '';
+        modal.style.display = 'flex';
+    } catch(err) {
+        alert('Error al abrir email: ' + err.message);
+        console.error('openComposeForLead error:', err);
+    }
+};
+
 async function updateLeadField(id, field, value) {
     try {
         const { error } = await _supabase
@@ -2595,49 +2640,7 @@ function renderOutreachSendList() {
     });
 }
 
-window.openComposeForLead = function(email) {
-    try {
-        if (sessionStorage.getItem('cc_role') === 'guest') {
-            showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
-            return;
-        }
-        const modal = document.getElementById('email-compose-modal');
-        const select = document.getElementById('compose-email-to');
-        const subjectEl = document.getElementById('compose-email-subject');
-        const bodyEl = document.getElementById('compose-email-body');
-
-        if (!modal) { alert('Error: No se encontró el modal email-compose-modal'); return; }
-        if (!select) { alert('Error: No se encontró el select compose-email-to'); return; }
-
-        select.innerHTML = '';
-
-        // Add target email as first option
-        const mainOpt = document.createElement('option');
-        mainOpt.value = email;
-        mainOpt.textContent = email;
-        mainOpt.selected = true;
-        select.appendChild(mainOpt);
-
-        // Add other leads
-        const seen = new Set([email]);
-        const sources = [...(typeof _allLeadsGridData !== 'undefined' ? _allLeadsGridData : []), ...(typeof outreachLeadsList !== 'undefined' ? outreachLeadsList : [])];
-        sources.forEach(l => {
-            if (!l.email || seen.has(l.email)) return;
-            seen.add(l.email);
-            const opt = document.createElement('option');
-            opt.value = l.email;
-            opt.textContent = `${l.first_name || 'Prospecto'} (${l.company_name || '—'}) — ${l.email}`;
-            select.appendChild(opt);
-        });
-
-        if (subjectEl) subjectEl.value = '';
-        if (bodyEl) bodyEl.value = '';
-        modal.style.display = 'flex';
-    } catch(err) {
-        alert('Error al abrir composición: ' + err.message);
-        console.error('openComposeForLead error:', err);
-    }
-};
+// openComposeForLead is defined earlier in the file (near lead utility functions)
 
 window.startOutreachSequence = async function(leadId) {
     if (sessionStorage.getItem('cc_role') === 'guest') {
