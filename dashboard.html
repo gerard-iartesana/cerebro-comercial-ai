@@ -495,7 +495,13 @@
             <div class="dashboard-section" id="sec-leads">
                 <div class="section-header">
                     <h1>Registro de Leads</h1>
+                    <span class="leads-counter" id="leads-total-count" style="font-size:0.82rem;color:var(--text-grey);font-weight:700;">0 leads</span>
                     <button class="btn-primary" onclick="loadLeadsGrid()">🔄 Recargar</button>
+                </div>
+
+                <!-- Search bar -->
+                <div class="leads-search-bar" style="margin-bottom:14px;">
+                    <input type="text" class="envio-search" id="leads-grid-search" placeholder="🔍 Buscar por nombre, email, empresa o móvil..." oninput="filterLeadsGrid()" />
                 </div>
 
                 <div class="table-wrapper">
@@ -504,8 +510,11 @@
                             <tr>
                                 <th>Nombre</th>
                                 <th>Email</th>
+                                <th>Móvil</th>
                                 <th>Empresa</th>
                                 <th>Cargo</th>
+                                <th>Tipo</th>
+                                <th>Estado Email</th>
                                 <th>Estado</th>
                                 <th>Acciones</th>
                             </tr>

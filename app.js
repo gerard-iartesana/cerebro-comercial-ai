@@ -472,6 +472,8 @@ async function initializeDashboard() {
 }
 
 // 6. Spreadsheet Module
+let _allLeadsGridData = [];
+
 async function loadLeadsGrid() {
     try {
         const { data: leads, error } = await _supabase
@@ -480,33 +482,96 @@ async function loadLeadsGrid() {
             .order('created_at', { ascending: false });
 
         if (error) throw error;
+        _allLeadsGridData = leads || [];
 
-        const tbody = document.getElementById('leads-table-body');
-        tbody.innerHTML = '';
+        // Update counter
+        const counter = document.getElementById('leads-total-count');
+        if (counter) counter.textContent = `${_allLeadsGridData.length} leads`;
 
-        leads.forEach(lead => {
-            const cargo = (lead.scraped_data && lead.scraped_data.position) || '';
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td class="editable-cell" contenteditable="true" onblur="updateLeadField('${lead.id}', 'first_name', this.textContent)">${lead.first_name || ''}</td>
-                <td class="lead-email-cell">${lead.email}</td>
-                <td class="editable-cell" contenteditable="true" onblur="updateLeadField('${lead.id}', 'company_name', this.textContent)">${lead.company_name || ''}</td>
-                <td class="lead-cargo-cell">${cargo}</td>
-                <td><span class="badge-status status-${lead.status}">${lead.status}</span></td>
-                <td class="lead-actions-cell">
-                    <button class="lead-action-btn btn-edit" data-tooltip="Editar" onclick="editLeadModal('${lead.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
-                    <button class="lead-action-btn btn-delete action-delete" data-tooltip="Borrar" onclick="deleteLead('${lead.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
-                    <button class="lead-action-btn btn-email" data-tooltip="Enviar Email" onclick="quickEmailLead('${lead.email}', '${lead.first_name || ''}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></button>
-                    <button class="lead-action-btn btn-whatsapp" data-tooltip="WhatsApp" onclick="openWhatsApp('${lead.email}', '${lead.first_name || ''}', '${lead.company_name || ''}')"><svg viewBox="0 0 24 24" fill="currentColor" class="svg-icon"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.454 5.709 1.455h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></button>
-                    <button class="lead-action-btn btn-signup" data-tooltip="Formulario de alta" onclick="sendSignupForm('${lead.email}', '${lead.first_name || ''}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg></button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
+        renderLeadsGridRows(_allLeadsGridData);
     } catch (e) {
         console.error('Error in loadLeadsGrid:', e);
         showAlert('Error', `No se pudieron cargar los leads: ${e.message || JSON.stringify(e)}`);
     }
+}
+
+function filterLeadsGrid() {
+    const q = (document.getElementById('leads-grid-search')?.value || '').toLowerCase();
+    if (!q) {
+        renderLeadsGridRows(_allLeadsGridData);
+        return;
+    }
+    const filtered = _allLeadsGridData.filter(l =>
+        (l.first_name || '').toLowerCase().includes(q) ||
+        (l.email || '').toLowerCase().includes(q) ||
+        (l.company_name || '').toLowerCase().includes(q) ||
+        (l.phone || '').toLowerCase().includes(q)
+    );
+    renderLeadsGridRows(filtered);
+}
+
+function renderLeadsGridRows(leads) {
+    const tbody = document.getElementById('leads-table-body');
+    tbody.innerHTML = '';
+
+    // Status maps
+    const activeStatuses = [
+        'welcome_1','welcome_2','welcome_3','welcome_4','welcome_5',
+        'followup_1','followup_2','followup_3','followup_4',
+        'nurture_1','nurture_2','nurture_3','nurture_4','nurture_5','nurture_6',
+        'nurture_7','nurture_8','nurture_9','nurture_10','nurture_11','nurture_monthly'
+    ];
+
+    leads.forEach(lead => {
+        const cargo = (lead.scraped_data && lead.scraped_data.position) || '';
+        const phone = lead.phone || '';
+        const version = lead.version || 'A';
+        const step = lead.sequence_step || 0;
+        const status = lead.status || 'lead';
+
+        // Lead type from version
+        const typeMap = { A: { label: 'Conocido', cls: 'lead-type-conocido' }, B: { label: 'Desconocido', cls: 'lead-type-desconocido' }, C: { label: 'Formulario', cls: 'lead-type-formulario' } };
+        const typeInfo = typeMap[version] || typeMap.A;
+
+        // Email status
+        let emailStatusHtml;
+        const isActive = activeStatuses.includes(status);
+        if (status === 'enriched' || status === 'lead') {
+            emailStatusHtml = '<span class="email-step-badge email-step-pending">Sin iniciar</span>';
+        } else if (status === 'reunion') {
+            emailStatusHtml = '<span class="email-step-badge email-step-meeting">📅 Reunión</span>';
+        } else if (status === 'unsubscribed') {
+            emailStatusHtml = '<span class="email-step-badge email-step-unsub">🚫 Baja</span>';
+        } else if (isActive) {
+            let chainName, chainColor, stepInChain;
+            if (step < 5) { chainName = 'C1'; chainColor = '#ff9500'; stepInChain = step + 1; }
+            else if (step < 9) { chainName = 'C2'; chainColor = '#34c759'; stepInChain = step - 4; }
+            else { chainName = 'C3'; chainColor = '#007aff'; stepInChain = step - 8; }
+            emailStatusHtml = `<span class="email-step-badge" style="background:${chainColor}18;color:${chainColor};border:1px solid ${chainColor}40">${chainName} · Paso ${stepInChain}</span>`;
+        } else {
+            emailStatusHtml = '<span class="email-step-badge email-step-done">✅ Completado</span>';
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="editable-cell" contenteditable="true" onblur="updateLeadField('${lead.id}', 'first_name', this.textContent)">${lead.first_name || ''}</td>
+            <td class="lead-email-cell">${lead.email}</td>
+            <td class="editable-cell" contenteditable="true" onblur="updateLeadField('${lead.id}', 'phone', this.textContent)">${phone}</td>
+            <td class="editable-cell" contenteditable="true" onblur="updateLeadField('${lead.id}', 'company_name', this.textContent)">${lead.company_name || ''}</td>
+            <td class="lead-cargo-cell">${cargo}</td>
+            <td><span class="lead-type-badge ${typeInfo.cls}">${typeInfo.label}</span></td>
+            <td>${emailStatusHtml}</td>
+            <td><span class="badge-status status-${lead.status}">${lead.status}</span></td>
+            <td class="lead-actions-cell">
+                <button class="lead-action-btn btn-edit" data-tooltip="Editar" onclick="editLeadModal('${lead.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                <button class="lead-action-btn btn-delete action-delete" data-tooltip="Borrar" onclick="deleteLead('${lead.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
+                <button class="lead-action-btn btn-email" data-tooltip="Enviar Email" onclick="quickEmailLead('${lead.email}', '${lead.first_name || ''}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></button>
+                <button class="lead-action-btn btn-whatsapp" data-tooltip="WhatsApp" onclick="openWhatsApp('${lead.email}', '${lead.first_name || ''}', '${lead.company_name || ''}')"><svg viewBox="0 0 24 24" fill="currentColor" class="svg-icon"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.454 5.709 1.455h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></button>
+                <button class="lead-action-btn btn-signup" data-tooltip="Formulario de alta" onclick="sendSignupForm('${lead.email}', '${lead.first_name || ''}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg></button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
 async function updateLeadField(id, field, value) {
@@ -2299,6 +2364,12 @@ function renderOutreachSendList() {
         const versionColors = { A: '#ff6b6b', B: '#007aff', C: '#bf5af2' };
         const vColor = versionColors[version] || '#999';
 
+        // Lead type
+        const typeLabels = { A: 'Conocido', B: 'Desconocido', C: 'Formulario' };
+        const typeCls = { A: 'lead-type-conocido', B: 'lead-type-desconocido', C: 'lead-type-formulario' };
+        const leadTypeLabel = typeLabels[version] || 'Conocido';
+        const leadTypeCls = typeCls[version] || 'lead-type-conocido';
+
         // Last contacted
         const lastContact = lead.last_contacted_at
             ? new Date(lead.last_contacted_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
@@ -2340,6 +2411,8 @@ function renderOutreachSendList() {
                         <div class="envio-card-meta">
                             <span class="envio-version-dot" style="background:${vColor}"></span>
                             <span class="envio-meta-label">V.${version}</span>
+                            <span class="envio-meta-sep">·</span>
+                            <span class="lead-type-badge ${leadTypeCls}" style="font-size:0.65rem;padding:2px 7px;">${leadTypeLabel}</span>
                             <span class="envio-meta-sep">·</span>
                             <span class="envio-meta-label">Último: ${lastContact}</span>
                         </div>

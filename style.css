@@ -3849,6 +3849,61 @@ body.role-guest td button {
     border-radius: 10px;
 }
 
+/* --- Lead Type Badges --- */
+.lead-type-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    display: inline-block;
+}
+.lead-type-conocido {
+    background: rgba(255, 107, 107, 0.12);
+    color: #ff6b6b;
+    border: 1px solid rgba(255, 107, 107, 0.25);
+}
+.lead-type-desconocido {
+    background: rgba(0, 122, 255, 0.12);
+    color: #007aff;
+    border: 1px solid rgba(0, 122, 255, 0.25);
+}
+.lead-type-formulario {
+    background: rgba(191, 90, 242, 0.12);
+    color: #bf5af2;
+    border: 1px solid rgba(191, 90, 242, 0.25);
+}
+
+/* --- Email Step Badges (Registro table) --- */
+.email-step-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    display: inline-block;
+}
+.email-step-pending {
+    background: rgba(142, 142, 147, 0.1);
+    color: var(--text-grey);
+    border: 1px solid rgba(142, 142, 147, 0.2);
+}
+.email-step-meeting {
+    background: rgba(0, 122, 255, 0.12);
+    color: #007aff;
+    border: 1px solid rgba(0, 122, 255, 0.25);
+}
+.email-step-unsub {
+    background: rgba(255, 59, 48, 0.12);
+    color: #ff3b30;
+    border: 1px solid rgba(255, 59, 48, 0.25);
+}
+.email-step-done {
+    background: rgba(52, 199, 89, 0.1);
+    color: #34c759;
+    border: 1px solid rgba(52, 199, 89, 0.2);
+}
+
 /* --- Envío Tab --- */
 .envio-toolbar {
     display: flex;
