@@ -2480,6 +2480,43 @@
                         <div class="cfg-field"><label class="cfg-label">Teléfono Bizum</label><input class="cfg-input" value="+34 629 49 41 67" style="max-width:300px" /></div>
                     </div>
 
+                    <!-- Giro Bancario -->
+                    <div style="border:2px solid rgba(52,199,89,0.15);border-radius:16px;padding:20px;margin-bottom:16px;background:var(--bg-card)">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <span style="font-size:1.2rem">🔄</span>
+                                <div><strong style="font-size:0.9rem;color:var(--text-main)">Giro Bancario</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Domiciliación bancaria y giros periódicos</p></div>
+                            </div>
+                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                            <div class="cfg-field"><label class="cfg-label">Banco</label><input class="cfg-input" placeholder="Nombre del banco" /></div>
+                            <div class="cfg-field"><label class="cfg-label">IBAN</label><input class="cfg-input" placeholder="ES00 0000 0000 0000 0000 0000" style="font-family:monospace" /></div>
+                        </div>
+                    </div>
+
+                    <!-- Efectivo -->
+                    <div style="border:2px solid rgba(142,142,147,0.15);border-radius:16px;padding:20px;margin-bottom:16px;background:var(--bg-card)">
+                        <div style="display:flex;justify-content:space-between;align-items:center">
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <span style="font-size:1.2rem">💵</span>
+                                <div><strong style="font-size:0.9rem;color:var(--text-main)">Efectivo</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Pago en efectivo presencial</p></div>
+                            </div>
+                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
+                        </div>
+                    </div>
+
+                    <!-- Sin IVA -->
+                    <div style="border:2px solid rgba(255,69,58,0.15);border-radius:16px;padding:20px;margin-bottom:16px;background:var(--bg-card)">
+                        <div style="display:flex;justify-content:space-between;align-items:center">
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <span style="font-size:1.2rem">🧾</span>
+                                <div><strong style="font-size:0.9rem;color:var(--text-main)">Sin IVA</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Facturación exenta de IVA (intracomunitario, IGIC, etc.)</p></div>
+                            </div>
+                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
+                        </div>
+                    </div>
+
                     <!-- Info footer -->
                     <div style="padding:14px 18px;border-radius:12px;background:rgba(0,113,227,0.04);border:1px solid rgba(0,113,227,0.1);margin-top:8px">
                         <h4 style="font-size:0.8rem;font-weight:700;color:#007AFF;margin-bottom:6px">💡 Cómo funciona</h4>
