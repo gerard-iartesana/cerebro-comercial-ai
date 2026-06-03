@@ -24,7 +24,7 @@ module.exports = async function handler(req, res) {
     if (req.method === 'GET') {
       const { data, error } = await supabase
         .from('dashboard_users')
-        .select('id, username, email, role, modules, is_active, created_at')
+        .select('id, username, full_name, email, role, modules, is_active, created_at')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -37,10 +37,10 @@ module.exports = async function handler(req, res) {
 
     // ── POST: Create a new user ──────────────────────────────────────────
     if (req.method === 'POST') {
-      const { username, email, password, role, modules, is_active } = req.body || {};
+      const { username, full_name, email, password, role, modules, is_active } = req.body || {};
 
-      if (!username || !email || !password) {
-        return res.status(400).json({ error: 'Faltan campos obligatorios: username, email, password' });
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Faltan campos obligatorios: email, password' });
       }
 
       // Check if email already exists
@@ -59,7 +59,8 @@ module.exports = async function handler(req, res) {
       const { data, error } = await supabase
         .from('dashboard_users')
         .insert({
-          username: username.trim(),
+          username: (username || full_name || email.split('@')[0]).trim(),
+          full_name: (full_name || username || '').trim(),
           email: email.toLowerCase().trim(),
           password_hash,
           role: role || 'client',
@@ -67,7 +68,7 @@ module.exports = async function handler(req, res) {
           is_active: is_active !== undefined ? is_active : true,
           created_at: new Date().toISOString()
         })
-        .select('id, username, email, role, modules, is_active, created_at')
+        .select('id, username, full_name, email, role, modules, is_active, created_at')
         .single();
 
       if (error) {
@@ -80,14 +81,16 @@ module.exports = async function handler(req, res) {
 
     // ── PUT: Update an existing user ─────────────────────────────────────
     if (req.method === 'PUT') {
-      const { id, username, email, role, modules, is_active, password } = req.body || {};
+      const id = req.query?.id || req.body?.id;
+      const { username, full_name, email, role, modules, is_active, password } = req.body || {};
 
       if (!id) {
         return res.status(400).json({ error: 'Falta el id del usuario' });
       }
 
       const updates = {};
-      if (username !== undefined) updates.username = username.trim();
+      if (full_name !== undefined) { updates.full_name = full_name.trim(); updates.username = full_name.trim(); }
+      if (username !== undefined && full_name === undefined) updates.username = username.trim();
       if (email !== undefined) updates.email = email.toLowerCase().trim();
       if (role !== undefined) updates.role = role;
       if (modules !== undefined) updates.modules = modules;
@@ -104,7 +107,7 @@ module.exports = async function handler(req, res) {
         .from('dashboard_users')
         .update(updates)
         .eq('id', id)
-        .select('id, username, email, role, modules, is_active, created_at')
+        .select('id, username, full_name, email, role, modules, is_active, created_at')
         .single();
 
       if (error) {
@@ -117,7 +120,7 @@ module.exports = async function handler(req, res) {
 
     // ── DELETE: Soft-deactivate a user ───────────────────────────────────
     if (req.method === 'DELETE') {
-      const { id } = req.body || {};
+      const id = req.query?.id || req.body?.id;
 
       if (!id) {
         return res.status(400).json({ error: 'Falta el id del usuario' });
