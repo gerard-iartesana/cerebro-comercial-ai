@@ -76,14 +76,31 @@ window.executeComposeAI = function() {
     var body = document.getElementById('compose-email-body');
     if (body) body.value = '⏳ Generando con IA...';
 
+    // Get recipient name from select for personalization
+    var select = document.getElementById('compose-email-to');
+    var recipientText = select ? select.options[select.selectedIndex].textContent : '';
+    var recipientName = recipientText.split('(')[0].split('—')[0].trim() || '';
+
+    var prompt = 'Genera el contenido HTML de un email comercial. Instrucción: ' + instruction + '.\n\n' +
+        'REGLAS ESTRICTAS:\n' +
+        '- Devuelve SOLO el HTML del cuerpo del email, SIN etiquetas ```html ni ``` ni markdown\n' +
+        '- NO incluyas línea de "Asunto:" dentro del cuerpo\n' +
+        '- NO uses [Nombre del Cliente] ni placeholders, usa el nombre real: "' + recipientName + '" (si está vacío, empieza con "Hola,")\n' +
+        '- Tono cercano, informal (tutea siempre), directo y profesional\n' +
+        '- Máximo 4-5 párrafos cortos\n' +
+        '- Incluye un CTA claro (ej: "¿Te va bien que agendemos una llamada rápida esta semana?")\n' +
+        '- Firma: Gerard Fanals — iadebarrio.com\n' +
+        '- Usa etiquetas HTML simples: <p>, <strong>, <a>, <br>. NO uses <html>, <head>, <body>';
+
     fetch('/api/brain-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            message: 'Genera un email profesional en HTML para enviar a un cliente potencial. La instrucción es: ' + instruction + '. El email debe ser corto, profesional, en español, sin incluir la etiqueta <html> ni <body>, solo el contenido del correo. Firma como iadebarrio.com. Devuelve SOLO el HTML del email, sin explicaciones adicionales.'
-        })
+        body: JSON.stringify({ message: prompt })
     }).then(function(r) { return r.json(); }).then(function(data) {
-        if (body) body.value = data.text || data.reply || data.message || 'Error generando contenido';
+        var content = data.text || data.reply || data.message || 'Error generando contenido';
+        // Strip markdown code blocks if present
+        content = content.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/g, '').trim();
+        if (body) body.value = content;
     }).catch(function(err) {
         if (body) body.value = 'Error al conectar con la IA: ' + err.message;
     });
