@@ -2531,64 +2531,22 @@
 
                 <!-- ═══ TAB: Usuarios y Permisos ═══ -->
                 <div class="cfg-panel" id="cfg-usuarios">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
                         <div>
                             <h3 style="font-size:0.9rem;font-weight:600;color:var(--text-main)">Gestión de Usuarios</h3>
-                            <p style="font-size:0.75rem;color:var(--text-grey);margin:4px 0 0">3 usuarios registrados</p>
+                            <p style="font-size:0.75rem;color:var(--text-grey);margin:4px 0 0" id="users-count-label">Cargando usuarios...</p>
                         </div>
-                        <button class="btn-primary" style="padding:8px 18px;font-size:0.8rem" onclick="showAlert('Nuevo usuario','Función de invitación disponible próximamente.','👤')">+ Añadir usuario</button>
+                        <button class="btn-primary" style="padding:8px 18px;font-size:0.8rem;display:flex;align-items:center;gap:6px" onclick="openCreateUserModal()">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Crear Usuario
+                        </button>
                     </div>
-                    <div style="display:flex;flex-direction:column;gap:10px">
-                        <!-- User 1 -->
-                        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card)">
-                            <div style="display:flex;align-items:center;gap:12px">
-                                <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#34c759,#30d158);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:0.9rem">G</div>
-                                <div>
-                                    <div style="font-weight:600;font-size:0.88rem;color:var(--text-main)">Gerard Fanals</div>
-                                    <div style="font-size:0.72rem;color:var(--text-grey)">gerard@iartesana.es · 🟢 Activo · 👑 Propietario</div>
-                                </div>
-                            </div>
-                            <div style="display:flex;align-items:center;gap:8px">
-                                <span style="padding:4px 10px;border-radius:8px;background:rgba(255,149,0,0.1);color:#ff9500;font-size:0.72rem;font-weight:700">Sesión activa ahora</span>
-                                <button class="btn-secondary" style="padding:4px 10px;font-size:0.72rem">✏️ Editar</button>
-                                <button class="btn-secondary" style="padding:4px 10px;font-size:0.72rem">Permisos</button>
-                            </div>
+                    <!-- Users list container - populated by loadUsers() -->
+                    <div id="users-list-container" style="display:flex;flex-direction:column;gap:10px">
+                        <div style="text-align:center;padding:40px 20px;color:var(--text-grey);font-size:0.85rem">
+                            <div style="font-size:2rem;margin-bottom:8px">⏳</div>
+                            Cargando usuarios...
                         </div>
-                        <!-- User 2 -->
-                        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card)">
-                            <div style="display:flex;align-items:center;gap:12px">
-                                <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#007AFF,#5856d6);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:0.9rem">E</div>
-                                <div>
-                                    <div style="font-weight:600;font-size:0.88rem;color:var(--text-main)">Equipo Comercial</div>
-                                    <div style="font-size:0.72rem;color:var(--text-grey)">equipo@iartesana.es · 🟢 Activo · 📝 Editor</div>
-                                </div>
-                            </div>
-                            <div style="display:flex;align-items:center;gap:8px">
-                                <span style="padding:4px 10px;border-radius:8px;background:rgba(52,199,89,0.1);color:#34c759;font-size:0.72rem;font-weight:700">Sesión activa ahora</span>
-                                <button class="btn-secondary" style="padding:4px 10px;font-size:0.72rem">✏️ Editar</button>
-                                <button class="btn-secondary" style="padding:4px 10px;font-size:0.72rem">Permisos</button>
-                                <button class="btn-secondary" style="padding:4px 10px;font-size:0.72rem;color:#ff453a">Desactivar</button>
-                            </div>
-                        </div>
-                        <!-- User 3 -->
-                        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card)">
-                            <div style="display:flex;align-items:center;gap:12px">
-                                <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#ff9500,#ff6b00);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:0.9rem">S</div>
-                                <div>
-                                    <div style="font-weight:600;font-size:0.88rem;color:var(--text-main)">Soporte Externo</div>
-                                    <div style="font-size:0.72rem;color:var(--text-grey)">soporte@iadebarrio.com · 🟢 Activo · 👁️ Lector</div>
-                                </div>
-                            </div>
-                            <div style="display:flex;align-items:center;gap:8px">
-                                <span style="padding:4px 10px;border-radius:8px;background:rgba(52,199,89,0.1);color:#34c759;font-size:0.72rem;font-weight:700">Sesión activa ahora</span>
-                                <button class="btn-secondary" style="padding:4px 10px;font-size:0.72rem">✏️ Editar</button>
-                                <button class="btn-secondary" style="padding:4px 10px;font-size:0.72rem">Permisos</button>
-                                <button class="btn-secondary" style="padding:4px 10px;font-size:0.72rem;color:#ff453a">Desactivar</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="text-align:center;margin-top:16px">
-                        <button class="btn-primary" style="padding:10px 24px;font-size:0.82rem" onclick="showAlert('Cambios guardados','Los permisos se han actualizado.','✅')">💾 Guardar cambios</button>
                     </div>
                 </div>
 
@@ -2979,6 +2937,87 @@
             </div>
 
         </main>
+    </div>
+
+    <!-- ═══ USER MANAGEMENT MODAL ═══ -->
+    <div id="user-modal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);opacity:0;transition:opacity 0.3s ease">
+        <div style="background:var(--bg-card);border:1px solid var(--card-border);border-radius:20px;padding:32px;width:95%;max-width:560px;max-height:85vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.4);transform:scale(0.95);transition:transform 0.3s ease" id="user-modal-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+                <h2 style="font-size:1.1rem;font-weight:700;color:var(--text-main);margin:0" id="user-modal-title">Crear Usuario</h2>
+                <button onclick="closeUserModal()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text-grey);padding:4px 8px;border-radius:8px;transition:background 0.2s" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background='none'">✕</button>
+            </div>
+
+            <input type="hidden" id="user-modal-id" value="">
+
+            <!-- Name -->
+            <div class="cfg-field" style="margin-bottom:14px">
+                <label class="cfg-label">Nombre completo</label>
+                <input class="cfg-input" id="user-modal-name" placeholder="Ej: María García López" autocomplete="off">
+            </div>
+
+            <!-- Email -->
+            <div class="cfg-field" style="margin-bottom:14px">
+                <label class="cfg-label">Email</label>
+                <input class="cfg-input" id="user-modal-email" type="email" placeholder="nombre@empresa.com" autocomplete="off">
+            </div>
+
+            <!-- Password (only for create) -->
+            <div class="cfg-field" style="margin-bottom:14px" id="user-modal-password-field">
+                <label class="cfg-label">Contraseña</label>
+                <input class="cfg-input" id="user-modal-password" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+            </div>
+
+            <!-- Role -->
+            <div class="cfg-field" style="margin-bottom:18px">
+                <label class="cfg-label">Rol</label>
+                <select class="cfg-input" id="user-modal-role" style="cursor:pointer">
+                    <option value="superadmin">👑 SuperAdmin — Acceso total</option>
+                    <option value="admin" selected>🛡️ Admin — Gestión completa</option>
+                    <option value="client">👤 Client — Módulos contratados</option>
+                    <option value="guest">👁️ Guest — Solo lectura</option>
+                </select>
+            </div>
+
+            <!-- Modules -->
+            <div style="margin-bottom:24px">
+                <label class="cfg-label" style="margin-bottom:10px;display:block">Módulos permitidos</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="user-modal-modules">
+                    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-secondary);cursor:pointer;font-size:0.78rem;color:var(--text-main);transition:border-color 0.2s">
+                        <input type="checkbox" value="overview" checked style="accent-color:#007aff"> 📊 Overview
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-secondary);cursor:pointer;font-size:0.78rem;color:var(--text-main);transition:border-color 0.2s">
+                        <input type="checkbox" value="leads" checked style="accent-color:#007aff"> 🎯 Leads
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-secondary);cursor:pointer;font-size:0.78rem;color:var(--text-main);transition:border-color 0.2s">
+                        <input type="checkbox" value="kanban" checked style="accent-color:#007aff"> 📋 Kanban
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-secondary);cursor:pointer;font-size:0.78rem;color:var(--text-main);transition:border-color 0.2s">
+                        <input type="checkbox" value="emails" checked style="accent-color:#007aff"> 📧 Emails
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-secondary);cursor:pointer;font-size:0.78rem;color:var(--text-main);transition:border-color 0.2s">
+                        <input type="checkbox" value="calendar" checked style="accent-color:#007aff"> 📅 Calendar
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-secondary);cursor:pointer;font-size:0.78rem;color:var(--text-main);transition:border-color 0.2s">
+                        <input type="checkbox" value="proposals" checked style="accent-color:#007aff"> 📄 Propuestas
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-secondary);cursor:pointer;font-size:0.78rem;color:var(--text-main);transition:border-color 0.2s">
+                        <input type="checkbox" value="whatsapp" checked style="accent-color:#007aff"> 💬 WhatsApp
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-secondary);cursor:pointer;font-size:0.78rem;color:var(--text-main);transition:border-color 0.2s">
+                        <input type="checkbox" value="contracts" checked style="accent-color:#007aff"> 📝 Contratos
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-secondary);cursor:pointer;font-size:0.78rem;color:var(--text-main);transition:border-color 0.2s">
+                        <input type="checkbox" value="config-business" checked style="accent-color:#007aff"> ⚙️ Config
+                    </label>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div style="display:flex;gap:10px;justify-content:flex-end">
+                <button class="btn-secondary" style="padding:10px 24px;font-size:0.82rem" onclick="closeUserModal()">Cancelar</button>
+                <button class="btn-primary" style="padding:10px 24px;font-size:0.82rem" onclick="saveUser()" id="user-modal-save-btn">💾 Crear Usuario</button>
+            </div>
+        </div>
     </div>
 
     <!-- App Scripts -->

@@ -145,6 +145,215 @@ function switchConfigTab(tabName) {
         p.classList.remove('active');
         if (p.id === 'cfg-' + tabName) p.classList.add('active');
     });
+    // Auto-load users when switching to the usuarios tab
+    if (tabName === 'usuarios') loadUsers();
+}
+
+// ── User Management ──────────────────────────────────────────
+let _cachedUsers = [];
+
+async function loadUsers() {
+    const container = document.getElementById('users-list-container');
+    const countLabel = document.getElementById('users-count-label');
+    if (!container) return;
+
+    try {
+        const res = await fetch('/api/users');
+        if (!res.ok) throw new Error('Error ' + res.status);
+        const data = await res.json();
+        const users = data.users || data || [];
+        _cachedUsers = users;
+
+        if (countLabel) countLabel.textContent = users.length + ' usuario' + (users.length !== 1 ? 's' : '') + ' registrado' + (users.length !== 1 ? 's' : '');
+
+        if (users.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-grey);font-size:0.85rem"><div style="font-size:2rem;margin-bottom:8px">👤</div>No hay usuarios registrados.<br>Crea el primero con el botón de arriba.</div>';
+            return;
+        }
+
+        const roleColors = { superadmin: '#af52de', admin: '#007aff', client: '#34c759', guest: '#8e8e93' };
+        const roleLabels = { superadmin: '👑 SuperAdmin', admin: '🛡️ Admin', client: '👤 Client', guest: '👁️ Guest' };
+        const roleGradients = {
+            superadmin: 'linear-gradient(135deg, #af52de, #5856d6)',
+            admin: 'linear-gradient(135deg, #007aff, #5856d6)',
+            client: 'linear-gradient(135deg, #34c759, #30d158)',
+            guest: 'linear-gradient(135deg, #8e8e93, #636366)'
+        };
+
+        container.innerHTML = users.map(u => {
+            const name = u.full_name || u.username || u.email || 'Sin nombre';
+            const initials = name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+            const role = (u.role || 'admin').toLowerCase();
+            const isActive = u.is_active !== false;
+            const email = u.email || '';
+            const roleColor = roleColors[role] || '#8e8e93';
+            const roleLabel = roleLabels[role] || role;
+            const gradient = roleGradients[role] || roleGradients.guest;
+
+            return `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card);transition:transform 0.15s ease,box-shadow 0.15s ease" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1">
+                    <div style="width:40px;height:40px;border-radius:50%;background:${gradient};display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:0.85rem;flex-shrink:0">${initials}</div>
+                    <div style="min-width:0">
+                        <div style="font-weight:600;font-size:0.88rem;color:var(--text-main);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</span>
+                            <span style="padding:2px 8px;border-radius:6px;background:${roleColor}18;color:${roleColor};font-size:0.68rem;font-weight:700;white-space:nowrap">${roleLabel}</span>
+                        </div>
+                        <div style="font-size:0.72rem;color:var(--text-grey);display:flex;align-items:center;gap:6px;margin-top:2px">
+                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${email}</span>
+                            <span style="padding:2px 8px;border-radius:6px;font-size:0.65rem;font-weight:700;white-space:nowrap;${isActive ? 'background:rgba(52,199,89,0.1);color:#34c759' : 'background:rgba(255,69,58,0.1);color:#ff453a'}">${isActive ? '🟢 Activo' : '🔴 Desactivado'}</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+                    <button class="btn-secondary" style="padding:5px 10px;font-size:0.72rem" onclick="openEditUserModal('${u.id}')" title="Editar usuario">✏️ Editar</button>
+                    <button class="btn-secondary" style="padding:5px 10px;font-size:0.72rem" onclick="sendPasswordReset('${u.id}', '${email}')" title="Enviar enlace de reseteo">🔑 Contraseña</button>
+                    <button class="btn-secondary" style="padding:5px 10px;font-size:0.72rem;color:${isActive ? '#ff453a' : '#34c759'}" onclick="toggleUserActive('${u.id}', ${isActive})" title="${isActive ? 'Desactivar' : 'Activar'} usuario">${isActive ? '🔴 Desactivar' : '🟢 Activar'}</button>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        console.error('Error loading users:', e);
+        container.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#ff453a;font-size:0.85rem"><div style="font-size:2rem;margin-bottom:8px">⚠️</div>Error al cargar usuarios: ' + e.message + '<br><button class="btn-secondary" style="margin-top:12px;padding:6px 16px;font-size:0.78rem" onclick="loadUsers()">🔄 Reintentar</button></div>';
+        if (countLabel) countLabel.textContent = 'Error al cargar';
+    }
+}
+
+function openCreateUserModal() {
+    document.getElementById('user-modal-title').textContent = 'Crear Usuario';
+    document.getElementById('user-modal-save-btn').textContent = '💾 Crear Usuario';
+    document.getElementById('user-modal-id').value = '';
+    document.getElementById('user-modal-name').value = '';
+    document.getElementById('user-modal-email').value = '';
+    document.getElementById('user-modal-password').value = '';
+    document.getElementById('user-modal-password-field').style.display = '';
+    document.getElementById('user-modal-role').value = 'admin';
+    // Check all modules by default
+    document.querySelectorAll('#user-modal-modules input[type=checkbox]').forEach(cb => cb.checked = true);
+    _showUserModal();
+}
+
+function openEditUserModal(userId) {
+    const user = _cachedUsers.find(u => u.id === userId);
+    if (!user) { showAlert('Error', 'No se encontró el usuario.', '❌'); return; }
+
+    document.getElementById('user-modal-title').textContent = 'Editar Usuario';
+    document.getElementById('user-modal-save-btn').textContent = '💾 Guardar Cambios';
+    document.getElementById('user-modal-id').value = userId;
+    document.getElementById('user-modal-name').value = user.full_name || user.username || '';
+    document.getElementById('user-modal-email').value = user.email || '';
+    document.getElementById('user-modal-password-field').style.display = 'none';
+    document.getElementById('user-modal-role').value = (user.role || 'admin').toLowerCase();
+
+    // Set module checkboxes
+    const userModules = user.modules || 'all';
+    document.querySelectorAll('#user-modal-modules input[type=checkbox]').forEach(cb => {
+        cb.checked = userModules === 'all' || (Array.isArray(userModules) && userModules.includes(cb.value));
+    });
+    _showUserModal();
+}
+
+function _showUserModal() {
+    const modal = document.getElementById('user-modal');
+    const card = document.getElementById('user-modal-card');
+    modal.style.display = 'flex';
+    requestAnimationFrame(() => {
+        modal.style.opacity = '1';
+        card.style.transform = 'scale(1)';
+    });
+}
+
+function closeUserModal() {
+    const modal = document.getElementById('user-modal');
+    const card = document.getElementById('user-modal-card');
+    modal.style.opacity = '0';
+    card.style.transform = 'scale(0.95)';
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
+
+async function saveUser() {
+    const id = document.getElementById('user-modal-id').value;
+    const name = document.getElementById('user-modal-name').value.trim();
+    const email = document.getElementById('user-modal-email').value.trim();
+    const password = document.getElementById('user-modal-password').value;
+    const role = document.getElementById('user-modal-role').value;
+
+    const modules = [];
+    document.querySelectorAll('#user-modal-modules input[type=checkbox]:checked').forEach(cb => modules.push(cb.value));
+
+    if (!name || !email) {
+        showAlert('Campos requeridos', 'Nombre y email son obligatorios.', '⚠️');
+        return;
+    }
+    if (!id && password.length < 6) {
+        showAlert('Contraseña muy corta', 'La contraseña debe tener al menos 6 caracteres.', '⚠️');
+        return;
+    }
+
+    const body = { full_name: name, email, role, modules };
+    if (!id) body.password = password;
+
+    try {
+        const isEdit = !!id;
+        const url = isEdit ? '/api/users?id=' + id : '/api/users';
+        const method = isEdit ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error del servidor');
+
+        closeUserModal();
+        showAlert(isEdit ? 'Usuario actualizado' : 'Usuario creado', isEdit ? name + ' se ha actualizado correctamente.' : name + ' se ha creado correctamente.', '✅');
+        loadUsers();
+    } catch (e) {
+        showAlert('Error', 'No se pudo guardar: ' + e.message, '❌');
+    }
+}
+
+async function sendPasswordReset(userId, email) {
+    if (!email) { showAlert('Error', 'Este usuario no tiene email configurado.', '⚠️'); return; }
+    try {
+        const res = await fetch('/api/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'send-reset', user_id: userId, email })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error del servidor');
+        showAlert('Enlace enviado', 'Se ha enviado un email de reseteo de contraseña a ' + email, '🔑');
+    } catch (e) {
+        showAlert('Error', 'No se pudo enviar el enlace: ' + e.message, '❌');
+    }
+}
+
+async function toggleUserActive(userId, currentIsActive) {
+    const action = currentIsActive ? 'desactivar' : 'activar';
+    const confirmed = await showConfirm(
+        (currentIsActive ? 'Desactivar' : 'Activar') + ' usuario',
+        '¿Seguro que quieres ' + action + ' este usuario? ' + (currentIsActive ? 'No podrá acceder al dashboard.' : 'Podrá volver a acceder.'),
+        currentIsActive ? '🔴' : '🟢',
+        currentIsActive ? 'Desactivar' : 'Activar'
+    );
+    if (!confirmed) return;
+
+    try {
+        const res = await fetch('/api/users?id=' + userId, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: !currentIsActive })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error del servidor');
+        showAlert('Usuario ' + (currentIsActive ? 'desactivado' : 'activado'), 'El cambio se ha aplicado correctamente.', '✅');
+        loadUsers();
+    } catch (e) {
+        showAlert('Error', 'No se pudo cambiar el estado: ' + e.message, '❌');
+    }
 }
 
 // Toggle API key visibility
