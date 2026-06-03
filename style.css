@@ -3929,9 +3929,9 @@ body.role-guest td button {
 }
 .lead-type-select:focus { outline: none; }
 .lead-type-select-a {
-    background-color: rgba(255, 107, 107, 0.12);
-    color: #ff6b6b;
-    border-color: rgba(255, 107, 107, 0.25);
+    background-color: rgba(255, 149, 0, 0.12);
+    color: #ff9500;
+    border-color: rgba(255, 149, 0, 0.3);
 }
 .lead-type-select-b {
     background-color: rgba(0, 122, 255, 0.12);
@@ -3948,6 +3948,10 @@ body.role-guest td button {
 .lead-action-btn.btn-phone { color: #34c759; }
 .lead-action-btn.btn-phone:hover { background: rgba(52, 199, 89, 0.12); }
 
+/* Signup/form button */
+.lead-action-btn.btn-signup { color: #bf5af2; }
+.lead-action-btn.btn-signup:hover { background: rgba(191, 90, 242, 0.12); }
+
 /* Test button */
 .lead-action-btn.btn-test { color: #ff9f0a; }
 .lead-action-btn.btn-test:hover { background: rgba(255, 159, 10, 0.12); }
@@ -3958,6 +3962,60 @@ body.role-guest td button {
     background: rgba(255, 204, 0, 0.12);
     color: #e8a900;
     border: 1px solid rgba(255, 204, 0, 0.3);
+}
+
+/* --- Form Selector Popup --- */
+.form-selector-popup {
+    position: fixed;
+    z-index: 10000;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 16px;
+    min-width: 280px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    backdrop-filter: blur(20px);
+    animation: formPopIn 0.15s ease;
+}
+@keyframes formPopIn {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+.form-selector-header {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+.form-selector-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s;
+    margin-bottom: 4px;
+}
+.form-selector-item:hover {
+    background: rgba(0, 122, 255, 0.08);
+    color: #007aff;
+}
+.form-selector-footer {
+    font-size: 0.68rem;
+    color: var(--text-grey);
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
 }
 
 /* --- Lead Detail Expansion Panel --- */

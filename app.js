@@ -578,6 +578,7 @@ function renderLeadsGridRows(leads) {
                 <button class="lead-action-btn btn-phone" data-tooltip="Llamar" onclick="window.callLead('${phone}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></button>
                 <button class="lead-action-btn btn-email" data-tooltip="Enviar Email" onclick="window.openComposeForLead('${lead.email}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></button>
                 <button class="lead-action-btn btn-whatsapp" data-tooltip="WhatsApp" onclick="openWhatsApp('${lead.email}', '${lead.first_name || ''}', '${lead.company_name || ''}')"><svg viewBox="0 0 24 24" fill="currentColor" class="svg-icon"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.454 5.709 1.455h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></button>
+                <button class="lead-action-btn btn-signup" data-tooltip="Enviar formulario" onclick="window.openFormSelector('${lead.email}', '${(lead.first_name || '').replace(/'/g, "\\'")}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg></button>
                 <button class="lead-action-btn btn-test ${isTest ? 'active' : ''}" data-tooltip="${isTest ? 'Quitar prueba' : 'Marcar prueba'}" onclick="window.toggleTestLead('${lead.id}', ${!isTest})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg></button>
                 <button class="lead-action-btn btn-delete action-delete" data-tooltip="Borrar" onclick="deleteLead('${lead.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
             </td>
@@ -683,6 +684,50 @@ window.toggleTestLead = async function(leadId, setTest) {
 window.callLead = function(phone) {
     if (!phone) { showToast('Este lead no tiene número de teléfono', true); return; }
     window.open(`tel:${phone}`, '_self');
+};
+
+// Form selector popup for sending forms to leads
+window.openFormSelector = function(email, name) {
+    // Remove any existing form popup
+    document.querySelectorAll('.form-selector-popup').forEach(el => el.remove());
+
+    const forms = [
+        { id: 'alta', label: '📋 Formulario de alta', icon: '📋' },
+        { id: 'rgpd', label: '🔒 Formulario RGPD', icon: '🔒' },
+        { id: 'proyecto', label: '📐 Formulario de proyecto', icon: '📐' }
+    ];
+
+    const popup = document.createElement('div');
+    popup.className = 'form-selector-popup';
+    popup.innerHTML = `
+        <div class="form-selector-header">Enviar formulario a <strong>${name || email}</strong></div>
+        ${forms.map(f => `<button class="form-selector-item" onclick="window.sendFormToLead('${f.id}', '${email}', '${(name || '').replace(/'/g, "\\'")}'); this.closest('.form-selector-popup').remove();">${f.label}</button>`).join('')}
+        <div class="form-selector-footer">📌 Configura tus formularios en Ajustes</div>
+    `;
+    document.body.appendChild(popup);
+
+    // Position near mouse / center
+    requestAnimationFrame(() => {
+        popup.style.top = '50%';
+        popup.style.left = '50%';
+        popup.style.transform = 'translate(-50%, -50%)';
+    });
+
+    // Close on click outside
+    setTimeout(() => {
+        document.addEventListener('click', function handler(e) {
+            if (!popup.contains(e.target)) { popup.remove(); document.removeEventListener('click', handler); }
+        });
+    }, 100);
+};
+
+window.sendFormToLead = function(formId, email, name) {
+    const formNames = { alta: 'Formulario de alta', rgpd: 'Consentimiento RGPD', proyecto: 'Formulario de proyecto' };
+    const subject = encodeURIComponent(`${name} — ${formNames[formId] || 'Formulario'}`);
+    const body = encodeURIComponent(`Hola ${name},\n\nTe adjunto el ${formNames[formId] || 'formulario'} para que puedas completarlo.\n\nFormulario: [ENLACE]\n\nUn saludo,\niadebarrio.com`);
+    // For now, open mailto; will be replaced by Resend + config forms
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
+    showToast(`Formulario "${formNames[formId]}" preparado para ${name || email}`);
 };
 
 async function updateLeadField(id, field, value) {
@@ -2549,10 +2594,22 @@ function renderOutreachSendList() {
     });
 }
 
-window.openComposeForLead = function(email) {
-    openComposeEmailModal();
+window.openComposeForLead = async function(email) {
+    // Ensure leads are loaded for the compose dropdown
+    if (!outreachLeadsList || outreachLeadsList.length === 0) {
+        await fetchOutreachLeadsList();
+    }
+    await openComposeEmailModal();
     const select = document.getElementById('compose-email-to');
     if (select) {
+        // If the email isn't in the list, add it
+        const exists = Array.from(select.options).some(o => o.value === email);
+        if (!exists) {
+            const opt = document.createElement('option');
+            opt.value = email;
+            opt.textContent = email;
+            select.appendChild(opt);
+        }
         select.value = email;
     }
 };
