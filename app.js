@@ -2595,24 +2595,39 @@ function renderOutreachSendList() {
     });
 }
 
-window.openComposeForLead = async function(email) {
-    // Ensure leads are loaded for the compose dropdown
-    if (!outreachLeadsList || outreachLeadsList.length === 0) {
-        await fetchOutreachLeadsList();
+window.openComposeForLead = function(email) {
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+        return;
     }
-    await openComposeEmailModal();
     const select = document.getElementById('compose-email-to');
-    if (select) {
-        // If the email isn't in the list, add it
-        const exists = Array.from(select.options).some(o => o.value === email);
-        if (!exists) {
-            const opt = document.createElement('option');
-            opt.value = email;
-            opt.textContent = email;
-            select.appendChild(opt);
-        }
-        select.value = email;
+    if (!select) { showToast('Error: modal de composición no encontrado', true); return; }
+    select.innerHTML = '';
+
+    // Populate from all available lead sources
+    const seen = new Set();
+    const sources = [...(_allLeadsGridData || []), ...(outreachLeadsList || [])];
+    sources.forEach(l => {
+        if (!l.email || seen.has(l.email)) return;
+        seen.add(l.email);
+        const opt = document.createElement('option');
+        opt.value = l.email;
+        opt.textContent = `${l.first_name || 'Prospecto'} (${l.company_name || '—'}) — ${l.email}`;
+        select.appendChild(opt);
+    });
+
+    // If email not in list, add it
+    if (!seen.has(email)) {
+        const opt = document.createElement('option');
+        opt.value = email;
+        opt.textContent = email;
+        select.appendChild(opt);
     }
+
+    select.value = email;
+    document.getElementById('compose-email-subject').value = '';
+    document.getElementById('compose-email-body').value = '';
+    document.getElementById('email-compose-modal').style.display = 'flex';
 };
 
 window.startOutreachSequence = async function(leadId) {
