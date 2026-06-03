@@ -3849,6 +3849,156 @@ body.role-guest td button {
     border-radius: 10px;
 }
 
+/* --- Config Flow Pipeline --- */
+.cfg-flow-pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 24px 16px;
+    overflow-x: auto;
+    margin-bottom: 16px;
+    background: rgba(255,255,255,0.015);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+}
+
+.cfg-flow-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.cfg-flow-entry {
+    border: 1.5px solid var(--border-color);
+    border-radius: 14px;
+    padding: 16px 22px;
+    background: var(--bg-card);
+    min-width: 120px;
+}
+.cfg-flow-entry strong {
+    font-size: 0.88rem;
+    color: var(--text-main);
+}
+
+.cfg-flow-chain {
+    border: 2px solid #999;
+    border-radius: 16px;
+    padding: 16px 18px 12px;
+    background: var(--bg-card);
+    min-width: 160px;
+    position: relative;
+}
+
+.cfg-flow-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 4px;
+}
+
+.cfg-flow-chain-name {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 1px;
+}
+
+.cfg-flow-subdesc {
+    font-size: 0.72rem;
+    color: var(--text-grey);
+    font-weight: 500;
+}
+
+.cfg-flow-badges {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.cfg-vbadge {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.cfg-vbadge-auto {
+    background: rgba(52, 199, 89, 0.12);
+    color: #34c759;
+    border: 1px solid rgba(52, 199, 89, 0.25);
+}
+
+.cfg-vbadge-manual {
+    background: rgba(255, 149, 0, 0.12);
+    color: #ff9500;
+    border: 1px solid rgba(255, 149, 0, 0.25);
+}
+
+.cfg-vbadge-off {
+    background: rgba(142, 142, 147, 0.1);
+    color: var(--text-grey);
+    border: 1px solid rgba(142, 142, 147, 0.2);
+}
+
+.cfg-flow-arrow {
+    font-size: 1.3rem;
+    color: var(--text-grey);
+    padding: 0 12px;
+    flex-shrink: 0;
+    opacity: 0.6;
+    font-weight: 300;
+}
+
+/* Flow notes (exit rules) */
+.cfg-flow-notes {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.cfg-flow-note {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.3;
+}
+
+.cfg-flow-note strong {
+    font-weight: 800;
+}
+
+.cfg-flow-note-green {
+    background: rgba(52, 199, 89, 0.08);
+    color: #34c759;
+    border: 1px solid rgba(52, 199, 89, 0.2);
+}
+
+.cfg-flow-note-orange {
+    background: rgba(255, 149, 0, 0.08);
+    color: #ff9500;
+    border: 1px solid rgba(255, 149, 0, 0.2);
+}
+
 /* Config and parameters cards */
 .nl-config-section {
     background: var(--bg-card);

@@ -871,11 +871,19 @@
 
                     <!-- Outreach: CONFIG -->
                     <div id="outreach-sub-config" class="outreach-sub-content" style="display: none;">
-                        <!-- Flow Diagram Node -->
+                        <!-- Flow Pipeline Diagram -->
                         <div class="nl-config-section">
-                            <div class="nl-config-title">Flujo de cadenas de prospección</div>
-                            <div class="nl-flow" id="outreach-flow-diagram" style="display: flex; gap: 12px; align-items: center; justify-content: flex-start; padding: 20px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: 14px; margin-bottom: 20px; overflow-x: auto;">
-                                <!-- Generated Dynamically -->
+                            <div class="nl-config-title"><span style="margin-right:6px">📊</span> Flujo de cadenas</div>
+                            <div class="cfg-flow-pipeline" id="outreach-flow-diagram">
+                                <!-- Generated Dynamically by renderOutreachConfigForm -->
+                            </div>
+                            <div class="cfg-flow-notes" id="outreach-flow-notes">
+                                <div class="cfg-flow-note cfg-flow-note-green">
+                                    <span>📅</span> Click en "Agendar reunión" → Sale de cadenas → Estado: <strong>reunión</strong>
+                                </div>
+                                <div class="cfg-flow-note cfg-flow-note-orange">
+                                    <span>🚫</span> Click en "Darme de baja" → Sale de cadenas → Estado: <strong>perdido</strong>
+                                </div>
                             </div>
                         </div>
 

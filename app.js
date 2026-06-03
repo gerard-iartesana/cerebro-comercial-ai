@@ -1837,30 +1837,73 @@ function renderOutreachConfigForm() {
     
     const flowDiagram = document.getElementById('outreach-flow-diagram');
     flowDiagram.innerHTML = '';
-    const modes = [
-        { label: 'Bienvenida (C1)', key: 'c1', interval: outreachConfig.intervalo_c1_a || 2 },
-        { label: 'Seguimiento (C2)', key: 'c2', interval: outreachConfig.intervalo_c2_a || 3 },
-        { label: 'Mantenimiento (C3)', key: 'c3', interval: outreachConfig.dia_c3_a || 5 }
-    ];
-    
-    modes.forEach((mode, idx) => {
-        const node = document.createElement('div');
-        node.className = 'nl-flow-node';
-        node.style.cssText = 'padding:12px 18px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:10px; display:flex; flex-direction:column; gap:4px; align-items:center; justify-content:center; min-width:140px;';
-        node.innerHTML = `
-            <span class="nl-flow-node-num" style="font-weight:800; font-size:0.78rem; padding:2px 6px; background:#0071e3; color:#fff; border-radius:12px; margin-bottom:2px;">C${idx+1}</span>
-            <span class="nl-flow-node-label" style="font-weight:700; font-size:0.8rem; color:var(--text-main);">${mode.label}</span>
-            <span class="nl-flow-node-desc" style="font-size:0.7rem; color:var(--text-grey);">Intervalo: ${mode.interval} días</span>
-        `;
-        flowDiagram.appendChild(node);
-        
-        if (idx < modes.length - 1) {
-            const arrow = document.createElement('div');
-            arrow.className = 'nl-flow-arrow';
-            arrow.style.cssText = 'font-size:1.2rem; color:var(--text-grey);';
-            arrow.textContent = '➔';
-            flowDiagram.appendChild(arrow);
+
+    // Chain definitions for the pipeline
+    const pipeChains = [
+        {
+            num: 1, name: 'Bienvenida', color: '#ff9500', steps: 5,
+            intervalKey: 'intervalo_c1', freqLabel: 'cada'
+        },
+        {
+            num: 2, name: 'Seguimiento', color: '#34c759', steps: 4,
+            intervalKey: 'intervalo_c2', freqLabel: 'cada'
+        },
+        {
+            num: 3, name: 'Mantenimiento', color: '#007aff', steps: 12,
+            intervalKey: 'dia_c3', freqLabel: 'Mensual · día'
         }
+    ];
+
+    const versionKeys = [
+        { key: 'a', label: 'A' },
+        { key: 'b', label: 'B' },
+        { key: 'c', label: 'C' }
+    ];
+
+    // Entry node: "Nuevo Lead"
+    const entryNode = document.createElement('div');
+    entryNode.className = 'cfg-flow-node cfg-flow-entry';
+    entryNode.innerHTML = `
+        <strong>Nuevo Lead</strong>
+        <span class="cfg-flow-subdesc">Entra al sistema</span>
+    `;
+    flowDiagram.appendChild(entryNode);
+
+    pipeChains.forEach((chain, idx) => {
+        // Arrow
+        const arrow = document.createElement('div');
+        arrow.className = 'cfg-flow-arrow';
+        arrow.textContent = '→';
+        flowDiagram.appendChild(arrow);
+
+        // Chain card
+        const card = document.createElement('div');
+        card.className = 'cfg-flow-node cfg-flow-chain';
+        card.style.borderColor = chain.color;
+
+        // Interval value
+        const intervalVal = outreachConfig[`${chain.intervalKey}_a`] || (chain.num === 1 ? 1 : chain.num === 2 ? 7 : 30);
+        const freqText = chain.num === 3
+            ? `Mensual · día ${intervalVal}`
+            : `cada ${intervalVal}d`;
+
+        // Version badges
+        let badgesHtml = '';
+        versionKeys.forEach(v => {
+            const modeKey = `modo_c${chain.num}_${v.key}`;
+            const mode = outreachConfig[modeKey] || 'auto';
+            const modeLabel = mode === 'auto' ? 'Auto' : mode === 'manual' ? 'Manual' : 'Off';
+            const modeClass = mode === 'auto' ? 'cfg-vbadge-auto' : mode === 'manual' ? 'cfg-vbadge-manual' : 'cfg-vbadge-off';
+            badgesHtml += `<span class="cfg-vbadge ${modeClass}">V.${v.label} ${chain.steps} ${modeLabel}</span>`;
+        });
+
+        card.innerHTML = `
+            <span class="cfg-flow-badge" style="background:${chain.color}">C${chain.num}</span>
+            <strong class="cfg-flow-chain-name">${chain.name}</strong>
+            <span class="cfg-flow-subdesc">${freqText}</span>
+            <div class="cfg-flow-badges">${badgesHtml}</div>
+        `;
+        flowDiagram.appendChild(card);
     });
     
     const settingsContainer = document.getElementById('outreach-chain-settings-container');
