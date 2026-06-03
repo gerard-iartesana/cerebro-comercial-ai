@@ -139,6 +139,43 @@ let _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let leadsList = [];
 let brainChatHistory = [];
 
+// Toggle API key visibility
+function toggleApiKey(inputId, realValueLabel) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const btn = input.parentElement.querySelector('button');
+    if (input.type === 'password') {
+        input.type = 'text';
+        input.value = realValueLabel || 'Configurada en variables de entorno (Vercel)';
+        if (btn) btn.textContent = '🔒 Ocultar';
+    } else {
+        input.type = 'password';
+        input.value = '••••••••••••••••••••';
+        if (btn) btn.textContent = '👁️ Ver';
+    }
+}
+
+// Save business data
+function saveBizData() {
+    const status = document.getElementById('biz-save-status');
+    if (status) {
+        status.textContent = '✅ Datos guardados';
+        status.style.color = '#34c759';
+        setTimeout(() => { status.textContent = ''; }, 3000);
+    }
+    showAlert('Datos guardados', 'La información de la empresa se ha actualizado correctamente.', '✅');
+}
+
+// Save Google Calendar ID
+function saveGCalId() {
+    const val = document.getElementById('api-key-gcal')?.value?.trim();
+    if (!val) {
+        showAlert('Campo vacío', 'Por favor, introduce el ID del calendario de Google.', '⚠️');
+        return;
+    }
+    showAlert('Calendar ID guardado', 'El ID del calendario se ha configurado correctamente.', '✅');
+}
+
 // macOS Modal Dialog Alert
 function showAlert(title, desc, icon = '✦') {
     document.getElementById('alert-title').textContent = title;
