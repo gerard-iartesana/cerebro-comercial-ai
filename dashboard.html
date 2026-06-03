@@ -970,10 +970,18 @@
 
                     <!-- Outreach: ENVIO -->
                     <div id="outreach-sub-envio" class="outreach-sub-content" style="display: none;">
-                        <div class="nl-send-search-wrap" style="margin-bottom: 16px;">
-                            <input type="text" class="nl-send-search" id="outreach-send-search" placeholder="Buscar lead..." oninput="renderOutreachSendList()" style="border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 8px; font-size: 0.85rem;" />
+                        <!-- Search & Filters -->
+                        <div class="envio-toolbar">
+                            <input type="text" class="envio-search" id="outreach-send-search" placeholder="🔍 Buscar lead por nombre, email o empresa..." oninput="renderOutreachSendList()" />
+                            <div class="envio-filters" id="envio-status-filters">
+                                <button class="envio-filter-btn active" data-filter="all" onclick="window.filterEnvioByStatus('all')">Todos</button>
+                                <button class="envio-filter-btn" data-filter="enriched" onclick="window.filterEnvioByStatus('enriched')">🟡 Pendientes</button>
+                                <button class="envio-filter-btn" data-filter="active" onclick="window.filterEnvioByStatus('active')">🟢 En secuencia</button>
+                                <button class="envio-filter-btn" data-filter="completed" onclick="window.filterEnvioByStatus('completed')">✅ Completados</button>
+                            </div>
                         </div>
-                        <div class="nl-send-list" id="outreach-send-leads-list" style="display: flex; flex-direction: column; gap: 8px;">
+                        <!-- Lead Cards List -->
+                        <div class="envio-leads-list" id="outreach-send-leads-list">
                             <!-- Populated dynamically -->
                         </div>
                     </div>

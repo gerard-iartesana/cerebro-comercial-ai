@@ -2219,40 +2219,134 @@ function filterProposalHistorial() {
     renderProposalHistorial();
 }
 
+let _envioStatusFilter = 'all';
+
+window.filterEnvioByStatus = function(filter) {
+    _envioStatusFilter = filter;
+    document.querySelectorAll('.envio-filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === filter);
+    });
+    renderOutreachSendList();
+};
+
 function renderOutreachSendList() {
     const listEl = document.getElementById('outreach-send-leads-list');
     listEl.innerHTML = '';
-    
+
     const searchVal = document.getElementById('outreach-send-search').value.toLowerCase();
-    const filtered = outreachLeadsList.filter(l => 
-        searchVal === '' || 
+
+    // Active statuses for sequence
+    const activeStatuses = [
+        'welcome_1','welcome_2','welcome_3','welcome_4','welcome_5',
+        'followup_1','followup_2','followup_3','followup_4',
+        'nurture_1','nurture_2','nurture_3','nurture_4','nurture_5','nurture_6',
+        'nurture_7','nurture_8','nurture_9','nurture_10','nurture_11','nurture_monthly'
+    ];
+
+    let filtered = outreachLeadsList.filter(l =>
+        searchVal === '' ||
         (l.first_name || '').toLowerCase().includes(searchVal) ||
         (l.email || '').toLowerCase().includes(searchVal) ||
         (l.company_name || '').toLowerCase().includes(searchVal)
     );
-    
+
+    // Status filter
+    if (_envioStatusFilter === 'enriched') {
+        filtered = filtered.filter(l => l.status === 'enriched' || l.status === 'lead');
+    } else if (_envioStatusFilter === 'active') {
+        filtered = filtered.filter(l => activeStatuses.includes(l.status));
+    } else if (_envioStatusFilter === 'completed') {
+        filtered = filtered.filter(l => l.status === 'nurture_monthly' || l.status === 'reunion' || l.status === 'unsubscribed' || l.status === 'completed');
+    }
+
     if (filtered.length === 0) {
-        listEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-grey); font-size:0.85rem;">No hay leads coincidentes</div>';
+        listEl.innerHTML = '<div class="envio-empty">No hay leads que coincidan con el filtro</div>';
         return;
     }
-    
+
     filtered.forEach(lead => {
-        const row = document.createElement('div');
-        row.style.cssText = 'padding:14px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-card); display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; margin-bottom: 8px;';
-        
-        row.innerHTML = `
-            <div>
-                <strong style="color:var(--text-main); font-size:0.9rem">${lead.first_name || 'Prospecto'} (${lead.company_name || '—'})</strong>
-                <div style="color:var(--text-grey); font-size:0.78rem; margin-top:2px;">
-                    ${lead.email} | Estado: <span style="font-weight:700; color:#0a84ff;">${lead.status}</span>
+        const step = lead.sequence_step || 0;
+        const status = lead.status || 'enriched';
+        const version = lead.version || 'A';
+        const isInSequence = activeStatuses.includes(status);
+        const isPending = status === 'enriched' || status === 'lead';
+        const isCompleted = status === 'nurture_monthly' || status === 'reunion' || status === 'unsubscribed' || status === 'completed';
+
+        // Chain info from step
+        let chainNum = 1, chainName = 'Bienvenida', chainColor = '#ff9500', stepInChain = step + 1, totalSteps = 5;
+        if (step < 5) {
+            chainNum = 1; chainName = 'Bienvenida'; chainColor = '#ff9500'; stepInChain = step + 1; totalSteps = 5;
+        } else if (step < 9) {
+            chainNum = 2; chainName = 'Seguimiento'; chainColor = '#34c759'; stepInChain = step - 4; totalSteps = 4;
+        } else {
+            chainNum = 3; chainName = 'Mantenimiento'; chainColor = '#007aff'; stepInChain = step - 8; totalSteps = 12;
+        }
+        const progressPct = isInSequence ? Math.round((stepInChain / totalSteps) * 100) : (isCompleted ? 100 : 0);
+
+        // Status badge
+        let statusLabel, statusClass;
+        if (isPending) {
+            statusLabel = 'Pendiente'; statusClass = 'envio-status-pending';
+        } else if (isCompleted) {
+            if (status === 'reunion') { statusLabel = 'Reunión'; statusClass = 'envio-status-meeting'; }
+            else if (status === 'unsubscribed') { statusLabel = 'Baja'; statusClass = 'envio-status-unsub'; }
+            else { statusLabel = 'Completado'; statusClass = 'envio-status-done'; }
+        } else {
+            statusLabel = `C${chainNum} · Paso ${stepInChain}`; statusClass = 'envio-status-active';
+        }
+
+        // Version colors
+        const versionColors = { A: '#ff6b6b', B: '#007aff', C: '#bf5af2' };
+        const vColor = versionColors[version] || '#999';
+
+        // Last contacted
+        const lastContact = lead.last_contacted_at
+            ? new Date(lead.last_contacted_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+            : '—';
+
+        // Initials
+        const initials = ((lead.first_name || 'P')[0] + ((lead.company_name || '')[0] || '')).toUpperCase();
+
+        const card = document.createElement('div');
+        card.className = 'envio-lead-card';
+
+        card.innerHTML = `
+            <div class="envio-card-left">
+                <div class="envio-avatar" style="background:${chainColor}20;color:${chainColor}">${initials}</div>
+                <div class="envio-card-info">
+                    <div class="envio-card-name">${lead.first_name || 'Prospecto'} <span class="envio-card-company">${lead.company_name || '—'}</span></div>
+                    <div class="envio-card-email">${lead.email}</div>
+                    <div class="envio-card-meta">
+                        <span class="envio-version-dot" style="background:${vColor}"></span>
+                        <span class="envio-meta-label">V.${version}</span>
+                        <span class="envio-meta-sep">·</span>
+                        <span class="envio-meta-label">Último: ${lastContact}</span>
+                    </div>
                 </div>
             </div>
-            <div style="display:flex; gap:8px;">
-                <button class="btn-secondary" style="padding:6px 12px; font-size:0.78rem; border-radius:8px;" onclick="window.openComposeForLead('${lead.email}')">📝 Enviar Email</button>
-                <button class="btn-primary" style="padding:6px 12px; font-size:0.78rem; border-radius:8px;" ${lead.status !== 'enriched' ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''} onclick="window.startOutreachSequence('${lead.id}')">🚀 Iniciar Secuencia</button>
+            <div class="envio-card-right">
+                <div class="envio-seq-indicator">
+                    <span class="envio-status-badge ${statusClass}">${statusLabel}</span>
+                    ${isInSequence ? `
+                        <div class="envio-progress-wrap">
+                            <div class="envio-progress-track">
+                                <div class="envio-progress-fill" style="width:${progressPct}%;background:${chainColor}"></div>
+                            </div>
+                            <span class="envio-progress-label" style="color:${chainColor}">${chainName} ${stepInChain}/${totalSteps}</span>
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="envio-card-actions">
+                    <button class="envio-btn-compose" onclick="window.openComposeForLead('${lead.email}')">📝 Email manual</button>
+                    ${isPending ? `
+                        <button class="envio-btn-start" onclick="window.startOutreachSequence('${lead.id}')">🚀 Iniciar secuencia</button>
+                    ` : isInSequence ? `
+                        <button class="envio-btn-resume" onclick="window.startOutreachSequence('${lead.id}')">▶ Enviar siguiente</button>
+                    ` : ''}
+                </div>
             </div>
         `;
-        listEl.appendChild(row);
+        listEl.appendChild(card);
     });
 }
 
