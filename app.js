@@ -80,12 +80,12 @@ window.executeComposeAI = function() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            messages: [{ role: 'user', content: 'Genera un email profesional en HTML para enviar a un cliente. La instrucción es: ' + instruction + '. El email debe ser corto, profesional, en español, sin incluir la etiqueta <html> ni <body>, solo el contenido del correo. Firma como iadebarrio.com' }]
+            message: 'Genera un email profesional en HTML para enviar a un cliente potencial. La instrucción es: ' + instruction + '. El email debe ser corto, profesional, en español, sin incluir la etiqueta <html> ni <body>, solo el contenido del correo. Firma como iadebarrio.com. Devuelve SOLO el HTML del email, sin explicaciones adicionales.'
         })
     }).then(function(r) { return r.json(); }).then(function(data) {
-        if (body) body.value = data.reply || data.message || 'Error generando contenido';
-    }).catch(function() {
-        if (body) body.value = 'Error al conectar con la IA. Escribe tu mensaje manualmente.';
+        if (body) body.value = data.text || data.reply || data.message || 'Error generando contenido';
+    }).catch(function(err) {
+        if (body) body.value = 'Error al conectar con la IA: ' + err.message;
     });
 };
 
@@ -2775,7 +2775,14 @@ async function sendManualEmail() {
         showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
         return;
     }
-    const emailTo = document.getElementById('compose-email-to').value;
+    let emailTo = document.getElementById('compose-email-to').value;
+    
+    // Handle custom email option
+    if (emailTo === '__custom__') {
+        const customInput = document.getElementById('compose-custom-email');
+        emailTo = customInput ? customInput.value.trim() : '';
+    }
+    
     const subject = document.getElementById('compose-email-subject').value.trim();
     const body = document.getElementById('compose-email-body').value.trim();
     
@@ -2784,9 +2791,16 @@ async function sendManualEmail() {
         return;
     }
     
+    // Basic email validation
+    if (!emailTo.includes('@') || !emailTo.includes('.')) {
+        showToast('El email introducido no es válido', true);
+        return;
+    }
+    
     const sendBtn = document.getElementById('btn-send-manual-email');
+    const originalHTML = sendBtn.innerHTML;
     sendBtn.disabled = true;
-    sendBtn.textContent = 'Enviando...';
+    sendBtn.innerHTML = '⏳ Enviando...';
     
     try {
         const res = await fetch('/api/send-manual', {
@@ -2801,18 +2815,18 @@ async function sendManualEmail() {
         
         const data = await res.json();
         if (res.ok && data.success) {
-            showToast('Email enviado con éxito');
+            showToast('✅ Email enviado a ' + emailTo);
             closeComposeEmailModal();
-            await loadBandejaInbox();
+            if (typeof loadBandejaInbox === 'function') await loadBandejaInbox();
         } else {
-            showToast(data.error || 'Error al enviar email manual', true);
+            showToast(data.error || 'Error al enviar email', true);
         }
     } catch(e) {
         console.error('Error sending manual email:', e);
         showToast('Error de conexión', true);
     } finally {
         sendBtn.disabled = false;
-        sendBtn.textContent = 'Enviar Correo';
+        sendBtn.innerHTML = originalHTML;
     }
 }
 
