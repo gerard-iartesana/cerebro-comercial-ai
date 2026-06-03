@@ -116,37 +116,71 @@
 
     <!-- Manual Email Composer Modal -->
     <div class="macos-modal-overlay" id="email-compose-modal" style="display: none;">
-        <div class="macos-modal-box" style="max-width: 600px; text-align: left;">
-            <h3 class="macos-alert-title" style="margin-bottom: 12px;">📝 Redactar Correo Manual</h3>
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-                <div>
-                    <label class="dash-label">Para (Lead / Destinatario)</label>
-                    <select class="dash-input" id="compose-email-to" style="width: 100%;">
-                        <!-- Populated with leads list -->
+        <div class="compose-modal">
+            <!-- Header -->
+            <div class="compose-header">
+                <div class="compose-header-left">
+                    <span class="compose-header-icon">✉️</span>
+                    <h3 class="compose-title">Redactar Correo</h3>
+                </div>
+                <button class="compose-close" onclick="closeComposeEmailModal()">✕</button>
+            </div>
+
+            <!-- To field: select + custom input -->
+            <div class="compose-field">
+                <label class="compose-label">Para</label>
+                <div class="compose-to-row">
+                    <select class="compose-select" id="compose-email-to" onchange="if(this.value==='__custom__') document.getElementById('compose-custom-email').style.display='block';">
+                        <!-- Populated dynamically -->
                     </select>
-                </div>
-                <div>
-                    <label class="dash-label">Asunto</label>
-                    <input type="text" class="dash-input" id="compose-email-subject" placeholder="Ej: Sobre nuestra reunión de ayer..." style="width: 100%;" />
-                </div>
-                <div>
-                    <label class="dash-label">Mensaje (Editor HTML)</label>
-                    <!-- Rich Editor Toolbar -->
-                    <div class="nl-editor-toolbar" style="margin-top: 4px;">
-                        <button type="button" class="nl-toolbar-btn" onclick="insertAtComposerCursor('<strong>', '</strong>')"><strong>B</strong></button>
-                        <button type="button" class="nl-toolbar-btn" onclick="insertAtComposerCursor('<em>', '</em>')"><em>I</em></button>
-                        <button type="button" class="nl-toolbar-btn" onclick="insertAtComposerCursor('<h2 style=&quot;color:#1d1d1f;font-size:1.3em;margin:16px 0 8px&quot;>', '</h2>')">H2</button>
-                        <button type="button" class="nl-toolbar-btn" onclick="insertAtComposerCursor('<p>', '</p>')">¶</button>
-                        <div class="nl-toolbar-sep"></div>
-                        <button type="button" class="nl-toolbar-btn" onclick="openComposerLinkPrompt()">🔗</button>
-                        <button type="button" class="nl-toolbar-btn" onclick="openComposerImagePrompt()">🖼️</button>
-                    </div>
-                    <textarea class="nl-editor-textarea" id="compose-email-body" rows="12" placeholder="Escribe tu correo en formato HTML o texto plano..." style="width: 100%;"></textarea>
+                    <input type="email" class="compose-input" id="compose-custom-email" placeholder="otro@email.com (para pruebas)" style="display:none;" />
                 </div>
             </div>
-            <div class="macos-alert-actions confirm-actions" style="margin-top: 16px;">
-                <button class="macos-alert-btn btn-cancel" onclick="closeComposeEmailModal()">Cancelar</button>
-                <button class="macos-alert-btn btn-primary" onclick="sendManualEmail()" id="btn-send-manual-email">Enviar Correo</button>
+
+            <!-- Subject -->
+            <div class="compose-field">
+                <label class="compose-label">Asunto</label>
+                <input type="text" class="compose-input" id="compose-email-subject" placeholder="Ej: Propuesta de colaboración — iadebarrio.com" />
+            </div>
+
+            <!-- Body with toolbar -->
+            <div class="compose-field compose-field-body">
+                <label class="compose-label">Mensaje</label>
+                <div class="compose-editor-wrap">
+                    <div class="compose-toolbar">
+                        <button type="button" class="compose-toolbar-btn" onclick="insertAtComposerCursor('<strong>', '</strong>')" title="Negrita"><strong>B</strong></button>
+                        <button type="button" class="compose-toolbar-btn" onclick="insertAtComposerCursor('<em>', '</em>')" title="Cursiva"><em>I</em></button>
+                        <button type="button" class="compose-toolbar-btn" onclick="insertAtComposerCursor('<h2>', '</h2>')" title="Título">H2</button>
+                        <button type="button" class="compose-toolbar-btn" onclick="insertAtComposerCursor('<p>', '</p>')" title="Párrafo">¶</button>
+                        <div class="compose-toolbar-sep"></div>
+                        <button type="button" class="compose-toolbar-btn" onclick="openComposerLinkPrompt()" title="Enlace">🔗</button>
+                        <button type="button" class="compose-toolbar-btn" onclick="openComposerImagePrompt()" title="Imagen">🖼️</button>
+                        <div class="compose-toolbar-sep"></div>
+                        <button type="button" class="compose-toolbar-btn compose-toolbar-ai" onclick="window.openComposeAI()" title="Generar con IA">🤖 IA</button>
+                    </div>
+                    <textarea class="compose-textarea" id="compose-email-body" rows="14" placeholder="Escribe tu correo aquí...&#10;&#10;Puedes usar HTML o texto plano."></textarea>
+                </div>
+            </div>
+
+            <!-- Attachments -->
+            <div class="compose-field">
+                <div class="compose-attach-row">
+                    <button type="button" class="compose-attach-btn" onclick="document.getElementById('compose-file-input').click()">
+                        📎 Adjuntar archivo
+                    </button>
+                    <span class="compose-attach-hint">PDF, JPG, PNG, DOC (máx. 10MB)</span>
+                    <input type="file" id="compose-file-input" accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.xls,.xlsx" multiple style="display:none;" onchange="window.handleComposeAttach(this)" />
+                </div>
+                <div id="compose-attachments-list" class="compose-attachments-list"></div>
+            </div>
+
+            <!-- Actions -->
+            <div class="compose-actions">
+                <button class="compose-btn-cancel" onclick="closeComposeEmailModal()">Cancelar</button>
+                <button class="compose-btn-send" onclick="sendManualEmail()" id="btn-send-manual-email">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="compose-send-icon"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    Enviar
+                </button>
             </div>
         </div>
     </div>

@@ -1,22 +1,97 @@
 // 🧠 CerebroComercial AI — Frontend Orchestrator (app.js)
 
 // EMAIL COMPOSE - defined early to ensure availability
+window._composeAttachments = [];
+
 window.openComposeForLead = function(email) {
     try {
         if (sessionStorage.getItem('cc_role') === 'guest') return;
         var modal = document.getElementById('email-compose-modal');
         var select = document.getElementById('compose-email-to');
         if (!modal || !select) { alert('Modal de email no encontrado'); return; }
-        select.innerHTML = '<option value="' + email + '" selected>' + email + '</option>';
+
+        select.innerHTML = '';
+        // Add target email
+        var mainOpt = document.createElement('option');
+        mainOpt.value = email;
+        mainOpt.textContent = email;
+        mainOpt.selected = true;
+        select.appendChild(mainOpt);
+
+        // Add other leads
+        var seen = new Set([email]);
+        var sources = [].concat(typeof _allLeadsGridData !== 'undefined' && _allLeadsGridData ? _allLeadsGridData : [], typeof outreachLeadsList !== 'undefined' && outreachLeadsList ? outreachLeadsList : []);
+        sources.forEach(function(l) {
+            if (!l.email || seen.has(l.email)) return;
+            seen.add(l.email);
+            var opt = document.createElement('option');
+            opt.value = l.email;
+            opt.textContent = (l.first_name || 'Prospecto') + ' (' + (l.company_name || '—') + ') — ' + l.email;
+            select.appendChild(opt);
+        });
+
+        // Custom email option
+        var customOpt = document.createElement('option');
+        customOpt.value = '__custom__';
+        customOpt.textContent = '✏️ Otro email (pruebas)...';
+        select.appendChild(customOpt);
+
+        // Reset fields
+        var customInput = document.getElementById('compose-custom-email');
+        if (customInput) { customInput.style.display = 'none'; customInput.value = ''; }
         var subj = document.getElementById('compose-email-subject');
         var body = document.getElementById('compose-email-body');
         if (subj) subj.value = '';
         if (body) body.value = '';
+        window._composeAttachments = [];
+        var attList = document.getElementById('compose-attachments-list');
+        if (attList) attList.innerHTML = '';
+
         modal.style.display = 'flex';
         modal.classList.add('active');
     } catch(e) {
         alert('Error: ' + e.message);
     }
+};
+
+// AI content generator for compose
+window.openComposeAI = function() {
+    var instruction = prompt('¿Qué quieres que escriba la IA?\n\nEj: "Un email presentando nuestros servicios de diseño web"');
+    if (!instruction) return;
+    var body = document.getElementById('compose-email-body');
+    if (body) body.value = 'Generando con IA...';
+
+    fetch('/api/brain-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            messages: [{ role: 'user', content: 'Genera un email profesional en HTML para enviar a un cliente. La instrucción es: ' + instruction + '. El email debe ser corto, profesional, en español, sin incluir la etiqueta <html> ni <body>, solo el contenido del correo. Firma como iadebarrio.com' }]
+        })
+    }).then(function(r) { return r.json(); }).then(function(data) {
+        if (body) body.value = data.reply || data.message || 'Error generando contenido';
+    }).catch(function() {
+        if (body) body.value = 'Error al conectar con la IA. Escribe tu mensaje manualmente.';
+    });
+};
+
+// File attachment handler
+window.handleComposeAttach = function(input) {
+    var list = document.getElementById('compose-attachments-list');
+    if (!list || !input.files) return;
+    Array.from(input.files).forEach(function(file) {
+        if (file.size > 10 * 1024 * 1024) {
+            if (typeof showToast !== 'undefined') showToast('Archivo "' + file.name + '" demasiado grande (máx 10MB)', true);
+            return;
+        }
+        window._composeAttachments.push(file);
+        var chip = document.createElement('div');
+        chip.className = 'compose-attach-chip';
+        var icon = file.type.includes('pdf') ? '📄' : file.type.includes('image') ? '🖼️' : '📎';
+        var sizeMB = (file.size / 1024 / 1024).toFixed(1);
+        chip.innerHTML = icon + ' ' + file.name + ' <span style="opacity:0.6">(' + sizeMB + 'MB)</span> <button onclick="this.parentElement.remove()">✕</button>';
+        list.appendChild(chip);
+    });
+    input.value = '';
 };
 // 1. Supabase Initialization
 const SUPABASE_URL = 'https://lmozoetpehmdxxremtqn.supabase.co';
