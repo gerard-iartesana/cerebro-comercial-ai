@@ -1150,7 +1150,180 @@ function renderAgentHistories() {
 document.addEventListener('DOMContentLoaded', renderAgentHistories);
 
 // 9. Email Inbox / Outbox Module
+// 9. Email Inbox / Outbox & Sequences Module
+let emailMainTab = 'bandeja';
+let outreachSubTab = 'panel';
+let proposalSubTab = 'cadenas';
+let proposalCategory = 'consultoria';
+let outreachActiveVersions = { 1: 'A', 2: 'A', 3: 'A' };
+let outreachExpandedAccordion = null;
+let proposalExpandedAccordion = null;
+let outreachSequences = [];
+let outreachConfig = {};
+let proposalSequences = [];
+let proposalConfig = {};
+let outreachHistPage = 1;
+let outreachHistSearch = '';
+let outreachHistFilter = 'all';
+let proposalHistSearch = '';
+let outreachLeadsList = [];
+
 async function loadEmailsLog() {
+    try {
+        await fetchOutreachConfig();
+        await fetchProposalConfig();
+        await fetchOutreachSequences();
+        await fetchProposalSequences();
+        await fetchOutreachLeadsList();
+        
+        switchEmailMainTab(emailMainTab);
+    } catch(e) {
+        console.error('Error initializing emails module:', e);
+    }
+}
+
+async function fetchOutreachConfig() {
+    try {
+        const { data, error } = await _supabase.from('outreach_config').select('*').limit(1).maybeSingle();
+        if (error) throw error;
+        outreachConfig = data || {};
+    } catch(e) {
+        console.warn('Error fetching outreach config:', e);
+        outreachConfig = {};
+    }
+}
+
+async function fetchProposalConfig() {
+    try {
+        const { data, error } = await _supabase.from('proposal_config').select('*').limit(1).maybeSingle();
+        if (error) throw error;
+        proposalConfig = data || {};
+    } catch(e) {
+        console.warn('Error fetching proposal config:', e);
+        proposalConfig = {};
+    }
+}
+
+async function fetchOutreachSequences() {
+    try {
+        const { data, error } = await _supabase.from('outreach_sequences').select('*').order('cadena_num', { ascending: true }).order('orden', { ascending: true });
+        if (error) throw error;
+        outreachSequences = data || [];
+        if (outreachSequences.length === 0) {
+            console.log('No outreach sequences found in DB. Seeding defaults...');
+            await seedDefaultOutreachSequences();
+            const { data: refetched } = await _supabase.from('outreach_sequences').select('*').order('cadena_num', { ascending: true }).order('orden', { ascending: true });
+            outreachSequences = refetched || [];
+        }
+    } catch(e) {
+        console.warn('Error fetching outreach sequences:', e);
+    }
+}
+
+async function fetchProposalSequences() {
+    try {
+        const { data, error } = await _supabase.from('proposal_sequences').select('*').order('step', { ascending: true });
+        if (error) throw error;
+        proposalSequences = data || [];
+        if (proposalSequences.length === 0) {
+            console.log('No proposal sequences found in DB. Seeding defaults...');
+            await seedDefaultProposalSequences();
+            const { data: refetched } = await _supabase.from('proposal_sequences').select('*').order('step', { ascending: true });
+            proposalSequences = refetched || [];
+        }
+    } catch(e) {
+        console.warn('Error fetching proposal sequences:', e);
+    }
+}
+
+async function fetchOutreachLeadsList() {
+    try {
+        const { data, error } = await _supabase.from('outreach_leads').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        outreachLeadsList = data || [];
+    } catch(e) {
+        console.warn('Error loading outreach leads:', e);
+    }
+}
+
+async function seedDefaultOutreachSequences() {
+    const steps = [
+      { cadena_num: 1, orden: 1, name: 'Bienvenida - Contacto Inicial', subject: 'una idea para {{company_name}}', content: 'Hola {{first_name}},\n\nSoy Gerard. Ayudamos a negocios y agencias a captar más clientes y multiplicar su productividad automatizando procesos combinando Inteligencia Artificial con desarrollo a medida.\n\nTe escribo porque veo una oportunidad muy clara en tu web para automatizar algunos de tus procesos.\n\n¿Te vendría bien charlar 10 o 15 minutos esta semana por Meet?\n\nSi te cuadra, puedes elegir día y hora directamente en mi calendario:\n{{booking_url}}\n\nUn abrazo,\nGerard' },
+      { cadena_num: 1, orden: 2, name: 'Bienvenida - Primer seguimiento', subject: 're: idea para {{company_name}}', content: 'Hola {{first_name}},\n\nTe escribo de forma muy breve por si se te pasó mi correo anterior.\n\n¿Has calculado alguna vez cuánto tiempo pierde tu equipo en tareas repetitivas de administración o captación?\n\nSi te da curiosidad, podemos charlar 10 minutos sin compromiso: {{booking_url}}\n\nUn abrazo,\nGerard' },
+      { cadena_num: 2, orden: 1, name: 'Seguimiento - Caso de Éxito', subject: 'automatizar tareas repetitivas en {{company_name}}', content: 'Hola {{first_name}},\n\nHace poco ayudamos a una empresa similar a la vuestra a ahorrar más de 15 horas de trabajo manual a la semana con IA.\n\nEl objetivo es ver si en {{company_name}} podemos lograr un impacto similar.\n\nElige un hueco cuando te venga bien: {{booking_url}}\n\nUn abrazo,\nGerard' },
+      { cadena_num: 2, orden: 2, name: 'Seguimiento - Breakup suave', subject: '¿demasiado lío, {{first_name}}?', content: 'Hola {{first_name}},\n\nImagino que estarás hasta arriba de trabajo con la gestión de {{company_name}} (¡lo cual es excelente!).\n\nSolo te escribo para saber si os encajaría explorar cómo liberar parte de esa carga administrativa. Si no es un buen momento dímelo y no insistiré.\n\n¡Que tengas una gran semana!\n\nUn abrazo,\nGerard' },
+      { cadena_num: 3, orden: 1, name: 'Mantenimiento - Último intento', subject: 'último intento por mi parte', content: 'Hola {{first_name}},\n\nAsumo que ahora mismo no es una prioridad para {{company_name}} automatizar tareas o implementar IA.\n\nA partir de ahora te dejaré tranquilo, pero si en el futuro decides dar el salto ya sabes dónde encontrarme: {{booking_url}}\n\nUn abrazo,\nGerard' },
+      { cadena_num: 3, orden: 2, name: 'Mantenimiento - Consejo mensual', subject: 'un consejo rápido de IA para {{company_name}}', content: 'Hola {{first_name}},\n\nEspero que todo vaya genial en {{company_name}}.\n\nAquí tienes un consejo de productividad del mes: automatiza tus reportes y clasificación de correos repetitivos usando una simple API conectada a tu bandeja.\n\nSi en algún momento quieres que lo montemos por ti, avísame.\n\nUn abrazo,\nGerard' }
+    ];
+    
+    const rows = [];
+    const versions = ['A', 'B', 'C'];
+    for (const step of steps) {
+        for (const v of versions) {
+            rows.push({
+                cadena_num: step.cadena_num,
+                orden: step.orden,
+                version: v,
+                nombre: step.name + ` (Versión ${v})`,
+                asunto: step.subject,
+                contenido_html: step.content.replace(/\n/g, '<br>'),
+                activo: true
+            });
+        }
+    }
+    await _supabase.from('outreach_sequences').insert(rows);
+}
+
+async function seedDefaultProposalSequences() {
+    const rows = [];
+    for (const seq of PRES_SEQUENCES) {
+        const seqId = seq.seqId;
+        for (const cat of seq.categories) {
+            const catKey = cat.key;
+            let stepNum = 1;
+            for (const email of cat.emails) {
+                rows.push({
+                    secuencia_id: seqId,
+                    categoria_key: catKey,
+                    step: stepNum++,
+                    nombre: email.name || `Paso ${stepNum}`,
+                    asunto: email.asunto,
+                    contenido_html: email.contenido || email.contenido_html,
+                    activo: true
+                });
+            }
+        }
+    }
+    await _supabase.from('proposal_sequences').insert(rows);
+}
+
+function switchEmailMainTab(tab) {
+    emailMainTab = tab;
+    document.querySelectorAll('.email-main-tab').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.getElementById(`btn-main-tab-${tab}`);
+    if (activeBtn) activeBtn.classList.add('active');
+    
+    document.querySelectorAll('.email-main-content').forEach(sec => sec.style.display = 'none');
+    const targetSec = document.getElementById(`email-tab-${tab}`);
+    if (targetSec) targetSec.style.display = 'block';
+    
+    if (tab === 'bandeja') {
+        loadBandejaInbox();
+    } else if (tab === 'outreach') {
+        switchOutreachSubTab(outreachSubTab);
+    } else if (tab === 'propuestas') {
+        // Query proposals active count
+        _supabase.from('propuesta_seguimiento').select('*', { count: 'exact', head: true })
+            .eq('pausada', false).not('secuencia_activa', 'is', null)
+            .then(({ count }) => {
+                const badge = document.getElementById('proposal-active-leads-subtitle');
+                if (badge) badge.textContent = `${count || 0} propuestas activas en seguimiento`;
+            });
+        switchProposalCategoryTab(proposalCategory);
+    }
+}
+
+async function loadBandejaInbox() {
     try {
         const { data: logs, error } = await _supabase
             .from('outreach_email_logs')
@@ -1196,7 +1369,6 @@ async function loadEmailsLog() {
             listDiv.appendChild(item);
         });
 
-        // Load first email detail by default
         if (logs.length > 0) {
             viewEmailDetails(logs[0]);
         }
@@ -1211,6 +1383,1157 @@ function viewEmailDetails(log) {
     document.getElementById('email-view-from').textContent = `Destinatario: ${lead.first_name} <${lead.email}> · Empresa: ${lead.company_name}`;
     document.getElementById('email-view-body').innerHTML = log.body;
 }
+
+function switchOutreachSubTab(subTab) {
+    outreachSubTab = subTab;
+    document.querySelectorAll('#email-tab-outreach .nl-tab-btn').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.getElementById(`btn-outreach-sub-${subTab}`);
+    if (activeBtn) activeBtn.classList.add('active');
+    
+    document.querySelectorAll('.outreach-sub-content').forEach(sec => sec.style.display = 'none');
+    const targetSec = document.getElementById(`outreach-sub-${subTab}`);
+    if (targetSec) targetSec.style.display = 'block';
+    
+    if (subTab === 'panel') {
+        renderOutreachPanel();
+    } else if (subTab === 'cadenas') {
+        renderOutreachChains();
+    } else if (subTab === 'config') {
+        renderOutreachConfigForm();
+    } else if (subTab === 'historial') {
+        outreachHistPage = 1;
+        renderOutreachHistorial();
+    } else if (subTab === 'envio') {
+        renderOutreachSendList();
+    }
+}
+
+function switchProposalSubTab(subTab) {
+    proposalSubTab = subTab;
+    document.querySelectorAll('#email-tab-propuestas .nl-tab-btn').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.getElementById(`btn-proposal-sub-${subTab}`);
+    if (activeBtn) activeBtn.classList.add('active');
+    
+    document.querySelectorAll('.proposal-sub-content').forEach(sec => sec.style.display = 'none');
+    const targetSec = document.getElementById(`proposal-sub-${subTab}`);
+    if (targetSec) targetSec.style.display = 'block';
+    
+    if (subTab === 'cadenas') {
+        renderProposalChains();
+    } else if (subTab === 'config') {
+        renderProposalConfigForm();
+    } else if (subTab === 'historial') {
+        renderProposalHistorial();
+    }
+}
+
+function switchProposalCategoryTab(categoryKey) {
+    proposalCategory = categoryKey;
+    document.querySelectorAll('.nl-ver-tabs .nl-ver-tab').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.getElementById(`tab-prop-cat-${categoryKey}`);
+    if (activeBtn) activeBtn.classList.add('active');
+    
+    if (proposalSubTab === 'cadenas') {
+        renderProposalChains();
+    }
+}
+
+async function renderOutreachPanel() {
+    try {
+        const { data: leadsData } = await _supabase.from('outreach_leads').select('status');
+        const activeLeadsCount = leadsData ? leadsData.filter(l => 
+            ['sent_first', 'followup_1', 'followup_2', 'followup_3', 'followup_4'].includes(l.status)
+        ).length : 0;
+        
+        document.getElementById('outreach-active-leads-subtitle').textContent = `${activeLeadsCount} leads en secuencias activas`;
+        
+        const { data: logsData } = await _supabase.from('outreach_email_logs').select('opened_at, clicked_at, email_type');
+        const totalSent = logsData ? logsData.length : 0;
+        const totalOpened = logsData ? logsData.filter(l => l.opened_at).length : 0;
+        const totalClicked = logsData ? logsData.filter(l => l.clicked_at).length : 0;
+        
+        const openRate = totalSent > 0 ? Math.round((totalOpened / totalSent) * 100) : 0;
+        const clicks = totalClicked;
+        const bajas = leadsData ? leadsData.filter(l => l.status === 'unsubscribed').length : 0;
+        
+        document.getElementById('outreach-stats-enviados').textContent = totalSent;
+        document.getElementById('outreach-stats-aperturas').textContent = `${openRate}%`;
+        document.getElementById('outreach-stats-clicks').textContent = clicks;
+        document.getElementById('outreach-stats-bajas').textContent = bajas;
+        
+        const breakdownDiv = document.getElementById('outreach-chains-breakdown');
+        breakdownDiv.innerHTML = '';
+        
+        const chainsInfo = [
+            { num: 1, name: 'Cadena 1 (Bienvenida)', desc: 'Envío inicial y primer seguimiento (C1)' },
+            { num: 2, name: 'Cadena 2 (Seguimiento)', desc: 'Caso de éxito y breakup suave (C2)' },
+            { num: 3, name: 'Cadena 3 (Mantenimiento)', desc: 'Píldora de valor mensual (C3)' }
+        ];
+        
+        chainsInfo.forEach(chain => {
+            const logsForChain = logsData ? logsData.filter(l => l.email_type.includes(`step_${(chain.num - 1) * 2}`) || l.email_type.includes(`step_${(chain.num - 1) * 2 + 1}`)) : [];
+            const sent = logsForChain.length;
+            const opened = logsForChain.filter(l => l.opened_at).length;
+            const rate = sent > 0 ? Math.round((opened / sent) * 100) : 0;
+            
+            const card = document.createElement('div');
+            card.className = 'nl-chain-stat-row';
+            card.style.cssText = 'padding:14px; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:12px; display:flex; flex-direction:column; gap:8px;';
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="color:var(--text-main); font-size:0.9rem">${chain.name}</strong>
+                        <div style="font-size:0.75rem; color:var(--text-grey);">${chain.desc}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <span style="font-size:0.85rem; color:var(--text-main); font-weight:700;">${sent} enviados</span>
+                        <div style="font-size:0.75rem; color:var(--accent-green); font-weight:700;">${rate}% apertura</div>
+                    </div>
+                </div>
+                <div class="nl-version-bar-track" style="height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden;">
+                    <div class="nl-version-bar-fill" style="height:100%; width:${rate}%; background:linear-gradient(90deg, #0071e3, #5ac8fa); border-radius:3px;"></div>
+                </div>
+            `;
+            breakdownDiv.appendChild(card);
+        });
+        
+        const recentDiv = document.getElementById('outreach-recent-list');
+        recentDiv.innerHTML = '';
+        
+        const { data: recentLogs } = await _supabase
+            .from('outreach_email_logs')
+            .select(`
+                id,
+                email_type,
+                subject,
+                sent_at,
+                outreach_leads (email, company_name, first_name)
+            `)
+            .order('sent_at', { ascending: false })
+            .limit(5);
+            
+        if (!recentLogs || recentLogs.length === 0) {
+            recentDiv.innerHTML = '<div style="padding:12px; color:var(--text-grey); font-size:0.8rem; text-align:center;">No hay envíos recientes</div>';
+        } else {
+            recentLogs.forEach(log => {
+                const lead = log.outreach_leads || { email: 'Desconocido', company_name: '—', first_name: 'Prospecto' };
+                const time = new Date(log.sent_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                const date = new Date(log.sent_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+                
+                const item = document.createElement('div');
+                item.className = 'nl-recent-item';
+                item.style.cssText = 'padding:10px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; font-size:0.82rem;';
+                item.innerHTML = `
+                    <div>
+                        <span style="font-weight:700; color:var(--text-main)">${lead.first_name} (${lead.company_name})</span>
+                        <div style="color:var(--text-grey); font-size:0.75rem">${log.subject}</div>
+                    </div>
+                    <div style="text-align:right; font-size:0.75rem; color:var(--text-grey);">
+                        <div>${date}</div>
+                        <div>${time}</div>
+                    </div>
+                `;
+                recentDiv.appendChild(item);
+            });
+        }
+    } catch(e) {
+        console.error('Error rendering outreach stats:', e);
+    }
+}
+
+function renderOutreachChains() {
+    const container = document.getElementById('outreach-chains-container');
+    container.innerHTML = '';
+    
+    const chains = [
+        { num: 1, name: 'Cadena 1: Secuencia de Bienvenida', desc: 'Se dispara cuando el lead entra en estado "enriched".' },
+        { num: 2, name: 'Cadena 2: Secuencia de Seguimiento', desc: 'Se dispara tras completar la bienvenida.' },
+        { num: 3, name: 'Cadena 3: Secuencia de Mantenimiento', desc: 'Píldoras mensuales de valor.' }
+    ];
+    
+    chains.forEach(chain => {
+        const isOpen = outreachExpandedAccordion === chain.num;
+        const activeVersion = outreachActiveVersions[chain.num] || 'A';
+        const steps = outreachSequences.filter(s => s.cadena_num === chain.num && s.version === activeVersion);
+        
+        const group = document.createElement('div');
+        group.className = `nl-chain-group ${isOpen ? 'open' : ''}`;
+        group.id = `outreach-accordion-${chain.num}`;
+        
+        group.innerHTML = `
+            <div class="nl-chain-header" onclick="window.toggleOutreachAccordion(${chain.num})">
+                <div class="nl-chain-header-left">
+                    <span class="nl-chain-chevron" style="display:inline-block; transition:transform 0.2s; ${isOpen ? 'transform:rotate(90deg);' : ''}">▶</span>
+                    <span class="nl-chain-name" style="margin-left:8px; font-weight:700;">${chain.name}</span>
+                </div>
+                <span class="nl-chain-count" style="font-size:0.8rem; color:var(--text-grey); font-weight:600;">${steps.length} pasos</span>
+            </div>
+            <div class="nl-chain-body" style="display: ${isOpen ? 'block' : 'none'}; padding:16px;">
+                <div class="nl-version-tabs" style="display:flex; gap:6px; margin-bottom:16px;">
+                    <button class="nl-version-tab ${activeVersion === 'A' ? 'active' : ''}" onclick="window.switchOutreachVersion(${chain.num}, 'A')">Versión A (Conocidos)</button>
+                    <button class="nl-version-tab ${activeVersion === 'B' ? 'active' : ''}" onclick="window.switchOutreachVersion(${chain.num}, 'B')">Versión B (Desconocidos)</button>
+                    <button class="nl-version-tab ${activeVersion === 'C' ? 'active' : ''}" onclick="window.switchOutreachVersion(${chain.num}, 'C')">Versión C (Formularios)</button>
+                </div>
+                <div class="nl-steps" id="outreach-steps-${chain.num}">
+                    <!-- Steps populated below -->
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(group);
+        
+        if (isOpen) {
+            const stepsContainer = group.querySelector(`#outreach-steps-${chain.num}`);
+            if (steps.length === 0) {
+                stepsContainer.innerHTML = '<div style="padding:12px; color:var(--text-grey); font-size:0.8rem; text-align:center;">No hay pasos creados para esta versión</div>';
+            } else {
+                steps.forEach(step => {
+                    const stepCard = document.createElement('div');
+                    stepCard.className = 'nl-step-card';
+                    stepCard.style.cssText = 'border:1px solid var(--border-color); border-radius:12px; padding:16px; margin-bottom:16px; background:rgba(255,255,255,0.015);';
+                    stepCard.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <span style="font-weight:700; font-size:0.92rem; color:var(--text-main)">Paso ${step.orden}: ${step.nombre}</span>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn-secondary" style="padding:4px 8px; font-size:0.75rem; border-radius:6px;" onclick="window.sendTestEmail(${chain.num}, '${step.version}', ${step.orden}, 'outreach')">📧 Probar</button>
+                                <button class="btn-primary" style="padding:4px 8px; font-size:0.75rem; border-radius:6px;" onclick="window.saveOutreachTemplate(${chain.num}, '${step.version}', ${step.orden})">💾 Guardar</button>
+                            </div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <div>
+                                <label class="nl-config-field-label" style="margin-bottom:4px; display:block; font-size:0.75rem; color:var(--text-grey)">Asunto</label>
+                                <input type="text" class="nl-config-input" id="outreach-subject-${chain.num}-${step.version}-${step.orden}" value="${step.asunto || ''}" style="width:100%; padding:8px 10px; border-radius:8px; background:var(--bg-card); border:1px solid var(--border-color); color:var(--text-main)">
+                            </div>
+                            <div>
+                                <label class="nl-config-field-label" style="margin-bottom:4px; display:block; font-size:0.75rem; color:var(--text-grey)">Cuerpo (HTML)</label>
+                                <div class="nl-editor-toolbar" style="display:flex; gap:4px; margin-bottom:4px; background:rgba(255,255,255,0.02); padding:4px; border-radius:6px;">
+                                    <button type="button" class="nl-toolbar-btn" style="padding:2px 6px; font-size:0.75rem; border-radius:4px; background:transparent; border:none; color:var(--text-main); cursor:pointer;" onclick="window.insertAtTemplateCursor(${chain.num}, '${step.version}', ${step.orden}, '<strong>', '</strong>')"><strong>B</strong></button>
+                                    <button type="button" class="nl-toolbar-btn" style="padding:2px 6px; font-size:0.75rem; border-radius:4px; background:transparent; border:none; color:var(--text-main); cursor:pointer;" onclick="window.insertAtTemplateCursor(${chain.num}, '${step.version}', ${step.orden}, '<em>', '</em>')"><em>I</em></button>
+                                    <button type="button" class="nl-toolbar-btn" style="padding:2px 6px; font-size:0.75rem; border-radius:4px; background:transparent; border:none; color:var(--text-main); cursor:pointer;" onclick="window.insertAtTemplateCursor(${chain.num}, '${step.version}', ${step.orden}, '{{first_name}}', '')">nombre</button>
+                                    <button type="button" class="nl-toolbar-btn" style="padding:2px 6px; font-size:0.75rem; border-radius:4px; background:transparent; border:none; color:var(--text-main); cursor:pointer;" onclick="window.insertAtTemplateCursor(${chain.num}, '${step.version}', ${step.orden}, '{{company_name}}', '')">empresa</button>
+                                    <button type="button" class="nl-toolbar-btn" style="padding:2px 6px; font-size:0.75rem; border-radius:4px; background:transparent; border:none; color:var(--text-main); cursor:pointer;" onclick="window.insertAtTemplateCursor(${chain.num}, '${step.version}', ${step.orden}, '{{booking_url}}', '')">calendario</button>
+                                    <button type="button" class="btn-secondary" style="margin-left:auto; padding:2px 8px; font-size:0.7rem; border-radius:6px;" onclick="window.generateAIOutreachVariant(${chain.num}, '${step.version}', ${step.orden})">✨ Generar con IA</button>
+                                </div>
+                                <textarea class="nl-editor-textarea" id="outreach-body-${chain.num}-${step.version}-${step.orden}" rows="8" style="width:100%; font-family:monospace; font-size:0.82rem; padding:8px 10px; border-radius:8px; background:var(--bg-card); border:1px solid var(--border-color); color:var(--text-main); line-height:1.4">${step.contenido_html || ''}</textarea>
+                            </div>
+                        </div>
+                    `;
+                    stepsContainer.appendChild(stepCard);
+                });
+            }
+        }
+    });
+}
+
+window.toggleOutreachAccordion = function(chainNum) {
+    outreachExpandedAccordion = (outreachExpandedAccordion === chainNum) ? null : chainNum;
+    renderOutreachChains();
+};
+
+window.switchOutreachVersion = function(chainNum, version) {
+    outreachActiveVersions[chainNum] = version;
+    renderOutreachChains();
+};
+
+function renderProposalChains() {
+    const container = document.getElementById('proposal-chains-container');
+    container.innerHTML = '';
+    const categoryKey = proposalCategory;
+    const seqs = [
+        { id: 'inmediato', label: 'Seguimiento Inmediato', desc: 'Se dispara tras enviar la propuesta. (1 a 5 correos)' },
+        { id: 'mensual', label: 'Seguimiento Mensual', desc: 'Correos semanales durante un mes si no hay respuesta.' },
+        { id: 'anual', label: 'Seguimiento Anual', desc: 'Nutrición mensual a largo plazo (12 correos).' }
+    ];
+    
+    seqs.forEach(seq => {
+        const isOpen = proposalExpandedAccordion === seq.id;
+        const steps = proposalSequences.filter(s => s.secuencia_id === seq.id && s.categoria_key === categoryKey);
+        
+        const group = document.createElement('div');
+        group.className = `nl-chain-group ${isOpen ? 'open' : ''}`;
+        group.id = `proposal-accordion-${seq.id}`;
+        
+        group.innerHTML = `
+            <div class="nl-chain-header" onclick="window.toggleProposalAccordion('${seq.id}')">
+                <div class="nl-chain-header-left">
+                    <span class="nl-chain-chevron" style="display:inline-block; transition:transform 0.2s; ${isOpen ? 'transform:rotate(90deg);' : ''}">▶</span>
+                    <span class="nl-chain-name" style="margin-left:8px; font-weight:700;">${seq.label} (${categoryKey.toUpperCase()})</span>
+                </div>
+                <span class="nl-chain-count" style="font-size:0.8rem; color:var(--text-grey); font-weight:600;">${steps.length} pasos</span>
+            </div>
+            <div class="nl-chain-body" style="display: ${isOpen ? 'block' : 'none'}; padding:16px;">
+                <div class="nl-steps" id="proposal-steps-${seq.id}">
+                    <!-- Steps populated below -->
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(group);
+        
+        if (isOpen) {
+            const stepsContainer = group.querySelector(`#proposal-steps-${seq.id}`);
+            if (steps.length === 0) {
+                stepsContainer.innerHTML = '<div style="padding:12px; color:var(--text-grey); font-size:0.8rem; text-align:center;">No hay pasos creados para esta categoría</div>';
+            } else {
+                steps.forEach(step => {
+                    const stepCard = document.createElement('div');
+                    stepCard.className = 'nl-step-card';
+                    stepCard.style.cssText = 'border:1px solid var(--border-color); border-radius:12px; padding:16px; margin-bottom:16px; background:rgba(255,255,255,0.015);';
+                    stepCard.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <span style="font-weight:700; font-size:0.92rem; color:var(--text-main)">Paso ${step.step}: ${step.nombre}</span>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn-secondary" style="padding:4px 8px; font-size:0.75rem; border-radius:6px;" onclick="window.sendProposalTestEmail('${seq.id}', '${categoryKey}', ${step.step})">📧 Probar</button>
+                                <button class="btn-primary" style="padding:4px 8px; font-size:0.75rem; border-radius:6px;" onclick="window.saveProposalTemplate('${seq.id}', '${categoryKey}', ${step.step})">💾 Guardar</button>
+                            </div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <div>
+                                <label class="nl-config-field-label" style="margin-bottom:4px; display:block; font-size:0.75rem; color:var(--text-grey)">Asunto</label>
+                                <input type="text" class="nl-config-input" id="proposal-subject-${seq.id}-${categoryKey}-${step.step}" value="${step.asunto || ''}" style="width:100%; padding:8px 10px; border-radius:8px; background:var(--bg-card); border:1px solid var(--border-color); color:var(--text-main)">
+                            </div>
+                            <div>
+                                <label class="nl-config-field-label" style="margin-bottom:4px; display:block; font-size:0.75rem; color:var(--text-grey)">Cuerpo (HTML)</label>
+                                <div class="nl-editor-toolbar" style="display:flex; gap:4px; margin-bottom:4px; background:rgba(255,255,255,0.02); padding:4px; border-radius:6px;">
+                                    <button type="button" class="nl-toolbar-btn" style="padding:2px 6px; font-size:0.75rem; border-radius:4px; background:transparent; border:none; color:var(--text-main); cursor:pointer;" onclick="window.insertAtProposalCursor('${seq.id}', '${categoryKey}', ${step.step}, '<strong>', '</strong>')"><strong>B</strong></button>
+                                    <button type="button" class="nl-toolbar-btn" style="padding:2px 6px; font-size:0.75rem; border-radius:4px; background:transparent; border:none; color:var(--text-main); cursor:pointer;" onclick="window.insertAtProposalCursor('${seq.id}', '${categoryKey}', ${step.step}, '<em>', '</em>')"><em>I</em></button>
+                                    <button type="button" class="nl-toolbar-btn" style="padding:2px 6px; font-size:0.75rem; border-radius:4px; background:transparent; border:none; color:var(--text-main); cursor:pointer;" onclick="window.insertAtProposalCursor('${seq.id}', '${categoryKey}', ${step.step}, '{{nombre}}', '')">nombre</button>
+                                    <button type="button" class="nl-toolbar-btn" style="padding:2px 6px; font-size:0.75rem; border-radius:4px; background:transparent; border:none; color:var(--text-main); cursor:pointer;" onclick="window.insertAtProposalCursor('${seq.id}', '${categoryKey}', ${step.step}, '{{link_confirmar}}', '')">link confirmar</button>
+                                    <button type="button" class="nl-toolbar-btn" style="padding:2px 6px; font-size:0.75rem; border-radius:4px; background:transparent; border:none; color:var(--text-main); cursor:pointer;" onclick="window.insertAtProposalCursor('${seq.id}', '${categoryKey}', ${step.step}, '{{link_pdf}}', '')">link pdf</button>
+                                    <button type="button" class="btn-secondary" style="margin-left:auto; padding:2px 8px; font-size:0.7rem; border-radius:6px;" onclick="window.generateAIProposalVariant('${seq.id}', '${categoryKey}', ${step.step})">✨ Generar con IA</button>
+                                </div>
+                                <textarea class="nl-editor-textarea" id="proposal-body-${seq.id}-${categoryKey}-${step.step}" rows="8" style="width:100%; font-family:monospace; font-size:0.82rem; padding:8px 10px; border-radius:8px; background:var(--bg-card); border:1px solid var(--border-color); color:var(--text-main); line-height:1.4">${step.contenido_html || ''}</textarea>
+                            </div>
+                        </div>
+                    `;
+                    stepsContainer.appendChild(stepCard);
+                });
+            }
+        }
+    });
+}
+
+window.toggleProposalAccordion = function(seqId) {
+    proposalExpandedAccordion = (proposalExpandedAccordion === seqId) ? null : seqId;
+    renderProposalChains();
+};
+
+function renderOutreachConfigForm() {
+    document.getElementById('outreach-config-auto-envio').checked = outreachConfig.auto_envio !== false;
+    document.getElementById('outreach-config-remitente-nombre').value = outreachConfig.remitente_nombre || 'Gerard Fanals';
+    document.getElementById('outreach-config-remitente-email').value = outreachConfig.remitente_email || 'gerard@gerardfanals.online';
+    document.getElementById('outreach-config-reply-to').value = outreachConfig.reply_to || 'gerard@iartesana.es';
+    document.getElementById('outreach-config-url-privacidad').value = outreachConfig.url_privacidad || 'https://gerardfanals.com/privacidad';
+    document.getElementById('outreach-config-direccion-fisica').value = outreachConfig.direccion_fisica || 'Avda Fort de Leau 131, Mahón';
+    
+    const flowDiagram = document.getElementById('outreach-flow-diagram');
+    flowDiagram.innerHTML = '';
+    const modes = [
+        { label: 'Bienvenida (C1)', key: 'c1', interval: outreachConfig.intervalo_c1_a || 2 },
+        { label: 'Seguimiento (C2)', key: 'c2', interval: outreachConfig.intervalo_c2_a || 3 },
+        { label: 'Mantenimiento (C3)', key: 'c3', interval: outreachConfig.dia_c3_a || 5 }
+    ];
+    
+    modes.forEach((mode, idx) => {
+        const node = document.createElement('div');
+        node.className = 'nl-flow-node';
+        node.style.cssText = 'padding:12px 18px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:10px; display:flex; flex-direction:column; gap:4px; align-items:center; justify-content:center; min-width:140px;';
+        node.innerHTML = `
+            <span class="nl-flow-node-num" style="font-weight:800; font-size:0.78rem; padding:2px 6px; background:#0071e3; color:#fff; border-radius:12px; margin-bottom:2px;">C${idx+1}</span>
+            <span class="nl-flow-node-label" style="font-weight:700; font-size:0.8rem; color:var(--text-main);">${mode.label}</span>
+            <span class="nl-flow-node-desc" style="font-size:0.7rem; color:var(--text-grey);">Intervalo: ${mode.interval} días</span>
+        `;
+        flowDiagram.appendChild(node);
+        
+        if (idx < modes.length - 1) {
+            const arrow = document.createElement('div');
+            arrow.className = 'nl-flow-arrow';
+            arrow.style.cssText = 'font-size:1.2rem; color:var(--text-grey);';
+            arrow.textContent = '➔';
+            flowDiagram.appendChild(arrow);
+        }
+    });
+    
+    const settingsContainer = document.getElementById('outreach-chain-settings-container');
+    settingsContainer.innerHTML = '';
+    const chainsSettings = [
+        { num: 1, name: 'Configuración Cadena 1 (Bienvenida)', key: 'c1' },
+        { num: 2, name: 'Configuración Cadena 2 (Seguimiento)', key: 'c2' },
+        { num: 3, name: 'Configuración Cadena 3 (Mantenimiento)', key: 'c3' }
+    ];
+    
+    chainsSettings.forEach(cs => {
+        const section = document.createElement('div');
+        section.className = 'nl-config-section';
+        
+        let subHtml = `
+            <div class="nl-config-title" style="margin-bottom:12px;">${cs.name}</div>
+            <div class="nl-config-grid" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px;">
+        `;
+        const versions = [
+            { key: 'a', label: 'Conocidos (Versión A)' },
+            { key: 'b', label: 'Desconocidos (Versión B)' },
+            { key: 'c', label: 'Formularios (Versión C)' }
+        ];
+        
+        versions.forEach(v => {
+            const modeVal = outreachConfig[`modo_${cs.key}_${v.key}`] || (cs.num === 3 ? 'auto' : (v.key === 'a' ? 'auto' : 'off'));
+            const intervalVal = outreachConfig[`intervalo_${cs.key}_${v.key}`] || 2;
+            const dayVal = outreachConfig[`dia_${cs.key}_${v.key}`] || 5;
+            
+            subHtml += `
+                <div class="nl-config-card" style="padding:12px; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:10px; display:flex; flex-direction:column; gap:8px;">
+                    <div class="nl-config-card-label" style="font-weight:700; font-size:0.8rem; color:var(--text-main);">${v.label}</div>
+                    <div>
+                        <label class="nl-config-field-label" style="font-size:0.75rem; color:var(--text-grey); display:block; margin-bottom:4px;">Modo</label>
+                        <select class="nl-config-input" id="outreach-mode-${cs.key}-${v.key}" style="width:100%; padding:6px; border-radius:6px; background:var(--bg-card); border:1px solid var(--border-color); color:var(--text-main); font-size:0.8rem;">
+                            <option value="auto" ${modeVal === 'auto' ? 'selected' : ''}>Auto-envío (Cron)</option>
+                            <option value="manual" ${modeVal === 'manual' ? 'selected' : ''}>Manual (Revisar)</option>
+                            <option value="off" ${modeVal === 'off' ? 'selected' : ''}>Desactivado</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="nl-config-field-label" style="font-size:0.75rem; color:var(--text-grey); display:block; margin-bottom:4px;">${cs.num === 3 ? 'Día de envío' : 'Días de intervalo'}</label>
+                        <input type="number" min="1" max="90" class="nl-config-input" id="outreach-interval-${cs.key}-${v.key}" value="${cs.num === 3 ? dayVal : intervalVal}" style="width:100%; padding:6px; border-radius:6px; background:var(--bg-card); border:1px solid var(--border-color); color:var(--text-main); font-size:0.8rem;">
+                    </div>
+                </div>
+            `;
+        });
+        
+        subHtml += `</div>`;
+        section.innerHTML = subHtml;
+        settingsContainer.appendChild(section);
+    });
+}
+
+async function saveOutreachConfig() {
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+        return;
+    }
+    const saveBtn = document.getElementById('btn-save-outreach-config');
+    const statusMsg = document.getElementById('outreach-config-status-msg');
+    saveBtn.disabled = true;
+    statusMsg.textContent = 'Guardando...';
+    
+    const newConfig = {
+        auto_envio: document.getElementById('outreach-config-auto-envio').checked,
+        remitente_nombre: document.getElementById('outreach-config-remitente-nombre').value.trim(),
+        remitente_email: document.getElementById('outreach-config-remitente-email').value.trim(),
+        reply_to: document.getElementById('outreach-config-reply-to').value.trim(),
+        url_privacidad: document.getElementById('outreach-config-url-privacidad').value.trim(),
+        direccion_fisica: document.getElementById('outreach-config-direccion-fisica').value.trim(),
+        updated_at: new Date().toISOString()
+    };
+    
+    const csKeys = ['c1', 'c2', 'c3'];
+    const vKeys = ['a', 'b', 'c'];
+    csKeys.forEach(cs => {
+        vKeys.forEach(v => {
+            const modeVal = document.getElementById(`outreach-mode-${cs}-${v}`).value;
+            const intervalVal = parseInt(document.getElementById(`outreach-interval-${cs}-${v}`).value) || 2;
+            newConfig[`modo_${cs}_${v}`] = modeVal;
+            if (cs === 'c3') {
+                newConfig[`dia_${cs}_${v}`] = intervalVal;
+            } else {
+                newConfig[`intervalo_${cs}_${v}`] = intervalVal;
+            }
+        });
+    });
+    
+    try {
+        let error;
+        if (outreachConfig.id) {
+            const res = await _supabase.from('outreach_config').update(newConfig).eq('id', outreachConfig.id);
+            error = res.error;
+        } else {
+            const res = await _supabase.from('outreach_config').insert(newConfig);
+            error = res.error;
+        }
+        if (error) throw error;
+        await fetchOutreachConfig();
+        statusMsg.textContent = '✅ Guardado con éxito';
+        statusMsg.style.color = 'var(--accent-green)';
+        showToast('Configuración Outreach guardada con éxito');
+    } catch(e) {
+        console.error('Error saving outreach config:', e);
+        statusMsg.textContent = '❌ Error';
+        statusMsg.style.color = 'var(--accent-red)';
+    } finally {
+        saveBtn.disabled = false;
+        setTimeout(() => statusMsg.textContent = '', 3000);
+    }
+}
+
+function renderProposalConfigForm() {
+    document.getElementById('proposal-config-remitente-nombre').value = proposalConfig.remitente_nombre || 'Gerard Fanals';
+    document.getElementById('proposal-config-remitente-email').value = proposalConfig.remitente_email || 'gerard@gerardfanals.online';
+    document.getElementById('proposal-config-reply-to').value = proposalConfig.reply_to || 'gerard@iartesana.es';
+    document.getElementById('proposal-config-url-privacidad').value = proposalConfig.url_privacidad || 'https://gerardfanals.com/privacidad';
+    document.getElementById('proposal-config-direccion-fisica').value = proposalConfig.direccion_fisica || 'Avda Fort de Leau 131, Mahón';
+    
+    const localFreqInm = localStorage.getItem('proposal_freq_inmediato') || '3';
+    const localFreqMens = localStorage.getItem('proposal_freq_mensual') || '7';
+    const localFreqAnual = localStorage.getItem('proposal_freq_anual') || '30';
+    
+    document.getElementById('proposal-freq-inmediato').value = localFreqInm;
+    document.getElementById('proposal-freq-mensual').value = localFreqMens;
+    document.getElementById('proposal-freq-anual').value = localFreqAnual;
+}
+
+async function saveProposalConfig() {
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+        return;
+    }
+    const saveBtn = document.getElementById('btn-save-proposal-config');
+    const statusMsg = document.getElementById('proposal-config-status-msg');
+    saveBtn.disabled = true;
+    statusMsg.textContent = 'Guardando...';
+    
+    const newConfig = {
+        remitente_nombre: document.getElementById('proposal-config-remitente-nombre').value.trim(),
+        remitente_email: document.getElementById('proposal-config-remitente-email').value.trim(),
+        reply_to: document.getElementById('proposal-config-reply-to').value.trim(),
+        url_privacidad: document.getElementById('proposal-config-url-privacidad').value.trim(),
+        direccion_fisica: document.getElementById('proposal-config-direccion-fisica').value.trim(),
+        updated_at: new Date().toISOString()
+    };
+    
+    localStorage.setItem('proposal_freq_inmediato', document.getElementById('proposal-freq-inmediato').value);
+    localStorage.setItem('proposal_freq_mensual', document.getElementById('proposal-freq-mensual').value);
+    localStorage.setItem('proposal_freq_anual', document.getElementById('proposal-freq-anual').value);
+    
+    try {
+        let error;
+        if (proposalConfig.id) {
+            const res = await _supabase.from('proposal_config').update(newConfig).eq('id', proposalConfig.id);
+            error = res.error;
+        } else {
+            const res = await _supabase.from('proposal_config').insert(newConfig);
+            error = res.error;
+        }
+        if (error) throw error;
+        await fetchProposalConfig();
+        statusMsg.textContent = '✅ Guardado';
+        statusMsg.style.color = 'var(--accent-green)';
+        showToast('Configuración de Propuestas guardada');
+    } catch(e) {
+        console.error('Error saving proposal config:', e);
+        statusMsg.textContent = '❌ Error';
+        statusMsg.style.color = 'var(--accent-red)';
+    } finally {
+        saveBtn.disabled = false;
+        setTimeout(() => statusMsg.textContent = '', 3000);
+    }
+}
+
+async function renderOutreachHistorial() {
+    const listEl = document.getElementById('outreach-historial-list');
+    listEl.innerHTML = '';
+    
+    const { data: logs, error } = await _supabase
+        .from('outreach_email_logs')
+        .select(`
+            id, email_type, subject, body, sent_at, opened_at, clicked_at,
+            outreach_leads (email, company_name, first_name)
+        `)
+        .order('sent_at', { ascending: false });
+        
+    if (error || !logs) {
+        listEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-grey)">Error al cargar historial</div>';
+        return;
+    }
+    
+    let filtered = logs.filter(log => {
+        const lead = log.outreach_leads || { email: '', company_name: '', first_name: '' };
+        const matchesSearch = outreachHistSearch === '' || 
+            (lead.first_name || '').toLowerCase().includes(outreachHistSearch.toLowerCase()) || 
+            (lead.email || '').toLowerCase().includes(outreachHistSearch.toLowerCase()) ||
+            (lead.company_name || '').toLowerCase().includes(outreachHistSearch.toLowerCase());
+            
+        let matchesChain = true;
+        if (outreachHistFilter === '1') {
+            matchesChain = log.email_type.includes('step_0') || log.email_type.includes('step_1');
+        } else if (outreachHistFilter === '2') {
+            matchesChain = log.email_type.includes('step_2') || log.email_type.includes('step_3');
+        } else if (outreachHistFilter === '3') {
+            matchesChain = log.email_type.includes('step_4') || log.email_type.includes('step_5') || log.email_type.includes('nurture_');
+        }
+        return matchesSearch && matchesChain;
+    });
+    
+    const perPage = 10;
+    const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+    if (outreachHistPage > totalPages) outreachHistPage = totalPages;
+    const startIdx = (outreachHistPage - 1) * perPage;
+    const paginated = filtered.slice(startIdx, startIdx + perPage);
+    
+    document.getElementById('outreach-hist-pagination-info').textContent = `Página ${outreachHistPage} de ${totalPages}`;
+    document.getElementById('btn-outreach-hist-prev').disabled = outreachHistPage === 1;
+    document.getElementById('btn-outreach-hist-next').disabled = outreachHistPage === totalPages;
+    
+    if (paginated.length === 0) {
+        listEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-grey)">No hay registros coincidentes</div>';
+        return;
+    }
+    
+    paginated.forEach(log => {
+        const lead = log.outreach_leads || { email: 'Desconocido', company_name: '—', first_name: 'Prospecto' };
+        const dateStr = new Date(log.sent_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        const openedBadge = log.opened_at ? '<span style="background:rgba(52,199,89,0.15); color:#34c759; padding:2px 6px; border-radius:4px; font-size:0.7rem; font-weight:700; margin-left:8px;">👁 Abierto</span>' : '';
+        const clickedBadge = log.clicked_at ? '<span style="background:rgba(191,90,242,0.15); color:#bf5af2; padding:2px 6px; border-radius:4px; font-size:0.7rem; font-weight:700; margin-left:8px;">🔗 Clic</span>' : '';
+        
+        const card = document.createElement('div');
+        card.style.cssText = 'padding:14px; border-bottom:1px solid var(--border-color); display:flex; flex-direction:column; gap:4px; font-size:0.82rem;';
+        card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong style="color:var(--text-main)">${lead.first_name} (${lead.company_name}) · ${lead.email}</strong>
+                <span style="font-size:0.75rem; color:var(--text-grey);">${dateStr}</span>
+            </div>
+            <div style="color:var(--text-grey); font-size:0.78rem;">
+                Tipo: <span style="color:var(--text-main); font-weight:600;">${log.email_type}</span> | Asunto: <span style="color:var(--text-main); font-weight:600;">"${log.subject}"</span>
+                ${openedBadge} ${clickedBadge}
+            </div>
+        `;
+        listEl.appendChild(card);
+    });
+}
+
+function filterOutreachHistorial() {
+    outreachHistSearch = document.getElementById('outreach-historial-search').value;
+    outreachHistFilter = document.getElementById('outreach-historial-filter-chain').value;
+    outreachHistPage = 1;
+    renderOutreachHistorial();
+}
+
+function changeOutreachHistPage(delta) {
+    outreachHistPage += delta;
+    renderOutreachHistorial();
+}
+
+async function renderProposalHistorial() {
+    const listEl = document.getElementById('proposal-historial-list');
+    listEl.innerHTML = '';
+    
+    const { data: logs, error } = await _supabase
+        .from('outreach_email_logs')
+        .select(`
+            id, email_type, subject, body, sent_at, opened_at, clicked_at,
+            outreach_leads (email, company_name, first_name)
+        `)
+        .ilike('email_type', 'proposal_%')
+        .order('sent_at', { ascending: false });
+        
+    if (error || !logs) {
+        listEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-grey)">Error al cargar historial</div>';
+        return;
+    }
+    
+    let filtered = logs.filter(log => {
+        const lead = log.outreach_leads || { email: '', company_name: '', first_name: '' };
+        return proposalHistSearch === '' || 
+            (lead.first_name || '').toLowerCase().includes(proposalHistSearch.toLowerCase()) || 
+            (lead.email || '').toLowerCase().includes(proposalHistSearch.toLowerCase()) ||
+            (lead.company_name || '').toLowerCase().includes(proposalHistSearch.toLowerCase());
+    });
+    
+    if (filtered.length === 0) {
+        listEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-grey)">No hay registros coincidentes</div>';
+        return;
+    }
+    
+    filtered.forEach(log => {
+        const lead = log.outreach_leads || { email: 'Desconocido', company_name: '—', first_name: 'Prospecto' };
+        const dateStr = new Date(log.sent_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        
+        const card = document.createElement('div');
+        card.style.cssText = 'padding:14px; border-bottom:1px solid var(--border-color); display:flex; flex-direction:column; gap:4px; font-size:0.82rem;';
+        card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong style="color:var(--text-main)">${lead.first_name} (${lead.company_name}) · ${lead.email}</strong>
+                <span style="font-size:0.75rem; color:var(--text-grey);">${dateStr}</span>
+            </div>
+            <div style="color:var(--text-grey); font-size:0.78rem;">
+                Secuencia: <span style="color:var(--text-main); font-weight:600;">${log.email_type}</span> | Asunto: <span style="color:var(--text-main); font-weight:600;">"${log.subject}"</span>
+            </div>
+        `;
+        listEl.appendChild(card);
+    });
+}
+
+function filterProposalHistorial() {
+    proposalHistSearch = document.getElementById('proposal-historial-search').value;
+    renderProposalHistorial();
+}
+
+function renderOutreachSendList() {
+    const listEl = document.getElementById('outreach-send-leads-list');
+    listEl.innerHTML = '';
+    
+    const searchVal = document.getElementById('outreach-send-search').value.toLowerCase();
+    const filtered = outreachLeadsList.filter(l => 
+        searchVal === '' || 
+        (l.first_name || '').toLowerCase().includes(searchVal) ||
+        (l.email || '').toLowerCase().includes(searchVal) ||
+        (l.company_name || '').toLowerCase().includes(searchVal)
+    );
+    
+    if (filtered.length === 0) {
+        listEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-grey); font-size:0.85rem;">No hay leads coincidentes</div>';
+        return;
+    }
+    
+    filtered.forEach(lead => {
+        const row = document.createElement('div');
+        row.style.cssText = 'padding:14px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-card); display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; margin-bottom: 8px;';
+        
+        row.innerHTML = `
+            <div>
+                <strong style="color:var(--text-main); font-size:0.9rem">${lead.first_name || 'Prospecto'} (${lead.company_name || '—'})</strong>
+                <div style="color:var(--text-grey); font-size:0.78rem; margin-top:2px;">
+                    ${lead.email} | Estado: <span style="font-weight:700; color:#0a84ff;">${lead.status}</span>
+                </div>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button class="btn-secondary" style="padding:6px 12px; font-size:0.78rem; border-radius:8px;" onclick="window.openComposeForLead('${lead.email}')">📝 Enviar Email</button>
+                <button class="btn-primary" style="padding:6px 12px; font-size:0.78rem; border-radius:8px;" ${lead.status !== 'enriched' ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''} onclick="window.startOutreachSequence('${lead.id}')">🚀 Iniciar Secuencia</button>
+            </div>
+        `;
+        listEl.appendChild(row);
+    });
+}
+
+window.openComposeForLead = function(email) {
+    openComposeEmailModal();
+    const select = document.getElementById('compose-email-to');
+    if (select) {
+        select.value = email;
+    }
+};
+
+window.startOutreachSequence = async function(leadId) {
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+        return;
+    }
+    try {
+        showToast('Iniciando secuencia para el lead...');
+        const res = await fetch('/api/send-sequence', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lead_id: leadId })
+        });
+        
+        const data = await res.json();
+        if (res.ok && data.success) {
+            showToast('Secuencia iniciada con éxito. Email enviado.');
+            await fetchOutreachLeadsList();
+            renderOutreachSendList();
+            await renderOutreachPanel();
+        } else {
+            showToast(data.error || 'Error al iniciar secuencia', true);
+        }
+    } catch(e) {
+        console.error('Error starting sequence:', e);
+        showToast('Error de conexión', true);
+    }
+};
+
+async function openComposeEmailModal() {
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+        return;
+    }
+    const select = document.getElementById('compose-email-to');
+    select.innerHTML = '';
+    
+    outreachLeadsList.forEach(l => {
+        const opt = document.createElement('option');
+        opt.value = l.email;
+        opt.textContent = `${l.first_name || 'Prospecto'} (${l.company_name || '—'}) - ${l.email}`;
+        select.appendChild(opt);
+    });
+    
+    document.getElementById('compose-email-subject').value = '';
+    document.getElementById('compose-email-body').value = '';
+    document.getElementById('email-compose-modal').style.display = 'flex';
+}
+
+function closeComposeEmailModal() {
+    document.getElementById('email-compose-modal').style.display = 'none';
+}
+
+async function sendManualEmail() {
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+        return;
+    }
+    const emailTo = document.getElementById('compose-email-to').value;
+    const subject = document.getElementById('compose-email-subject').value.trim();
+    const body = document.getElementById('compose-email-body').value.trim();
+    
+    if (!emailTo || !subject || !body) {
+        showToast('Por favor, rellena todos los campos del correo', true);
+        return;
+    }
+    
+    const sendBtn = document.getElementById('btn-send-manual-email');
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Enviando...';
+    
+    try {
+        const res = await fetch('/api/send-manual', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: emailTo,
+                subject: subject,
+                body: body
+            })
+        });
+        
+        const data = await res.json();
+        if (res.ok && data.success) {
+            showToast('Email enviado con éxito');
+            closeComposeEmailModal();
+            await loadBandejaInbox();
+        } else {
+            showToast(data.error || 'Error al enviar email manual', true);
+        }
+    } catch(e) {
+        console.error('Error sending manual email:', e);
+        showToast('Error de conexión', true);
+    } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Enviar Correo';
+    }
+}
+
+async function saveOutreachTemplate(cadenaNum, version, stepNum) {
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+        return;
+    }
+    const subject = document.getElementById(`outreach-subject-${cadenaNum}-${version}-${stepNum}`).value.trim();
+    const body = document.getElementById(`outreach-body-${cadenaNum}-${version}-${stepNum}`).value.trim();
+    
+    if (!subject || !body) {
+        showToast('El asunto y el cuerpo del email no pueden estar vacíos', true);
+        return;
+    }
+    try {
+        const { error } = await _supabase
+            .from('outreach_sequences')
+            .update({ asunto: subject, contenido_html: body, updated_at: new Date().toISOString() })
+            .eq('cadena_num', cadenaNum).eq('orden', stepNum).eq('version', version);
+            
+        if (error) throw error;
+        
+        const idx = outreachSequences.findIndex(s => s.cadena_num === cadenaNum && s.orden === stepNum && s.version === version);
+        if (idx !== -1) {
+            outreachSequences[idx].asunto = subject;
+            outreachSequences[idx].contenido_html = body;
+        }
+        showToast('Plantilla de outreach guardada correctamente');
+    } catch(e) {
+        console.error('Error saving outreach template:', e);
+        showToast('Error al guardar la plantilla', true);
+    }
+}
+
+async function saveProposalTemplate(secuenciaId, categoryKey, stepNum) {
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+        return;
+    }
+    const subject = document.getElementById(`proposal-subject-${secuenciaId}-${categoryKey}-${stepNum}`).value.trim();
+    const body = document.getElementById(`proposal-body-${secuenciaId}-${categoryKey}-${stepNum}`).value.trim();
+    
+    if (!subject || !body) {
+        showToast('El asunto y el cuerpo del email no pueden estar vacíos', true);
+        return;
+    }
+    try {
+        const { error } = await _supabase
+            .from('proposal_sequences')
+            .update({ asunto: subject, contenido_html: body, updated_at: new Date().toISOString() })
+            .eq('secuencia_id', secuenciaId).eq('categoria_key', categoryKey).eq('step', stepNum);
+            
+        if (error) throw error;
+        
+        const idx = proposalSequences.findIndex(s => s.secuencia_id === secuenciaId && s.categoria_key === categoryKey && s.step === stepNum);
+        if (idx !== -1) {
+            proposalSequences[idx].asunto = subject;
+            proposalSequences[idx].contenido_html = body;
+        }
+        showToast('Plantilla de propuesta guardada correctamente');
+    } catch(e) {
+        console.error('Error saving proposal template:', e);
+        showToast('Error al guardar la plantilla', true);
+    }
+}
+
+async function sendTestEmail(cadenaNum, version, stepNum, type) {
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+        return;
+    }
+    const subject = document.getElementById(`outreach-subject-${cadenaNum}-${version}-${stepNum}`).value.trim();
+    const body = document.getElementById(`outreach-body-${cadenaNum}-${version}-${stepNum}`).value.trim();
+    const targetEmail = outreachConfig.reply_to || 'gerard@iartesana.es';
+    
+    try {
+        showToast('Enviando email de prueba...');
+        const res = await fetch('/api/send-manual', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: targetEmail,
+                subject: `[PRUEBA OUTREACH] ${subject}`,
+                body: body,
+                isTest: true
+            })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            showToast(`Email de prueba enviado a ${targetEmail}`);
+        } else {
+            showToast(data.error || 'Error al enviar email de prueba', true);
+        }
+    } catch(e) {
+        console.error('Error sending test:', e);
+        showToast('Error de conexión', true);
+    }
+}
+
+async function sendProposalTestEmail(secuenciaId, categoryKey, stepNum) {
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+        return;
+    }
+    const subject = document.getElementById(`proposal-subject-${secuenciaId}-${categoryKey}-${stepNum}`).value.trim();
+    const body = document.getElementById(`proposal-body-${secuenciaId}-${categoryKey}-${stepNum}`).value.trim();
+    const targetEmail = proposalConfig.reply_to || 'gerard@iartesana.es';
+    
+    try {
+        showToast('Enviando email de prueba...');
+        const res = await fetch('/api/send-manual', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: targetEmail,
+                subject: `[PRUEBA PROPUESTA] ${subject}`,
+                body: body,
+                isTest: true
+            })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            showToast(`Email de prueba enviado a ${targetEmail}`);
+        } else {
+            showToast(data.error || 'Error al enviar email de prueba', true);
+        }
+    } catch(e) {
+        console.error('Error sending test:', e);
+        showToast('Error de conexión', true);
+    }
+}
+
+async function generateAIOutreachVariant(cadenaNum, version, stepNum) {
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+        return;
+    }
+    const subjectEl = document.getElementById(`outreach-subject-${cadenaNum}-${version}-${stepNum}`);
+    const bodyEl = document.getElementById(`outreach-body-${cadenaNum}-${version}-${stepNum}`);
+    const subject = subjectEl.value.trim();
+    const body = bodyEl.value.trim();
+    
+    showToast('Generando variante persuasiva con IA...');
+    const promptMsg = `Escribe una variante alternativa persuasiva y directa en español para este correo de prospección comercial. Mantén los mismos marcadores o variables como {{first_name}}, {{company_name}} y {{booking_url}} exactamente igual.
+Asunto original: "${subject}"
+Cuerpo original: "${body}"
+Devuelve tu respuesta únicamente en formato JSON con dos campos de texto planos: "subject" y "body" (que contenga el cuerpo con saltos de línea codificados como <br>). No añadas bloques de código markdown, explicaciones ni comentarios.`;
+
+    try {
+        const res = await fetch('/api/brain-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: promptMsg })
+        });
+        const data = await res.json();
+        if (res.ok && data.text) {
+            let text = data.text;
+            text = text.replace(/```json/i, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(text);
+            if (parsed.subject && parsed.body) {
+                subjectEl.value = parsed.subject;
+                bodyEl.value = parsed.body.replace(/<br\s*\/?>/gi, '\n');
+                showToast('Variante generada con éxito');
+            } else {
+                throw new Error('Formato de respuesta incorrecto');
+            }
+        } else {
+            showToast('Error al generar variante con IA', true);
+        }
+    } catch(e) {
+        console.error('Error in AI variant:', e);
+        showToast('Error de conexión o respuesta no válida', true);
+    }
+}
+
+async function generateAIProposalVariant(secuenciaId, categoryKey, stepNum) {
+    if (sessionStorage.getItem('cc_role') === 'guest') {
+        showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
+        return;
+    }
+    const subjectEl = document.getElementById(`proposal-subject-${secuenciaId}-${categoryKey}-${stepNum}`);
+    const bodyEl = document.getElementById(`proposal-body-${secuenciaId}-${categoryKey}-${stepNum}`);
+    const subject = subjectEl.value.trim();
+    const body = bodyEl.value.trim();
+    
+    showToast('Generando variante persuasiva con IA...');
+    const promptMsg = `Escribe una variante alternativa persuasiva y directa en español para este correo de seguimiento de propuestas. Mantén los mismos marcadores o variables como {{nombre}}, {{link_confirmar}} y {{link_pdf}} exactamente igual.
+Asunto original: "${subject}"
+Cuerpo original: "${body}"
+Devuelve tu respuesta únicamente en formato JSON con dos campos de texto planos: "subject" y "body" (que contenga el cuerpo con saltos de línea codificados como <br>). No añadas bloques de código markdown, explicaciones ni comentarios.`;
+
+    try {
+        const res = await fetch('/api/brain-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: promptMsg })
+        });
+        const data = await res.json();
+        if (res.ok && data.text) {
+            let text = data.text;
+            text = text.replace(/```json/i, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(text);
+            if (parsed.subject && parsed.body) {
+                subjectEl.value = parsed.subject;
+                bodyEl.value = parsed.body.replace(/<br\s*\/?>/gi, '\n');
+                showToast('Variante generada con éxito');
+            } else {
+                throw new Error('Formato de respuesta incorrecto');
+            }
+        } else {
+            showToast('Error al generar variante con IA', true);
+        }
+    } catch(e) {
+        console.error('Error in AI variant:', e);
+        showToast('Error de conexión o respuesta no válida', true);
+    }
+}
+
+function insertAtCursor(el, text) {
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const val = el.value;
+    el.value = val.substring(0, start) + text + val.substring(end);
+    el.selectionStart = el.selectionEnd = start + text.length;
+    el.focus();
+}
+
+window.insertAtComposerCursor = function(openTag, closeTag) {
+    const el = document.getElementById('compose-email-body');
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const selectedText = el.value.substring(start, end);
+    insertAtCursor(el, openTag + selectedText + closeTag);
+};
+
+window.insertAtTemplateCursor = function(cadenaNum, version, stepNum, openTag, closeTag) {
+    const el = document.getElementById(`outreach-body-${cadenaNum}-${version}-${stepNum}`);
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const selectedText = el.value.substring(start, end);
+    insertAtCursor(el, openTag + selectedText + closeTag);
+};
+
+window.insertAtProposalCursor = function(secuenciaId, categoryKey, stepNum, openTag, closeTag) {
+    const el = document.getElementById(`proposal-body-${secuenciaId}-${categoryKey}-${stepNum}`);
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const selectedText = el.value.substring(start, end);
+    insertAtCursor(el, openTag + selectedText + closeTag);
+};
+
+let _emailPromptResolve = null;
+function openEmailPromptModal(title, fields) {
+    document.getElementById('email-prompt-title').textContent = title;
+    const container = document.getElementById('email-prompt-fields-container');
+    container.innerHTML = '';
+    fields.forEach(f => {
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex; flex-direction:column; gap:4px;';
+        div.innerHTML = `
+            <label class="dash-label" style="font-size:0.75rem;">${f.label}</label>
+            <input type="text" class="dash-input" id="email-prompt-field-${f.key}" placeholder="${f.placeholder || ''}" value="${f.value || ''}" style="width:100%;">
+        `;
+        container.appendChild(div);
+    });
+    document.getElementById('email-prompt-modal').style.display = 'flex';
+    return new Promise(resolve => {
+        _emailPromptResolve = resolve;
+        document.getElementById('btn-email-prompt-submit').onclick = () => {
+            const result = {};
+            fields.forEach(f => {
+                result[f.key] = document.getElementById(`email-prompt-field-${f.key}`).value.trim();
+            });
+            closeEmailPromptModal();
+            if (_emailPromptResolve) { _emailPromptResolve(result); _emailPromptResolve = null; }
+        };
+    });
+}
+
+function closeEmailPromptModal() {
+    document.getElementById('email-prompt-modal').style.display = 'none';
+    if (_emailPromptResolve) { _emailPromptResolve(null); _emailPromptResolve = null; }
+}
+
+window.closeEmailPromptModal = closeEmailPromptModal;
+
+window.openComposerLinkPrompt = async function() {
+    const res = await openEmailPromptModal('Insertar Enlace 🔗', [
+        { key: 'text', label: 'Texto a mostrar', placeholder: 'Haz clic aquí' },
+        { key: 'url', label: 'URL del enlace', placeholder: 'https://example.com' }
+    ]);
+    if (res && res.url) {
+        window.insertAtComposerCursor(`<a href="${res.url}" style="color:#0071e3; text-decoration:underline;">${res.text || res.url}`, `</a>`);
+    }
+};
+
+window.openComposerImagePrompt = async function() {
+    const res = await openEmailPromptModal('Insertar Imagen 🖼️', [
+        { key: 'url', label: 'URL de la imagen', placeholder: 'https://example.com/imagen.jpg' },
+        { key: 'alt', label: 'Texto alternativo (alt)', placeholder: 'Descripción' }
+    ]);
+    if (res && res.url) {
+        window.insertAtComposerCursor(`<img src="${res.url}" alt="${res.alt || ''}" style="max-width:100%; height:auto; border-radius:8px; margin:12px 0;">`, '');
+    }
+};
+
+// Bind functions to window context
+window.switchEmailMainTab = switchEmailMainTab;
+window.switchOutreachSubTab = switchOutreachSubTab;
+window.switchProposalSubTab = switchProposalSubTab;
+window.switchProposalCategoryTab = switchProposalCategoryTab;
+window.saveOutreachConfig = saveOutreachConfig;
+window.saveProposalConfig = saveProposalConfig;
+window.openComposeEmailModal = openComposeEmailModal;
+window.closeComposeEmailModal = closeComposeEmailModal;
+window.sendManualEmail = sendManualEmail;
+window.saveOutreachTemplate = saveOutreachTemplate;
+window.saveProposalTemplate = saveProposalTemplate;
+window.sendTestEmail = sendTestEmail;
+window.sendProposalTestEmail = sendProposalTestEmail;
+window.generateAIOutreachVariant = generateAIOutreachVariant;
+window.generateAIProposalVariant = generateAIProposalVariant;
+window.filterOutreachHistorial = filterOutreachHistorial;
+window.changeOutreachHistPage = changeOutreachHistPage;
+window.filterProposalHistorial = filterProposalHistorial;
+window.renderOutreachSendList = renderOutreachSendList;
 
 // =============================================
 // 10. CUSTOM CALENDAR GRID

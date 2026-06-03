@@ -56,6 +56,57 @@
         </div>
     </div>
 
+    <!-- Email Rich Editor Link/Image Prompt Modal -->
+    <div class="macos-modal-overlay" id="email-prompt-modal" style="display: none;">
+        <div class="macos-modal-box" style="max-width: 400px; text-align: left;">
+            <h3 class="macos-alert-title" id="email-prompt-title">Insertar</h3>
+            <div id="email-prompt-fields-container" style="display: flex; flex-direction: column; gap: 12px; margin: 16px 0;">
+                <!-- Fields added dynamically -->
+            </div>
+            <div class="macos-alert-actions confirm-actions">
+                <button class="macos-alert-btn btn-cancel" onclick="closeEmailPromptModal()">Cancelar</button>
+                <button class="macos-alert-btn btn-primary" id="btn-email-prompt-submit">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Email Composer Modal -->
+    <div class="macos-modal-overlay" id="email-compose-modal" style="display: none;">
+        <div class="macos-modal-box" style="max-width: 600px; text-align: left;">
+            <h3 class="macos-alert-title" style="margin-bottom: 12px;">📝 Redactar Correo Manual</h3>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div>
+                    <label class="dash-label">Para (Lead / Destinatario)</label>
+                    <select class="dash-input" id="compose-email-to" style="width: 100%;">
+                        <!-- Populated with leads list -->
+                    </select>
+                </div>
+                <div>
+                    <label class="dash-label">Asunto</label>
+                    <input type="text" class="dash-input" id="compose-email-subject" placeholder="Ej: Sobre nuestra reunión de ayer..." style="width: 100%;" />
+                </div>
+                <div>
+                    <label class="dash-label">Mensaje (Editor HTML)</label>
+                    <!-- Rich Editor Toolbar -->
+                    <div class="nl-editor-toolbar" style="margin-top: 4px;">
+                        <button type="button" class="nl-toolbar-btn" onclick="insertAtComposerCursor('<strong>', '</strong>')"><strong>B</strong></button>
+                        <button type="button" class="nl-toolbar-btn" onclick="insertAtComposerCursor('<em>', '</em>')"><em>I</em></button>
+                        <button type="button" class="nl-toolbar-btn" onclick="insertAtComposerCursor('<h2 style=&quot;color:#1d1d1f;font-size:1.3em;margin:16px 0 8px&quot;>', '</h2>')">H2</button>
+                        <button type="button" class="nl-toolbar-btn" onclick="insertAtComposerCursor('<p>', '</p>')">¶</button>
+                        <div class="nl-toolbar-sep"></div>
+                        <button type="button" class="nl-toolbar-btn" onclick="openComposerLinkPrompt()">🔗</button>
+                        <button type="button" class="nl-toolbar-btn" onclick="openComposerImagePrompt()">🖼️</button>
+                    </div>
+                    <textarea class="nl-editor-textarea" id="compose-email-body" rows="12" placeholder="Escribe tu correo en formato HTML o texto plano..." style="width: 100%;"></textarea>
+                </div>
+            </div>
+            <div class="macos-alert-actions confirm-actions" style="margin-top: 16px;">
+                <button class="macos-alert-btn btn-cancel" onclick="closeComposeEmailModal()">Cancelar</button>
+                <button class="macos-alert-btn btn-primary" onclick="sendManualEmail()" id="btn-send-manual-email">Enviar Correo</button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- macOS Lock Screen Authentication (Professional Login Form - Light Theme) -->
     <div class="macos-lock-screen" id="lock-screen">
@@ -687,24 +738,323 @@
                 </div>
             </div>
 
-            <!-- SECTION: Email Inbox / Outbox -->
+            <!-- SECTION: Email Inbox / Outbox & Sequences -->
             <div class="dashboard-section" id="sec-emails">
-                <div class="section-header">
-                    <h1>Gestor de Email Outreach</h1>
+                <div class="section-header" style="margin-bottom: 16px;">
+                    <h1>Gestor de Email e Inteligencia Comercial</h1>
                 </div>
 
-                <div class="email-box-grid">
-                    <div class="email-list" id="email-inbox-list">
-                        <!-- Populated dynamic -->
-                        <div style="padding:20px;text-align:center;color:var(--text-grey);font-size:0.8rem">No hay correos registrados</div>
+                <!-- Main Module Tabs -->
+                <div class="email-main-tabs" style="margin-bottom: 24px; display: flex; gap: 8px;">
+                    <button class="email-main-tab active" onclick="switchEmailMainTab('bandeja')" id="btn-main-tab-bandeja">📥 Bandeja de Entrada</button>
+                    <button class="email-main-tab" onclick="switchEmailMainTab('outreach')" id="btn-main-tab-outreach">👥 Cadenas Outreach (Leads)</button>
+                    <button class="email-main-tab" onclick="switchEmailMainTab('propuestas')" id="btn-main-tab-propuestas">📄 Cadenas Propuestas (Seguimiento)</button>
+                </div>
+
+                <!-- ==================== TAB 1: BANDEJA DE ENTRADA ==================== -->
+                <div id="email-tab-bandeja" class="email-main-content">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin: 0;">Bandeja de Correo y Respuestas</h2>
+                        <button class="btn-primary" onclick="openComposeEmailModal()" style="font-size: 0.8rem; padding: 8px 16px;">📝 Redactar Correo</button>
                     </div>
-                    <div class="email-reader">
-                        <div class="email-reader-header">
-                            <h2 id="email-view-subject">Selecciona un correo</h2>
-                            <div id="email-view-from">Remitente: —</div>
+                    <div class="email-box-grid" style="display: grid; grid-template-columns: 320px 1fr; gap: 20px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; min-height: 500px;">
+                        <div class="email-list" id="email-inbox-list" style="border-right: 1px solid var(--border-color); max-height: 600px; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+                            <!-- Populated dynamically -->
+                            <div style="padding:20px;text-align:center;color:var(--text-grey);font-size:0.8rem">No hay correos registrados</div>
                         </div>
-                        <div class="email-reader-body" id="email-view-body">
-                            Haga clic en un email de la lista lateral para visualizar su contenido completo y trazas de envío.
+                        <div class="email-reader" style="padding: 24px; max-height: 600px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;">
+                            <div class="email-reader-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
+                                <h2 id="email-view-subject" style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin: 0 0 8px 0;">Selecciona un correo</h2>
+                                <div id="email-view-from" style="font-size: 0.85rem; color: var(--text-grey);">Remitente: —</div>
+                            </div>
+                            <div class="email-reader-body" id="email-view-body" style="font-size: 0.92rem; line-height: 1.6; color: var(--text-main); white-space: pre-wrap;">
+                                Haga clic en un email de la lista lateral para visualizar su contenido completo y trazas de envío.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== TAB 2: CADENAS OUTREACH ==================== -->
+                <div id="email-tab-outreach" class="email-main-content" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin: 0;">Secuencias para Prospección en Frío</h2>
+                        <span style="font-size: 0.82rem; color: var(--text-grey); font-weight: 600;" id="outreach-active-leads-subtitle">0 leads en secuencias activas</span>
+                    </div>
+
+                    <!-- Sub-tab navigation -->
+                    <div class="nl-tabs" style="margin-bottom: 20px;">
+                        <button class="nl-tab-btn active" onclick="switchOutreachSubTab('panel')" id="btn-outreach-sub-panel">
+                            <span class="nl-tab-icon">📊</span> Panel
+                        </button>
+                        <button class="nl-tab-btn" onclick="switchOutreachSubTab('cadenas')" id="btn-outreach-sub-cadenas">
+                            <span class="nl-tab-icon">🔗</span> Cadenas
+                        </button>
+                        <button class="nl-tab-btn" onclick="switchOutreachSubTab('config')" id="btn-outreach-sub-config">
+                            <span class="nl-tab-icon">⚙️</span> Config
+                        </button>
+                        <button class="nl-tab-btn" onclick="switchOutreachSubTab('historial')" id="btn-outreach-sub-historial">
+                            <span class="nl-tab-icon">🕒</span> Historial
+                        </button>
+                        <button class="nl-tab-btn" onclick="switchOutreachSubTab('envio')" id="btn-outreach-sub-envio">
+                            <span class="nl-tab-icon">📤</span> Envío
+                        </button>
+                    </div>
+
+                    <!-- Outreach: PANEL -->
+                    <div id="outreach-sub-panel" class="outreach-sub-content">
+                        <!-- Stats Grid -->
+                        <div class="nl-stats-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+                            <div class="nl-stat-card" style="--nl-accent: #0071e3; --nl-accent-end: #5ac8fa;">
+                                <div class="nl-stat-header"><div class="nl-stat-icon">📤</div><div class="nl-stat-label">Total Enviados</div></div>
+                                <div class="nl-stat-value" id="outreach-stats-enviados">0</div>
+                            </div>
+                            <div class="nl-stat-card" style="--nl-accent: #34c759; --nl-accent-end: #30d158;">
+                                <div class="nl-stat-header"><div class="nl-stat-icon">👁</div><div class="nl-stat-label">Tasa Apertura</div></div>
+                                <div class="nl-stat-value" id="outreach-stats-aperturas">0%</div>
+                            </div>
+                            <div class="nl-stat-card" style="--nl-accent: #bf5af2; --nl-accent-end: #da8fff;">
+                                <div class="nl-stat-header"><div class="nl-stat-icon">📅</div><div class="nl-stat-label">Clicks Reunión</div></div>
+                                <div class="nl-stat-value" id="outreach-stats-clicks">0</div>
+                            </div>
+                            <div class="nl-stat-card" style="--nl-accent: #ff3b30; --nl-accent-end: #ff6961;">
+                                <div class="nl-stat-header"><div class="nl-stat-icon">🚫</div><div class="nl-stat-label">Bajas</div></div>
+                                <div class="nl-stat-value" id="outreach-stats-bajas">0</div>
+                            </div>
+                        </div>
+
+                        <!-- Per-chain breakdown -->
+                        <h3 class="nl-section-title">Desglose por cadena y versión</h3>
+                        <div class="nl-chain-stats" id="outreach-chains-breakdown" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
+                            <!-- Populated Dynamically -->
+                        </div>
+
+                        <!-- Recent sends -->
+                        <h3 class="nl-section-title">Últimos envíos</h3>
+                        <div class="nl-recent-list" id="outreach-recent-list">
+                            <!-- Populated Dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Outreach: CADENAS (ACCORDIONS) -->
+                    <div id="outreach-sub-cadenas" class="outreach-sub-content" style="display: none;">
+                        <div class="nl-chains" id="outreach-chains-container">
+                            <!-- Accordions loaded dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Outreach: CONFIG -->
+                    <div id="outreach-sub-config" class="outreach-sub-content" style="display: none;">
+                        <!-- Flow Diagram Node -->
+                        <div class="nl-config-section">
+                            <div class="nl-config-title">Flujo de cadenas de prospección</div>
+                            <div class="nl-flow" id="outreach-flow-diagram" style="display: flex; gap: 12px; align-items: center; justify-content: flex-start; padding: 20px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: 14px; margin-bottom: 20px; overflow-x: auto;">
+                                <!-- Generated Dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Chain Settings -->
+                        <div id="outreach-chain-settings-container" style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 20px;">
+                            <!-- Config panels for C1, C2, C3 loaded dynamically -->
+                        </div>
+
+                        <!-- Auto-envío -->
+                        <div class="nl-config-section">
+                            <div class="nl-config-title">Automatización General</div>
+                            <div class="nl-config-row">
+                                <div class="nl-config-label">
+                                    <div class="nl-config-label-text">Auto-envío activo</div>
+                                    <div class="nl-config-label-desc">El cron job procesará las secuencias y enviará emails automáticamente</div>
+                                </div>
+                                <label class="nl-config-toggle">
+                                    <input type="checkbox" id="outreach-config-auto-envio" checked />
+                                    <span class="nl-config-toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Remitente & GDPR -->
+                        <div class="nl-config-section">
+                            <div class="nl-config-title">Remitente y GDPR</div>
+                            <div class="nl-config-grid" style="grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div class="nl-config-field">
+                                    <label class="nl-config-field-label">Nombre del remitente</label>
+                                    <input class="nl-config-input" id="outreach-config-remitente-nombre" placeholder="Gerard Fanals" />
+                                </div>
+                                <div class="nl-config-field">
+                                    <label class="nl-config-field-label">Email remitente</label>
+                                    <input class="nl-config-input" id="outreach-config-remitente-email" placeholder="gerard@gerardfanals.online" />
+                                </div>
+                            </div>
+                            <div class="nl-config-grid" style="grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div class="nl-config-field">
+                                    <label class="nl-config-field-label">Reply-to (respuestas)</label>
+                                    <input class="nl-config-input" id="outreach-config-reply-to" placeholder="gerard@iartesana.es" />
+                                </div>
+                                <div class="nl-config-field">
+                                    <label class="nl-config-field-label">URL Política de privacidad</label>
+                                    <input class="nl-config-input" id="outreach-config-url-privacidad" placeholder="https://gerardfanals.com/privacidad" />
+                                </div>
+                            </div>
+                            <div class="nl-config-grid" style="grid-template-columns: 1fr; gap: 12px;">
+                                <div class="nl-config-field">
+                                    <label class="nl-config-field-label">Dirección física (GDPR)</label>
+                                    <input class="nl-config-input" id="outreach-config-direccion-fisica" placeholder="Avda Fort de Leau 131, Mahón" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Save Config Button -->
+                        <div style="margin-top: 20px; display: flex; align-items: center; gap: 12px;">
+                            <button class="btn-primary" onclick="saveOutreachConfig()" id="btn-save-outreach-config">Guardar configuración</button>
+                            <span id="outreach-config-status-msg" style="font-size: 0.8rem; font-weight: 600;"></span>
+                        </div>
+                    </div>
+
+                    <!-- Outreach: HISTORIAL -->
+                    <div id="outreach-sub-historial" class="outreach-sub-content" style="display: none;">
+                        <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                            <input type="text" class="nl-send-search" id="outreach-historial-search" placeholder="🔍 Buscar por nombre o email..." style="border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 8px; font-size: 0.85rem;" oninput="filterOutreachHistorial()" />
+                            <select id="outreach-historial-filter-chain" style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 8px; font-size: 0.85rem;" onchange="filterOutreachHistorial()">
+                                <option value="all">Todas las cadenas</option>
+                                <option value="1">Cadena 1 (Bienvenida)</option>
+                                <option value="2">Cadena 2 (Seguimiento)</option>
+                                <option value="3">Cadena 3 (Mantenimiento)</option>
+                            </select>
+                        </div>
+                        <div class="nl-recent-list" id="outreach-historial-list">
+                            <!-- Populated dynamically -->
+                        </div>
+                        <div class="nl-hist-pagination">
+                            <span class="nl-hist-pagination-info" id="outreach-hist-pagination-info">Página 1 de 1</span>
+                            <div class="nl-hist-pagination-btns">
+                                <button class="nl-hist-page-btn" id="btn-outreach-hist-prev" onclick="changeOutreachHistPage(-1)" disabled>Anterior</button>
+                                <button class="nl-hist-page-btn" id="btn-outreach-hist-next" onclick="changeOutreachHistPage(1)" disabled>Siguiente</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Outreach: ENVIO -->
+                    <div id="outreach-sub-envio" class="outreach-sub-content" style="display: none;">
+                        <div class="nl-send-search-wrap" style="margin-bottom: 16px;">
+                            <input type="text" class="nl-send-search" id="outreach-send-search" placeholder="Buscar lead..." oninput="renderOutreachSendList()" style="border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 8px; font-size: 0.85rem;" />
+                        </div>
+                        <div class="nl-send-list" id="outreach-send-leads-list" style="display: flex; flex-direction: column; gap: 8px;">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== TAB 3: CADENAS PROPUESTAS ==================== -->
+                <div id="email-tab-propuestas" class="email-main-content" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin: 0;">Secuencias para Aceptación de Propuestas</h2>
+                        <span style="font-size: 0.82rem; color: var(--text-grey); font-weight: 600;" id="proposal-active-leads-subtitle">0 propuestas activas en seguimiento</span>
+                    </div>
+
+                    <!-- Category Selector Tabs -->
+                    <div class="nl-ver-tabs" style="margin-bottom: 16px; display: flex; gap: 4px;">
+                        <button class="nl-ver-tab active" onclick="switchProposalCategoryTab('consultoria')" id="tab-prop-cat-consultoria">🎯 Consultoría</button>
+                        <button class="nl-ver-tab" onclick="switchProposalCategoryTab('agentes_ia')" id="tab-prop-cat-agentes_ia">🤖 Agentes de IA</button>
+                        <button class="nl-ver-tab" onclick="switchProposalCategoryTab('apps_web')" id="tab-prop-cat-apps_web">🌐 Apps Web</button>
+                        <button class="nl-ver-tab" onclick="switchProposalCategoryTab('automatizacion')" id="tab-prop-cat-automatizacion">⚡ Automatización</button>
+                        <button class="nl-ver-tab" onclick="switchProposalCategoryTab('personalizada')" id="tab-prop-cat-personalizada">📋 Personalizada</button>
+                    </div>
+
+                    <!-- Sub-tabs nav for Proposals -->
+                    <div class="nl-tabs" style="margin-bottom: 20px;">
+                        <button class="nl-tab-btn active" onclick="switchProposalSubTab('cadenas')" id="btn-proposal-sub-cadenas">
+                            <span class="nl-tab-icon">🔗</span> Cadenas
+                        </button>
+                        <button class="nl-tab-btn" onclick="switchProposalSubTab('config')" id="btn-proposal-sub-config">
+                            <span class="nl-tab-icon">⚙️</span> Config
+                        </button>
+                        <button class="nl-tab-btn" onclick="switchProposalSubTab('historial')" id="btn-proposal-sub-historial">
+                            <span class="nl-tab-icon">🕒</span> Historial
+                        </button>
+                    </div>
+
+                    <!-- Proposals: CADENAS -->
+                    <div id="proposal-sub-cadenas" class="proposal-sub-content">
+                        <div class="nl-chains" id="proposal-chains-container">
+                            <!-- Accordions (Inmediato, Mensual, Anual) loaded dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Proposals: CONFIG -->
+                    <div id="proposal-sub-config" class="proposal-sub-content" style="display: none;">
+                        <!-- Frequency Config Card -->
+                        <div class="nl-config-section" style="margin-bottom: 20px;">
+                            <div class="nl-config-title">Configuración de Frecuencias de Envío (Días entre emails)</div>
+                            <div class="nl-config-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                                <div class="nl-config-card">
+                                    <div class="nl-config-card-label">Seguimiento Inmediato</div>
+                                    <div class="nl-config-card-row">
+                                        <input type="number" min="1" max="90" class="nl-interval-input" id="proposal-freq-inmediato" value="3" />
+                                        <span class="nl-interval-unit">días</span>
+                                    </div>
+                                </div>
+                                <div class="nl-config-card">
+                                    <div class="nl-config-card-label">Seguimiento Mensual</div>
+                                    <div class="nl-config-card-row">
+                                        <input type="number" min="1" max="90" class="nl-interval-input" id="proposal-freq-mensual" value="7" />
+                                        <span class="nl-interval-unit">días</span>
+                                    </div>
+                                </div>
+                                <div class="nl-config-card">
+                                    <div class="nl-config-card-label">Seguimiento Anual</div>
+                                    <div class="nl-config-card-row">
+                                        <input type="number" min="1" max="90" class="nl-interval-input" id="proposal-freq-anual" value="30" />
+                                        <span class="nl-interval-unit">días</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Remitente & GDPR -->
+                        <div class="nl-config-section">
+                            <div class="nl-config-title">Remitente y GDPR (Propuestas)</div>
+                            <div class="nl-config-grid" style="grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div class="nl-config-field">
+                                    <label class="nl-config-field-label">Nombre del remitente</label>
+                                    <input class="nl-config-input" id="proposal-config-remitente-nombre" placeholder="Gerard Fanals" />
+                                </div>
+                                <div class="nl-config-field">
+                                    <label class="nl-config-field-label">Email remitente</label>
+                                    <input class="nl-config-input" id="proposal-config-remitente-email" placeholder="gerard@gerardfanals.online" />
+                                </div>
+                            </div>
+                            <div class="nl-config-grid" style="grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div class="nl-config-field">
+                                    <label class="nl-config-field-label">Reply-to (respuestas)</label>
+                                    <input class="nl-config-input" id="proposal-config-reply-to" placeholder="gerard@iartesana.es" />
+                                </div>
+                                <div class="nl-config-field">
+                                    <label class="nl-config-field-label">URL Política de privacidad</label>
+                                    <input class="nl-config-input" id="proposal-config-url-privacidad" placeholder="https://gerardfanals.com/privacidad" />
+                                </div>
+                            </div>
+                            <div class="nl-config-grid" style="grid-template-columns: 1fr; gap: 12px;">
+                                <div class="nl-config-field">
+                                    <label class="nl-config-field-label">Dirección física (GDPR)</label>
+                                    <input class="nl-config-input" id="proposal-config-direccion-fisica" placeholder="Avda Fort de Leau 131, Mahón" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Save Config Button -->
+                        <div style="margin-top: 20px; display: flex; align-items: center; gap: 12px;">
+                            <button class="btn-primary" onclick="saveProposalConfig()" id="btn-save-proposal-config">Guardar configuración</button>
+                            <span id="proposal-config-status-msg" style="font-size: 0.8rem; font-weight: 600;"></span>
+                        </div>
+                    </div>
+
+                    <!-- Proposals: HISTORIAL -->
+                    <div id="proposal-sub-historial" class="proposal-sub-content" style="display: none;">
+                        <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                            <input type="text" class="nl-send-search" id="proposal-historial-search" placeholder="🔍 Buscar historial de propuestas..." style="border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 8px; font-size: 0.85rem;" oninput="filterProposalHistorial()" />
+                        </div>
+                        <div class="nl-recent-list" id="proposal-historial-list">
+                            <!-- Populated dynamically -->
                         </div>
                     </div>
                 </div>
