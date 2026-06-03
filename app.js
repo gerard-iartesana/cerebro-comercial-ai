@@ -93,14 +93,9 @@ window.executeComposeAI = function() {
         '- Tono cercano, informal (tutea siempre), directo y profesional\n' +
         '- Máximo 4-5 párrafos cortos\n' +
         '- Incluye un CTA claro (ej: "¿Te va bien que agendemos una llamada rápida esta semana?")\n' +
-        '- Al final incluye esta firma exacta en HTML:\n' +
-        '  <br><br>—<br>\n' +
-        '  <strong>Gerard Fanals</strong><br>\n' +
-        '  629 49 41 67<br>\n' +
-        '  CEO & Senior IA Architect and Automation<br>\n' +
-        '  IA de Barrio | <a href="https://iadebarrio.com">iadebarrio.com</a> / <a href="https://gerardfanals.online">gerardfanals.online</a><br>\n' +
-        '  <a href="mailto:gerard@iartesana.es">gerard@iartesana.es</a>\n' +
-        '- Usa etiquetas HTML simples: <p>, <strong>, <a>, <br>. NO uses <html>, <head>, <body>';
+        '- NO incluyas firma al final del email, la firma se añade automáticamente por el sistema\n' +
+        '- Para el espaciado, usa etiquetas <p style="margin:0 0 8px 0"> en cada párrafo para que queden compactos, SIN <br><br> entre párrafos\n' +
+        '- Usa etiquetas HTML simples: <p>, <strong>, <a>. NO uses <html>, <head>, <body>';
 
     fetch('/api/brain-chat', {
         method: 'POST',
