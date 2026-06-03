@@ -3910,21 +3910,29 @@ body.role-guest td button {
     font-size: 0.85rem;
 }
 
-/* Lead Card */
+/* Lead Card — two-row layout */
 .envio-lead-card {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 20px;
+    flex-direction: column;
+    padding: 0;
     border: 1px solid var(--border-color);
     border-radius: 14px;
     background: var(--bg-card);
-    gap: 16px;
+    overflow: hidden;
     transition: all 0.15s;
 }
 .envio-lead-card:hover {
     border-color: rgba(255,255,255,0.12);
     background: rgba(255,255,255,0.02);
+}
+
+/* Top row: info + badge + actions */
+.envio-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    gap: 12px;
 }
 .envio-card-left {
     display: flex;
@@ -3991,19 +3999,12 @@ body.role-guest td button {
     opacity: 0.4;
 }
 
-/* Right side: sequence indicator + actions */
+/* Right side: badge + action buttons inline */
 .envio-card-right {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 10px;
     flex-shrink: 0;
-}
-.envio-seq-indicator {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 6px;
-    min-width: 120px;
 }
 
 /* Status badges */
@@ -4015,14 +4016,14 @@ body.role-guest td button {
     white-space: nowrap;
 }
 .envio-status-pending {
-    background: rgba(255, 204, 0, 0.12);
-    color: #ffcc00;
-    border: 1px solid rgba(255, 204, 0, 0.25);
+    background: rgba(255, 159, 10, 0.12);
+    color: #ff9f0a;
+    border: 1px solid rgba(255, 159, 10, 0.3);
 }
 .envio-status-active {
-    background: rgba(52, 199, 89, 0.12);
-    color: #34c759;
-    border: 1px solid rgba(52, 199, 89, 0.25);
+    background: rgba(255, 149, 0, 0.12);
+    color: #ff9500;
+    border: 1px solid rgba(255, 149, 0, 0.3);
 }
 .envio-status-meeting {
     background: rgba(0, 122, 255, 0.12);
@@ -4040,37 +4041,11 @@ body.role-guest td button {
     border: 1px solid rgba(142, 142, 147, 0.2);
 }
 
-/* Progress bar */
-.envio-progress-wrap {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-}
-.envio-progress-track {
-    flex: 1;
-    height: 5px;
-    background: rgba(255,255,255,0.06);
-    border-radius: 3px;
-    overflow: hidden;
-    min-width: 60px;
-}
-.envio-progress-fill {
-    height: 100%;
-    border-radius: 3px;
-    transition: width 0.4s ease;
-}
-.envio-progress-label {
-    font-size: 0.68rem;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-/* Action buttons */
+/* Action buttons — horizontal */
 .envio-card-actions {
     display: flex;
-    flex-direction: column;
-    gap: 5px;
+    align-items: center;
+    gap: 6px;
 }
 .envio-btn-compose,
 .envio-btn-start,
@@ -4109,6 +4084,53 @@ body.role-guest td button {
 .envio-btn-resume:hover {
     filter: brightness(1.1);
     transform: translateY(-1px);
+}
+
+/* Bottom row: chain step dots */
+.envio-card-bottom {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 18px 10px;
+    border-top: 1px solid var(--border-color);
+    background: rgba(255,255,255,0.01);
+}
+.envio-chain-dots {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+.envio-chain-dots-label {
+    font-size: 0.62rem;
+    font-weight: 800;
+    margin-right: 4px;
+    min-width: 18px;
+}
+.envio-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+.envio-dot-empty {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.envio-dot-done {
+    background: var(--dot-color);
+    border: 1px solid var(--dot-color);
+    opacity: 0.7;
+}
+.envio-dot-current {
+    background: var(--dot-color);
+    border: 1px solid var(--dot-color);
+    box-shadow: 0 0 6px var(--dot-color);
+    animation: envio-dot-pulse 1.5s ease-in-out infinite;
+}
+@keyframes envio-dot-pulse {
+    0%, 100% { box-shadow: 0 0 4px var(--dot-color); transform: scale(1); }
+    50% { box-shadow: 0 0 10px var(--dot-color); transform: scale(1.3); }
 }
 
 /* --- Config Flow Pipeline --- */

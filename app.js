@@ -2310,40 +2310,55 @@ function renderOutreachSendList() {
         const card = document.createElement('div');
         card.className = 'envio-lead-card';
 
+        // Build chain step dots
+        const chainsDots = [
+            { num: 1, name: 'C1', color: '#ff9500', total: 5 },
+            { num: 2, name: 'C2', color: '#34c759', total: 4 },
+            { num: 3, name: 'C3', color: '#007aff', total: 12 }
+        ];
+        let dotsHtml = '';
+        chainsDots.forEach(ch => {
+            let startStep = ch.num === 1 ? 0 : ch.num === 2 ? 5 : 9;
+            let dots = '';
+            for (let i = 0; i < ch.total; i++) {
+                const globalStep = startStep + i;
+                let cls = 'envio-dot-empty';
+                if (globalStep < step) cls = 'envio-dot-done';
+                else if (globalStep === step && isInSequence) cls = 'envio-dot-current';
+                dots += `<span class="envio-dot ${cls}" style="--dot-color:${ch.color}"></span>`;
+            }
+            dotsHtml += `<div class="envio-chain-dots"><span class="envio-chain-dots-label" style="color:${ch.color}">${ch.name}</span>${dots}</div>`;
+        });
+
         card.innerHTML = `
-            <div class="envio-card-left">
-                <div class="envio-avatar" style="background:${chainColor}20;color:${chainColor}">${initials}</div>
-                <div class="envio-card-info">
-                    <div class="envio-card-name">${lead.first_name || 'Prospecto'} <span class="envio-card-company">${lead.company_name || '—'}</span></div>
-                    <div class="envio-card-email">${lead.email}</div>
-                    <div class="envio-card-meta">
-                        <span class="envio-version-dot" style="background:${vColor}"></span>
-                        <span class="envio-meta-label">V.${version}</span>
-                        <span class="envio-meta-sep">·</span>
-                        <span class="envio-meta-label">Último: ${lastContact}</span>
+            <div class="envio-card-top">
+                <div class="envio-card-left">
+                    <div class="envio-avatar" style="background:${chainColor}20;color:${chainColor}">${initials}</div>
+                    <div class="envio-card-info">
+                        <div class="envio-card-name">${lead.first_name || 'Prospecto'} <span class="envio-card-company">${lead.company_name || '—'}</span></div>
+                        <div class="envio-card-email">${lead.email}</div>
+                        <div class="envio-card-meta">
+                            <span class="envio-version-dot" style="background:${vColor}"></span>
+                            <span class="envio-meta-label">V.${version}</span>
+                            <span class="envio-meta-sep">·</span>
+                            <span class="envio-meta-label">Último: ${lastContact}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="envio-card-right">
+                    <span class="envio-status-badge ${statusClass}">${statusLabel}</span>
+                    <div class="envio-card-actions">
+                        <button class="envio-btn-compose" onclick="window.openComposeForLead('${lead.email}')">📝 Email manual</button>
+                        ${isPending ? `
+                            <button class="envio-btn-start" onclick="window.startOutreachSequence('${lead.id}')">🚀 Iniciar secuencia</button>
+                        ` : isInSequence ? `
+                            <button class="envio-btn-resume" onclick="window.startOutreachSequence('${lead.id}')">▶ Enviar siguiente</button>
+                        ` : ''}
                     </div>
                 </div>
             </div>
-            <div class="envio-card-right">
-                <div class="envio-seq-indicator">
-                    <span class="envio-status-badge ${statusClass}">${statusLabel}</span>
-                    ${isInSequence ? `
-                        <div class="envio-progress-wrap">
-                            <div class="envio-progress-track">
-                                <div class="envio-progress-fill" style="width:${progressPct}%;background:${chainColor}"></div>
-                            </div>
-                            <span class="envio-progress-label" style="color:${chainColor}">${chainName} ${stepInChain}/${totalSteps}</span>
-                        </div>
-                    ` : ''}
-                </div>
-                <div class="envio-card-actions">
-                    <button class="envio-btn-compose" onclick="window.openComposeForLead('${lead.email}')">📝 Email manual</button>
-                    ${isPending ? `
-                        <button class="envio-btn-start" onclick="window.startOutreachSequence('${lead.id}')">🚀 Iniciar secuencia</button>
-                    ` : isInSequence ? `
-                        <button class="envio-btn-resume" onclick="window.startOutreachSequence('${lead.id}')">▶ Enviar siguiente</button>
-                    ` : ''}
-                </div>
+            <div class="envio-card-bottom">
+                ${dotsHtml}
             </div>
         `;
         listEl.appendChild(card);
@@ -5948,7 +5963,6 @@ function renderEditPresLineas() {
                 </div>
             </div>
 
-            <!-- ROW 3: MANTENIMIENTO SLIDER TOGGLE -->
             <div style="display:flex; gap:10px; align-items:center; margin-top:4px;">
                 <span style="font-size:0.74rem; color:var(--text-grey); display:flex; align-items:center; gap:4px;">🔄 Mant. mensual</span>
                 <label class="ios-switch">
