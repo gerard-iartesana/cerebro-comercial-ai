@@ -54,12 +54,27 @@ window.openComposeForLead = function(email) {
     }
 };
 
-// AI content generator for compose
+// AI content generator for compose - opens custom modal
 window.openComposeAI = function() {
-    var instruction = prompt('¿Qué quieres que escriba la IA?\n\nEj: "Un email presentando nuestros servicios de diseño web"');
+    var modal = document.getElementById('compose-ai-modal');
+    if (!modal) return;
+    document.getElementById('compose-ai-instruction').value = '';
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+    setTimeout(function() { document.getElementById('compose-ai-instruction').focus(); }, 100);
+};
+
+window.closeComposeAIModal = function() {
+    var modal = document.getElementById('compose-ai-modal');
+    if (modal) { modal.classList.remove('active'); modal.style.display = 'none'; }
+};
+
+window.executeComposeAI = function() {
+    var instruction = document.getElementById('compose-ai-instruction').value.trim();
     if (!instruction) return;
+    closeComposeAIModal();
     var body = document.getElementById('compose-email-body');
-    if (body) body.value = 'Generando con IA...';
+    if (body) body.value = '⏳ Generando con IA...';
 
     fetch('/api/brain-chat', {
         method: 'POST',

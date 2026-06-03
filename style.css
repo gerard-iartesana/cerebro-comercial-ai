@@ -4407,6 +4407,25 @@ body.role-guest td button {
 .compose-btn-send:hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--accent-glow); }
 .compose-send-icon { width: 16px; height: 16px; }
 
+/* AI suggestion chips */
+.compose-ai-suggestion {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-grey);
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.compose-ai-suggestion:hover {
+    border-color: var(--accent-purple);
+    color: var(--accent-purple);
+    background: rgba(88, 86, 214, 0.06);
+}
+
 /* --- Envío Tab --- */
 .envio-toolbar {
     display: flex;

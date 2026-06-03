@@ -185,6 +185,35 @@
         </div>
     </div>
 
+    <!-- AI Compose Prompt Modal (Apple Style) -->
+    <div class="macos-modal-overlay" id="compose-ai-modal" style="display: none;">
+        <div class="compose-modal" style="width: 520px;">
+            <div class="compose-header">
+                <div class="compose-header-left">
+                    <span class="compose-header-icon">🤖</span>
+                    <h3 class="compose-title">Generar con IA</h3>
+                </div>
+                <button class="compose-close" onclick="closeComposeAIModal()">✕</button>
+            </div>
+            <div class="compose-field">
+                <label class="compose-label">¿Qué quieres que escriba?</label>
+                <textarea class="compose-input" id="compose-ai-instruction" rows="3" placeholder="Describe el email que quieres generar..." style="resize: vertical; min-height: 80px; line-height: 1.5;"></textarea>
+            </div>
+            <div class="compose-field" style="margin-top: 10px;">
+                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                    <button class="compose-ai-suggestion" onclick="document.getElementById('compose-ai-instruction').value=this.textContent">Email presentando servicios de diseño web</button>
+                    <button class="compose-ai-suggestion" onclick="document.getElementById('compose-ai-instruction').value=this.textContent">Seguimiento después de reunión</button>
+                    <button class="compose-ai-suggestion" onclick="document.getElementById('compose-ai-instruction').value=this.textContent">Propuesta de colaboración</button>
+                </div>
+            </div>
+            <div class="compose-actions">
+                <button class="compose-btn-cancel" onclick="closeComposeAIModal()">Cancelar</button>
+                <button class="compose-btn-send" onclick="executeComposeAI()" style="background: var(--accent-purple); box-shadow: 0 4px 14px rgba(88,86,214,0.3);">
+                    <span>🤖</span> Generar
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- macOS Lock Screen Authentication (Professional Login Form - Light Theme) -->
     <div class="macos-lock-screen" id="lock-screen">
