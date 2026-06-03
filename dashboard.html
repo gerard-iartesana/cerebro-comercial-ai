@@ -327,25 +327,12 @@
                     </button>
                 </div>
 
-                <!-- GRUPO: CONFIGURACIÓN -->
-                <div class="sidebar-group-header" data-group="config" onclick="toggleSidebarGroup('config')">
-                    <span class="sidebar-group-title">Configuración</span>
-                    <svg class="sidebar-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                </div>
-                <div class="sidebar-subnav collapsed" id="subnav-config">
-                    <button class="sidebar-nav-item" data-section="config-business">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-4V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM10 4h4v3h-4z"></path></svg>
-                        Datos de Negocio
-                    </button>
-                    <button class="sidebar-nav-item" data-section="config-apikeys">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
-                        Claves API
-                    </button>
-                    <button class="sidebar-nav-item" data-section="config-forms">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                        Formularios
-                    </button>
-                </div>
+                <!-- CONFIGURACIÓN (standalone) -->
+                <button class="sidebar-nav-item" data-section="configuracion" style="margin-top:8px;border-top:1px solid var(--border-color);padding-top:16px">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    Configuración
+                </button>
+
 
                 <!-- GRUPO: COMUNICACIÓN -->
                 <div class="sidebar-group-header" data-group="comms" onclick="toggleSidebarGroup('comms')">
@@ -2340,170 +2327,342 @@
                 </div>
             </div>
 
-            <div class="dashboard-section" id="sec-config-business">
-                <div class="section-header">
-                    <h1>Datos de Negocio</h1>
-                    <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Información de la empresa</span>
+            <!-- SECTION: Configuración (Tabbed) -->
+            <div class="dashboard-section" id="sec-configuracion">
+                <div class="section-header" style="margin-bottom:0">
+                    <h1 style="display:flex;align-items:center;gap:10px">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        Configuración
+                    </h1>
                 </div>
 
-                <!-- Business Info Card -->
-                <div class="stat-card-glass" style="margin-bottom:20px">
-                    <h3 style="font-size:1rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;color:var(--text-main)">
-                        <span style="font-size:1.2rem">🏢</span> Información de la Empresa
-                    </h3>
-                    <div class="nl-config-grid" style="grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
-                        <div class="nl-config-field">
-                            <label class="nl-config-field-label">Nombre de la empresa</label>
-                            <input class="nl-config-input" id="biz-company-name" value="IA de Barrio (iadebarrio.com)" />
-                        </div>
-                        <div class="nl-config-field">
-                            <label class="nl-config-field-label">CIF / NIF</label>
-                            <input class="nl-config-input" id="biz-cif" placeholder="B12345678" />
-                        </div>
-                    </div>
-                    <div class="nl-config-grid" style="grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
-                        <div class="nl-config-field">
-                            <label class="nl-config-field-label">Dirección fiscal</label>
-                            <input class="nl-config-input" id="biz-address" value="Avda Fort de Leau 131, Mahón" />
-                        </div>
-                        <div class="nl-config-field">
-                            <label class="nl-config-field-label">Teléfono</label>
-                            <input class="nl-config-input" id="biz-phone" value="629 49 41 67" />
-                        </div>
-                    </div>
-                    <div class="nl-config-grid" style="grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
-                        <div class="nl-config-field">
-                            <label class="nl-config-field-label">Email de contacto</label>
-                            <input class="nl-config-input" id="biz-email" value="gerard@iartesana.es" />
-                        </div>
-                        <div class="nl-config-field">
-                            <label class="nl-config-field-label">Sitio web</label>
-                            <input class="nl-config-input" id="biz-website" value="https://iadebarrio.com" />
-                        </div>
-                    </div>
-                    <div class="nl-config-grid" style="grid-template-columns: 1fr 1fr; gap: 14px;">
-                        <div class="nl-config-field">
-                            <label class="nl-config-field-label">Sector / Actividad</label>
-                            <input class="nl-config-input" id="biz-sector" value="Consultoría IA y Automatización B2B" />
-                        </div>
-                        <div class="nl-config-field">
-                            <label class="nl-config-field-label">Responsable</label>
-                            <input class="nl-config-input" id="biz-owner" value="Gerard Fanals — CEO" />
-                        </div>
-                    </div>
-                    <div style="margin-top:16px;display:flex;gap:10px">
-                        <button class="btn-primary" style="padding:8px 20px;font-size:0.82rem" onclick="saveBizData()">💾 Guardar datos</button>
-                        <span id="biz-save-status" style="font-size:0.8rem;font-weight:600;display:flex;align-items:center"></span>
-                    </div>
+                <!-- Tab Bar -->
+                <div style="display:flex;gap:4px;border-bottom:1px solid var(--border-color);margin-bottom:24px;overflow-x:auto;padding-bottom:0">
+                    <button class="cfg-tab active" data-cfgtab="negocio" onclick="switchConfigTab('negocio')">🏢 Negocio</button>
+                    <button class="cfg-tab" data-cfgtab="pagos" onclick="switchConfigTab('pagos')">💳 Formas de pago</button>
+                    <button class="cfg-tab" data-cfgtab="usuarios" onclick="switchConfigTab('usuarios')">👥 Usuarios y Permisos</button>
+                    <button class="cfg-tab" data-cfgtab="actividad" onclick="switchConfigTab('actividad')">📁 Actividad</button>
+                    <button class="cfg-tab" data-cfgtab="sync" onclick="switchConfigTab('sync')">🔄 Sincronización</button>
+                    <button class="cfg-tab" data-cfgtab="storage" onclick="switchConfigTab('storage')">📦 Storage</button>
                 </div>
 
-                <!-- Suscripción y Pago -->
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; margin-bottom:20px;">
-                    <div class="stat-card-glass">
-                        <span class="stat-label">💳 Suscripción Activa</span>
-                        <div class="stat-value" style="font-size:1.8rem; margin:10px 0; color:var(--text-main)">Plan Pro AI</div>
-                        <span class="stat-trend" style="color:var(--text-grey)">€49.00 / mes (Renueva el 01/07/2026)</span>
-                    </div>
-                    <div class="stat-card-glass">
-                        <span class="stat-label">🏦 Método de Pago</span>
-                        <div style="display:flex; align-items:center; gap:12px; margin:15px 0">
-                            <div style="background:#1d1d1f; color:white; padding:4px 8px; border-radius:6px; font-size:0.8rem; font-weight:700">VISA</div>
-                            <div style="font-size:1rem; font-weight:600; color:var(--text-main)">Stripe •••• 4167</div>
-                        </div>
-                        <button class="btn-secondary" style="padding:6px 12px; font-size:0.78rem">Actualizar Tarjeta</button>
-                    </div>
-                </div>
-
-                <!-- Google Calendar -->
-                <div class="stat-card-glass">
-                    <h3 style="font-size:1rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;color:var(--text-main)">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="#4285F4"><path d="M19.5 22h-15A2.5 2.5 0 0 1 2 19.5v-15A2.5 2.5 0 0 1 4.5 2H8v2H4.5a.5.5 0 0 0-.5.5v15a.5.5 0 0 0 .5.5h15a.5.5 0 0 0 .5-.5V16h2v3.5a2.5 2.5 0 0 1-2.5 2.5z"/><path d="M16 2v2h3.59l-9.3 9.29 1.42 1.42L21 5.41V9h2V2h-7z"/></svg>
-                        Google Calendar
-                    </h3>
-                    <div class="nl-config-grid" style="grid-template-columns: 1fr; gap: 12px;">
-                        <div class="nl-config-field">
-                            <label class="nl-config-field-label">OAuth Client ID</label>
-                            <div style="display:flex;gap:10px;max-width:600px">
-                                <input type="text" id="gcal-client-id" class="nl-config-input" placeholder="Tu Client ID (xxxx.apps.googleusercontent.com)" style="flex:1">
-                                <button onclick="saveGCalClientId()" class="btn-primary" style="padding:8px 16px;font-size:0.8rem">Guardar</button>
+                <!-- ═══ TAB: Negocio ═══ -->
+                <div class="cfg-panel active" id="cfg-negocio">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+                        <!-- Left: Business Data -->
+                        <div>
+                            <h3 style="font-size:0.85rem;font-weight:700;color:var(--text-grey);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.05em">🏢 Datos de Negocio</h3>
+                            <div style="display:flex;flex-direction:column;gap:12px">
+                                <div class="cfg-field"><label class="cfg-label">Nombre de la empresa</label><input class="cfg-input" id="biz-company-name" value="IA de Barrio (iadebarrio.com)" /></div>
+                                <div class="cfg-field"><label class="cfg-label">Actividad</label><input class="cfg-input" id="biz-sector" value="Consultoría IA y Automatización B2B" /></div>
+                                <div class="cfg-field"><label class="cfg-label">CIF / NIF</label><input class="cfg-input" id="biz-cif" placeholder="B12345678" /></div>
+                                <div class="cfg-field"><label class="cfg-label">Dirección</label><input class="cfg-input" id="biz-address" value="Avda Fort de Leau 131, Mahón" /></div>
+                                <div class="cfg-field"><label class="cfg-label">Teléfono</label><input class="cfg-input" id="biz-phone" value="629 49 41 67" /></div>
+                                <div class="cfg-field"><label class="cfg-label">Email</label><input class="cfg-input" id="biz-email" value="gerard@iartesana.es" /></div>
+                                <div class="cfg-field"><label class="cfg-label">Web</label><input class="cfg-input" id="biz-website" value="https://iadebarrio.com" /></div>
+                                <div class="cfg-field"><label class="cfg-label">Logo</label>
+                                    <div style="display:flex;gap:8px">
+                                        <button class="btn-primary" style="padding:6px 14px;font-size:0.78rem" onclick="document.getElementById('biz-logo-upload').click()">📎 Subir logo</button>
+                                        <button class="btn-secondary" style="padding:6px 14px;font-size:0.78rem;color:#ff453a" onclick="showAlert('Logo eliminado','Se ha quitado el logo.','🗑️')">🗑️ Eliminar</button>
+                                    </div>
+                                    <input type="file" id="biz-logo-upload" accept="image/*" style="display:none" onchange="showAlert('Logo subido','Logo actualizado correctamente.','✅')">
+                                </div>
+                                <div id="biz-logo-preview" style="margin-top:4px">
+                                    <div style="width:120px;height:80px;border-radius:12px;border:1px dashed var(--border-color);display:flex;align-items:center;justify-content:center;color:var(--text-grey);font-size:0.75rem">Sin logo</div>
+                                </div>
                             </div>
-                            <small style="color:var(--text-grey);font-size:0.72rem;margin-top:4px;display:block"><a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:#4285F4">Crear credenciales en Google Cloud Console →</a></small>
+                        </div>
+                        <!-- Right: Corporate Colors + Calendar -->
+                        <div>
+                            <h3 style="font-size:0.85rem;font-weight:700;color:var(--text-grey);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.05em">🎨 Diseño Corporativo</h3>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+                                <div class="cfg-field" style="flex-direction:row;align-items:center;gap:8px">
+                                    <input type="color" value="#007AFF" style="width:32px;height:32px;border:none;border-radius:6px;cursor:pointer;padding:0">
+                                    <input class="cfg-input" value="#007AFF" style="flex:1;font-family:monospace">
+                                </div>
+                                <div class="cfg-field" style="flex-direction:row;align-items:center;gap:8px">
+                                    <input type="color" value="#1d1d1f" style="width:32px;height:32px;border:none;border-radius:6px;cursor:pointer;padding:0">
+                                    <input class="cfg-input" value="#1d1d1f" style="flex:1;font-family:monospace">
+                                </div>
+                                <div class="cfg-field" style="flex-direction:row;align-items:center;gap:8px">
+                                    <input type="color" value="#34c759" style="width:32px;height:32px;border:none;border-radius:6px;cursor:pointer;padding:0">
+                                    <input class="cfg-input" value="#34c759" style="flex:1;font-family:monospace">
+                                </div>
+                                <div class="cfg-field" style="flex-direction:row;align-items:center;gap:8px">
+                                    <input type="color" value="#f5f5f7" style="width:32px;height:32px;border:none;border-radius:6px;cursor:pointer;padding:0">
+                                    <input class="cfg-input" value="#f5f5f7" style="flex:1;font-family:monospace">
+                                </div>
+                            </div>
+                            <hr style="border:none;border-top:1px solid var(--border-color);margin:16px 0">
+                            <h3 style="font-size:0.85rem;font-weight:700;color:var(--text-grey);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.05em">📅 Google Calendar</h3>
+                            <div class="cfg-field" style="margin-bottom:10px"><label class="cfg-label">OAuth Client ID</label><input class="cfg-input" id="gcal-client-id" placeholder="Tu Client ID (xxxx.apps.googleusercontent.com)" /></div>
+                            <div class="cfg-field" style="margin-bottom:10px"><label class="cfg-label">Calendar ID</label><input class="cfg-input" id="api-key-gcal" placeholder="xxx@group.calendar.google.com" style="font-family:monospace" /></div>
+                            <div style="display:flex;gap:10px;margin-top:8px">
+                                <button onclick="connectGoogleCalendar()" style="padding:8px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,#4285F4,#34A853);color:white;font-weight:600;font-size:0.8rem;cursor:pointer">Conectar Google Calendar</button>
+                                <a href="https://calendar.app.google/QMiJY3UbKChYgEcu6" target="_blank" style="padding:8px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,#007AFF,#5856d6);color:white;font-weight:600;font-size:0.8rem;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:6px">📅 Booking Page</a>
+                            </div>
+                            <div id="gcal-config" style="display:none"></div>
+                            <div id="gcal-status" style="display:none;padding:8px 12px;border-radius:10px;margin-top:8px;font-size:0.8rem;font-weight:600"></div>
                         </div>
                     </div>
-                    <div id="gcal-config" style="display:none"></div>
-                    <div id="gcal-status" style="display:none;padding:8px 12px;border-radius:10px;margin-top:8px;font-size:0.8rem;font-weight:600"></div>
-                    <div style="margin-top:12px;display:flex;gap:10px">
-                        <button onclick="connectGoogleCalendar()" id="btn-gcal-connect" style="padding:8px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,#4285F4,#34A853);color:white;font-weight:600;font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:6px">Conectar Google Calendar</button>
-                        <a href="https://calendar.app.google/QMiJY3UbKChYgEcu6" target="_blank" style="padding:8px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,#007AFF,#5856d6);color:white;font-weight:600;font-size:0.8rem;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:6px">📅 Booking Page</a>
+                    <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
+                        <button class="btn-secondary" style="padding:8px 20px;font-size:0.82rem" onclick="showAlert('Restaurado','Datos restaurados a los valores originales.','↩️')">↩️ Deshacer cambios</button>
+                        <button class="btn-primary" style="padding:8px 24px;font-size:0.82rem" onclick="saveBizData()">💾 Guardar</button>
                     </div>
                 </div>
-            </div>
 
-            <!-- SECTION: Claves API -->
-            <div class="dashboard-section" id="sec-config-apikeys">
-                <div class="section-header">
-                    <h1>Claves API</h1>
-                    <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Integraciones y servicios externos</span>
-                </div>
-                <div class="stat-card-glass" style="display:flex;flex-direction:column;gap:18px">
-                    <div class="nl-config-field">
-                        <label class="nl-config-field-label" style="display:flex;align-items:center;gap:6px">
-                            <span style="font-size:1rem">🔎</span> Hunter.io API Key
-                        </label>
-                        <div style="display:flex;gap:10px;max-width:600px">
-                            <input type="password" id="api-key-hunter" value="••••••••••••••••••••" readonly class="nl-config-input" style="flex:1;font-family:monospace">
-                            <button class="btn-secondary" style="padding:6px 14px;font-size:0.78rem;white-space:nowrap" onclick="toggleApiKey('api-key-hunter','Configurada en Vercel')">👁️ Ver</button>
+                <!-- ═══ TAB: Formas de pago ═══ -->
+                <div class="cfg-panel" id="cfg-pagos">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                        <div>
+                            <h3 style="font-size:0.9rem;font-weight:600;color:var(--text-main)">Formas de pago</h3>
+                            <p style="font-size:0.75rem;color:var(--text-grey);margin:4px 0 0">Configura los métodos de pago disponibles en tus presupuestos</p>
                         </div>
-                        <small style="color:var(--text-grey);font-size:0.72rem;margin-top:4px;display:block">Búsqueda de emails profesionales · <a href="https://hunter.io/api-keys" target="_blank" style="color:var(--accent)">Panel de Hunter.io →</a></small>
+                        <button class="btn-primary" style="padding:8px 18px;font-size:0.8rem" onclick="saveBizData()">💾 Guardar</button>
                     </div>
-                    <hr style="border:none;border-top:1px solid var(--border-color);margin:0">
-                    <div class="nl-config-field">
-                        <label class="nl-config-field-label" style="display:flex;align-items:center;gap:6px">
-                            <span style="font-size:1rem">📧</span> Resend API Key
-                        </label>
-                        <div style="display:flex;gap:10px;max-width:600px">
-                            <input type="password" id="api-key-resend" value="••••••••••••••••••••" readonly class="nl-config-input" style="flex:1;font-family:monospace">
-                            <button class="btn-secondary" style="padding:6px 14px;font-size:0.78rem;white-space:nowrap" onclick="toggleApiKey('api-key-resend','Configurada en Vercel')">👁️ Ver</button>
-                        </div>
-                        <small style="color:var(--text-grey);font-size:0.72rem;margin-top:4px;display:block">Envío de emails transaccionales · <a href="https://resend.com/api-keys" target="_blank" style="color:var(--accent)">Panel de Resend →</a></small>
-                    </div>
-                    <hr style="border:none;border-top:1px solid var(--border-color);margin:0">
-                    <div class="nl-config-field">
-                        <label class="nl-config-field-label" style="display:flex;align-items:center;gap:6px">
-                            <span style="font-size:1rem">🤖</span> Google AI Studio (Gemini) Key
-                        </label>
-                        <div style="display:flex;gap:10px;max-width:600px">
-                            <input type="password" id="api-key-gemini" value="••••••••••••••••••••" readonly class="nl-config-input" style="flex:1;font-family:monospace">
-                            <button class="btn-secondary" style="padding:6px 14px;font-size:0.78rem;white-space:nowrap" onclick="toggleApiKey('api-key-gemini','Configurada en Vercel')">👁️ Ver</button>
-                        </div>
-                        <small style="color:var(--text-grey);font-size:0.72rem;margin-top:4px;display:block">Inteligencia artificial generativa · <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">Google AI Studio →</a></small>
-                    </div>
-                    <hr style="border:none;border-top:1px solid var(--border-color);margin:0">
-                    <div class="nl-config-field">
-                        <label class="nl-config-field-label" style="display:flex;align-items:center;gap:6px">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="#4285F4"><path d="M19.5 22h-15A2.5 2.5 0 0 1 2 19.5v-15A2.5 2.5 0 0 1 4.5 2H8v2H4.5a.5.5 0 0 0-.5.5v15a.5.5 0 0 0 .5.5h15a.5.5 0 0 0 .5-.5V16h2v3.5a2.5 2.5 0 0 1-2.5 2.5z"/><path d="M16 2v2h3.59l-9.3 9.29 1.42 1.42L21 5.41V9h2V2h-7z"/></svg>
-                            Google Calendar ID
-                        </label>
-                        <div style="display:flex;gap:10px;max-width:600px">
-                            <input type="text" id="api-key-gcal" class="nl-config-input" style="flex:1;font-family:monospace" placeholder="ID del calendario (xxx@group.calendar.google.com)" />
-                            <button class="btn-secondary" style="padding:6px 14px;font-size:0.78rem;white-space:nowrap" onclick="saveGCalId()">💾 Guardar</button>
-                        </div>
-                        <small style="color:var(--text-grey);font-size:0.72rem;margin-top:4px;display:block">Integración con Google Calendar para reuniones</small>
-                    </div>
-                </div>
-            </div>
 
-            <!-- SECTION: Formularios -->
-            <div class="dashboard-section" id="sec-config-forms">
-                <div class="section-header">
-                    <h1>Formularios</h1>
-                    <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Crear y gestionar formularios de captación</span>
+                    <!-- Stripe -->
+                    <div style="border:2px solid rgba(0,113,227,0.15);border-radius:16px;padding:20px;margin-bottom:16px;background:var(--bg-card)">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <span style="font-size:1.2rem">💳</span>
+                                <div><strong style="font-size:0.9rem;color:var(--text-main)">Stripe (Visa/MasterCard)</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Acepta pagos con tarjeta de crédito y débito</p></div>
+                            </div>
+                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" checked style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                            <div class="cfg-field"><label class="cfg-label">Titular</label><input class="cfg-input" value="IA de Barrio" /></div>
+                            <div class="cfg-field"><label class="cfg-label">País</label><input class="cfg-input" value="España (ES)" /></div>
+                            <div class="cfg-field"><label class="cfg-label">Business Name</label><input class="cfg-input" value="iadebarrio.com" /></div>
+                            <div class="cfg-field"><label class="cfg-label">Email Stripe</label><input class="cfg-input" value="gerard@iartesana.es" /></div>
+                        </div>
+                    </div>
+
+                    <!-- Transferencia Bancaria -->
+                    <div style="border:2px solid rgba(255,149,0,0.15);border-radius:16px;padding:20px;margin-bottom:16px;background:var(--bg-card)">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <span style="font-size:1.2rem">🏦</span>
+                                <div><strong style="font-size:0.9rem;color:var(--text-main)">Transferencia Bancaria</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Datos para transferencias directas a tu cuenta</p></div>
+                            </div>
+                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" checked style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                            <div class="cfg-field"><label class="cfg-label">Banco</label><input class="cfg-input" value="Banco de Santander" /></div>
+                            <div class="cfg-field"><label class="cfg-label">Titular</label><input class="cfg-input" value="IA de Barrio S.L." /></div>
+                            <div class="cfg-field"><label class="cfg-label">IBAN</label><input class="cfg-input" value="ES49 0049 0012 1234 5678 9012" style="font-family:monospace" /></div>
+                            <div class="cfg-field"><label class="cfg-label">Concepto</label><input class="cfg-input" placeholder="Referencia automática" /></div>
+                        </div>
+                    </div>
+
+                    <!-- Bizum -->
+                    <div style="border:2px solid rgba(88,86,214,0.15);border-radius:16px;padding:20px;margin-bottom:16px;background:var(--bg-card)">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <span style="font-size:1.2rem">📱</span>
+                                <div><strong style="font-size:0.9rem;color:var(--text-main)">Bizum</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Pago rápido desde el móvil</p></div>
+                            </div>
+                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" checked style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
+                        </div>
+                        <div class="cfg-field"><label class="cfg-label">Teléfono Bizum</label><input class="cfg-input" value="+34 629 49 41 67" style="max-width:300px" /></div>
+                    </div>
+
+                    <!-- Info footer -->
+                    <div style="padding:14px 18px;border-radius:12px;background:rgba(0,113,227,0.04);border:1px solid rgba(0,113,227,0.1);margin-top:8px">
+                        <h4 style="font-size:0.8rem;font-weight:700;color:#007AFF;margin-bottom:6px">💡 Cómo funciona</h4>
+                        <ul style="font-size:0.75rem;color:var(--text-grey);padding-left:16px;margin:0;display:flex;flex-direction:column;gap:4px">
+                            <li>Activa las formas de pago que ofreces a tus clientes</li>
+                            <li>Los datos se reflejan automáticamente en cada presupuesto</li>
+                            <li>Puedes activar o desactivar formularios en cualquier momento</li>
+                            <li>Al crear un presupuesto, las opciones activas se mostrarán automáticamente en el desglose</li>
+                        </ul>
+                    </div>
                 </div>
-                <div class="stat-card-glass" style="padding:40px;text-align:center">
-                    <div style="font-size:3rem;margin-bottom:12px">📋</div>
-                    <h3 style="font-size:1.1rem;font-weight:700;color:var(--text-main);margin-bottom:8px">Constructor de Formularios</h3>
-                    <p style="color:var(--text-grey);font-size:0.85rem;max-width:400px;margin:0 auto 20px">Crea formularios personalizados para captar leads desde tu web, landing pages o campañas de email.</p>
-                    <button class="btn-primary" style="padding:10px 24px;font-size:0.85rem" onclick="showAlert('Próximamente','El constructor de formularios estará disponible próximamente.','🚧')">+ Crear Formulario</button>
+
+                <!-- ═══ TAB: Usuarios y Permisos ═══ -->
+                <div class="cfg-panel" id="cfg-usuarios">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                        <div>
+                            <h3 style="font-size:0.9rem;font-weight:600;color:var(--text-main)">Gestión de Usuarios</h3>
+                            <p style="font-size:0.75rem;color:var(--text-grey);margin:4px 0 0">3 usuarios registrados</p>
+                        </div>
+                        <button class="btn-primary" style="padding:8px 18px;font-size:0.8rem" onclick="showAlert('Nuevo usuario','Función de invitación disponible próximamente.','👤')">+ Añadir usuario</button>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:10px">
+                        <!-- User 1 -->
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card)">
+                            <div style="display:flex;align-items:center;gap:12px">
+                                <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#34c759,#30d158);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:0.9rem">G</div>
+                                <div>
+                                    <div style="font-weight:600;font-size:0.88rem;color:var(--text-main)">Gerard Fanals</div>
+                                    <div style="font-size:0.72rem;color:var(--text-grey)">gerard@iartesana.es · 🟢 Activo · 👑 Propietario</div>
+                                </div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span style="padding:4px 10px;border-radius:8px;background:rgba(255,149,0,0.1);color:#ff9500;font-size:0.72rem;font-weight:700">Sesión activa ahora</span>
+                                <button class="btn-secondary" style="padding:4px 10px;font-size:0.72rem">✏️ Editar</button>
+                                <button class="btn-secondary" style="padding:4px 10px;font-size:0.72rem">Permisos</button>
+                            </div>
+                        </div>
+                        <!-- User 2 -->
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card)">
+                            <div style="display:flex;align-items:center;gap:12px">
+                                <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#007AFF,#5856d6);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:0.9rem">E</div>
+                                <div>
+                                    <div style="font-weight:600;font-size:0.88rem;color:var(--text-main)">Equipo Comercial</div>
+                                    <div style="font-size:0.72rem;color:var(--text-grey)">equipo@iartesana.es · 🟢 Activo · 📝 Editor</div>
+                                </div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span style="padding:4px 10px;border-radius:8px;background:rgba(52,199,89,0.1);color:#34c759;font-size:0.72rem;font-weight:700">Sesión activa ahora</span>
+                                <button class="btn-secondary" style="padding:4px 10px;font-size:0.72rem">✏️ Editar</button>
+                                <button class="btn-secondary" style="padding:4px 10px;font-size:0.72rem">Permisos</button>
+                                <button class="btn-secondary" style="padding:4px 10px;font-size:0.72rem;color:#ff453a">Desactivar</button>
+                            </div>
+                        </div>
+                        <!-- User 3 -->
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card)">
+                            <div style="display:flex;align-items:center;gap:12px">
+                                <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#ff9500,#ff6b00);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:0.9rem">S</div>
+                                <div>
+                                    <div style="font-weight:600;font-size:0.88rem;color:var(--text-main)">Soporte Externo</div>
+                                    <div style="font-size:0.72rem;color:var(--text-grey)">soporte@iadebarrio.com · 🟢 Activo · 👁️ Lector</div>
+                                </div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span style="padding:4px 10px;border-radius:8px;background:rgba(52,199,89,0.1);color:#34c759;font-size:0.72rem;font-weight:700">Sesión activa ahora</span>
+                                <button class="btn-secondary" style="padding:4px 10px;font-size:0.72rem">✏️ Editar</button>
+                                <button class="btn-secondary" style="padding:4px 10px;font-size:0.72rem">Permisos</button>
+                                <button class="btn-secondary" style="padding:4px 10px;font-size:0.72rem;color:#ff453a">Desactivar</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align:center;margin-top:16px">
+                        <button class="btn-primary" style="padding:10px 24px;font-size:0.82rem" onclick="showAlert('Cambios guardados','Los permisos se han actualizado.','✅')">💾 Guardar cambios</button>
+                    </div>
+                </div>
+
+                <!-- ═══ TAB: Actividad ═══ -->
+                <div class="cfg-panel" id="cfg-actividad">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                        <div>
+                            <h3 style="font-size:0.9rem;font-weight:600;color:var(--text-main)">📁 Registro de Actividad</h3>
+                            <p style="font-size:0.75rem;color:var(--text-grey);margin:4px 0 0">Historial completo de acciones</p>
+                        </div>
+                        <button class="btn-primary" style="padding:8px 18px;font-size:0.8rem" onclick="showAlert('Actualizado','Registro actualizado.','🔄')">🔄 Actualizar</button>
+                    </div>
+                    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+                        <select class="cfg-input" style="max-width:150px;padding:6px 10px;font-size:0.78rem"><option>Sección: Todas</option><option>Leads</option><option>Outreach</option><option>Propuestas</option></select>
+                        <select class="cfg-input" style="max-width:150px;padding:6px 10px;font-size:0.78rem"><option>Usuario: Todos</option><option>Gerard</option><option>Equipo</option></select>
+                        <select class="cfg-input" style="max-width:150px;padding:6px 10px;font-size:0.78rem"><option>Tipo: Todos</option><option>Crear</option><option>Editar</option><option>Eliminar</option></select>
+                        <select class="cfg-input" style="max-width:150px;padding:6px 10px;font-size:0.78rem"><option>Últimas semanas</option><option>Último mes</option><option>Todo</option></select>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:0">
+                        <!-- Timeline entry 1 -->
+                        <div style="display:flex;gap:16px;padding:14px 0;border-bottom:1px solid var(--border-color)">
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:12px">
+                                <div style="width:10px;height:10px;border-radius:50%;background:#007AFF;flex-shrink:0"></div>
+                                <div style="width:1px;flex:1;background:var(--border-color)"></div>
+                            </div>
+                            <div style="flex:1">
+                                <div style="font-weight:700;font-size:0.78rem;color:var(--text-grey);margin-bottom:6px">Martes, 3 De Junio De 2026</div>
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                                    <span style="font-weight:600;font-size:0.85rem;color:var(--text-main)">👤 gerard</span>
+                                    <span style="padding:2px 8px;border-radius:6px;background:rgba(0,113,227,0.1);color:#007AFF;font-size:0.68rem;font-weight:700">EDITAR</span>
+                                </div>
+                                <div style="font-size:0.78rem;color:var(--text-grey)">Ha creado cadena de outreach "Serie Eventos"</div>
+                                <div style="font-size:0.68rem;color:var(--text-grey);margin-top:2px">📍 Outreach · hace 2 horas</div>
+                            </div>
+                            <div style="font-size:0.7rem;color:var(--text-grey);white-space:nowrap">18:15</div>
+                        </div>
+                        <!-- Timeline entry 2 -->
+                        <div style="display:flex;gap:16px;padding:14px 0;border-bottom:1px solid var(--border-color)">
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:12px">
+                                <div style="width:10px;height:10px;border-radius:50%;background:#34c759;flex-shrink:0"></div>
+                                <div style="width:1px;flex:1;background:var(--border-color)"></div>
+                            </div>
+                            <div style="flex:1">
+                                <div style="font-weight:700;font-size:0.78rem;color:var(--text-grey);margin-bottom:6px">Viernes, 23 De Mayo De 2026</div>
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                                    <span style="font-weight:600;font-size:0.85rem;color:var(--text-main)">👤 gerard</span>
+                                    <span style="padding:2px 8px;border-radius:6px;background:rgba(52,199,89,0.1);color:#34c759;font-size:0.68rem;font-weight:700">CREAR</span>
+                                </div>
+                                <div style="font-size:0.78rem;color:var(--text-grey)">Ha creado landing + DPA + AGENTIC + BCDI</div>
+                                <div style="font-size:0.68rem;color:var(--text-grey);margin-top:2px">📍 Propuestas · hace 11 días</div>
+                            </div>
+                            <div style="font-size:0.7rem;color:var(--text-grey);white-space:nowrap">14:23</div>
+                        </div>
+                    </div>
+                    <p style="text-align:center;font-size:0.72rem;color:var(--text-grey);margin-top:16px">Mostrando 2 · Registros → últimos 30 días</p>
+                </div>
+
+                <!-- ═══ TAB: Sincronización ═══ -->
+                <div class="cfg-panel" id="cfg-sync">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                        <div>
+                            <h3 style="font-size:0.9rem;font-weight:600;color:var(--text-main)">🔄 Sincronización</h3>
+                            <p style="font-size:0.75rem;color:var(--text-grey);margin:4px 0 0">Estado de las integraciones y servicios conectados</p>
+                        </div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:14px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card)">
+                            <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">📧</span><div><strong style="font-size:0.88rem">Resend (Email)</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Envío de emails transaccionales y outreach</p></div></div>
+                            <span style="padding:4px 12px;border-radius:8px;background:rgba(52,199,89,0.1);color:#34c759;font-size:0.72rem;font-weight:700">✅ Conectado</span>
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card)">
+                            <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🔎</span><div><strong style="font-size:0.88rem">Hunter.io</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Búsqueda de emails profesionales</p></div></div>
+                            <span style="padding:4px 12px;border-radius:8px;background:rgba(52,199,89,0.1);color:#34c759;font-size:0.72rem;font-weight:700">✅ Conectado</span>
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card)">
+                            <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🤖</span><div><strong style="font-size:0.88rem">Google AI Studio (Gemini)</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">IA generativa para emails y contenido</p></div></div>
+                            <span style="padding:4px 12px;border-radius:8px;background:rgba(52,199,89,0.1);color:#34c759;font-size:0.72rem;font-weight:700">✅ Conectado</span>
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card)">
+                            <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">📅</span><div><strong style="font-size:0.88rem">Google Calendar</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Gestión de reuniones y citas</p></div></div>
+                            <span style="padding:4px 12px;border-radius:8px;background:rgba(255,149,0,0.1);color:#ff9500;font-size:0.72rem;font-weight:700">⚠️ Pendiente configurar</span>
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card)">
+                            <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">💳</span><div><strong style="font-size:0.88rem">Stripe</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Procesamiento de pagos con tarjeta</p></div></div>
+                            <span style="padding:4px 12px;border-radius:8px;background:rgba(52,199,89,0.1);color:#34c759;font-size:0.72rem;font-weight:700">✅ Conectado</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ TAB: Storage ═══ -->
+                <div class="cfg-panel" id="cfg-storage">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                        <div>
+                            <h3 style="font-size:0.9rem;font-weight:600;color:var(--text-main)">📦 Almacenamiento</h3>
+                            <p style="font-size:0.75rem;color:var(--text-grey);margin:4px 0 0">Uso de almacenamiento y archivos subidos</p>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px">
+                        <div class="stat-card-glass" style="text-align:center">
+                            <span class="stat-label">Espacio Usado</span>
+                            <div class="stat-value" style="font-size:1.6rem;margin:6px 0;color:var(--text-main)">12.4 MB</div>
+                            <span style="font-size:0.72rem;color:var(--text-grey)">de 500 MB disponibles</span>
+                        </div>
+                        <div class="stat-card-glass" style="text-align:center">
+                            <span class="stat-label">Archivos</span>
+                            <div class="stat-value" style="font-size:1.6rem;margin:6px 0;color:var(--text-main)">23</div>
+                            <span style="font-size:0.72rem;color:var(--text-grey)">logos, adjuntos, docs</span>
+                        </div>
+                        <div class="stat-card-glass" style="text-align:center">
+                            <span class="stat-label">Último upload</span>
+                            <div class="stat-value" style="font-size:1.2rem;margin:6px 0;color:var(--text-main)">Hoy</div>
+                            <span style="font-size:0.72rem;color:var(--text-grey)">logo_iadebarrio.png</span>
+                        </div>
+                    </div>
+                    <div style="background:var(--bg-card);border-radius:14px;border:1px solid var(--border-color);overflow:hidden">
+                        <div style="padding:12px 18px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center">
+                            <span style="font-weight:600;font-size:0.85rem;color:var(--text-main)">Uso por categoría</span>
+                        </div>
+                        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:12px">
+                            <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1rem">🖼️</span><div style="flex:1"><div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px"><span style="color:var(--text-main);font-weight:500">Imágenes y logos</span><span style="color:var(--text-grey)">8.2 MB</span></div><div style="height:6px;border-radius:3px;background:rgba(0,113,227,0.1);overflow:hidden"><div style="height:100%;width:65%;background:#007AFF;border-radius:3px"></div></div></div></div>
+                            <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1rem">📎</span><div style="flex:1"><div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px"><span style="color:var(--text-main);font-weight:500">Adjuntos email</span><span style="color:var(--text-grey)">3.1 MB</span></div><div style="height:6px;border-radius:3px;background:rgba(52,199,89,0.1);overflow:hidden"><div style="height:100%;width:25%;background:#34c759;border-radius:3px"></div></div></div></div>
+                            <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1rem">📄</span><div style="flex:1"><div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px"><span style="color:var(--text-main);font-weight:500">Documentos</span><span style="color:var(--text-grey)">1.1 MB</span></div><div style="height:6px;border-radius:3px;background:rgba(255,149,0,0.1);overflow:hidden"><div style="height:100%;width:9%;background:#ff9500;border-radius:3px"></div></div></div></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

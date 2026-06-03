@@ -5443,3 +5443,90 @@ body.role-guest td button {
         display: none;
     }
 }
+
+/* ═══ Configuración Tab System ═══ */
+.cfg-tab {
+    padding: 10px 18px;
+    border: none;
+    background: transparent;
+    color: var(--text-grey);
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+}
+.cfg-tab:hover {
+    color: var(--text-main);
+    background: rgba(255,255,255,0.02);
+}
+.cfg-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    font-weight: 700;
+}
+.cfg-panel {
+    display: none;
+    animation: cfgFadeIn 0.25s ease;
+}
+.cfg-panel.active {
+    display: block;
+}
+@keyframes cfgFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.cfg-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.cfg-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-grey);
+}
+.cfg-input {
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: rgba(255,255,255,0.02);
+    color: var(--text-main);
+    font-size: 0.84rem;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+.cfg-input:focus {
+    border-color: var(--accent);
+    background: rgba(255,255,255,0.04);
+}
+.cfg-input::placeholder {
+    color: var(--text-grey);
+    opacity: 0.5;
+}
+
+/* Toggle switches */
+.toggle-switch input:checked + span {
+    background: #34c759 !important;
+}
+.toggle-switch span::before {
+    content: "";
+    position: absolute;
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: .3s;
+}
+.toggle-switch input:checked + span::before {
+    transform: translateX(22px);
+}

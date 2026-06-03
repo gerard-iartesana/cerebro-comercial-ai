@@ -138,6 +138,14 @@ let _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // State management
 let leadsList = [];
 let brainChatHistory = [];
+// ── Config Tab Switcher ──────────────────────────────────────
+function switchConfigTab(tabName) {
+    document.querySelectorAll('.cfg-tab').forEach(t => t.classList.toggle('active', t.dataset.cfgtab === tabName));
+    document.querySelectorAll('.cfg-panel').forEach(p => {
+        p.classList.remove('active');
+        if (p.id === 'cfg-' + tabName) p.classList.add('active');
+    });
+}
 
 // Toggle API key visibility
 function toggleApiKey(inputId, realValueLabel) {
