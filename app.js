@@ -3,16 +3,17 @@
 // EMAIL COMPOSE - defined early to ensure availability
 window.openComposeForLead = function(email) {
     try {
+        if (sessionStorage.getItem('cc_role') === 'guest') return;
         var modal = document.getElementById('email-compose-modal');
         var select = document.getElementById('compose-email-to');
-        if (!modal) { alert('Modal no encontrado'); return; }
-        if (!select) { alert('Select no encontrado'); return; }
+        if (!modal || !select) { alert('Modal de email no encontrado'); return; }
         select.innerHTML = '<option value="' + email + '" selected>' + email + '</option>';
         var subj = document.getElementById('compose-email-subject');
         var body = document.getElementById('compose-email-body');
         if (subj) subj.value = '';
         if (body) body.value = '';
         modal.style.display = 'flex';
+        modal.classList.add('active');
     } catch(e) {
         alert('Error: ' + e.message);
     }
@@ -2674,7 +2675,9 @@ async function openComposeEmailModal() {
 }
 
 function closeComposeEmailModal() {
-    document.getElementById('email-compose-modal').style.display = 'none';
+    const m = document.getElementById('email-compose-modal');
+    m.classList.remove('active');
+    m.style.display = 'none';
 }
 
 async function sendManualEmail() {
