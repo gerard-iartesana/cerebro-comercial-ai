@@ -327,11 +327,25 @@
                     </button>
                 </div>
 
-                <!-- CONFIGURACIÓN (standalone) -->
-                <button class="sidebar-nav-item" data-section="configuracion" style="margin-top:8px;border-top:1px solid var(--border-color);padding-top:16px">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                    Configuración
-                </button>
+                <!-- GRUPO: CONFIGURACIÓN -->
+                <div class="sidebar-group-header" data-group="config" onclick="toggleSidebarGroup('config')">
+                    <span class="sidebar-group-title">Configuración</span>
+                    <svg class="sidebar-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <div class="sidebar-subnav collapsed" id="subnav-config">
+                    <button class="sidebar-nav-item" data-section="config-business">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-4V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM10 4h4v3h-4z"></path></svg>
+                        Datos de Negocio
+                    </button>
+                    <button class="sidebar-nav-item" data-section="config-apikeys">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+                        Claves API
+                    </button>
+                    <button class="sidebar-nav-item" data-section="config-forms">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        Formularios
+                    </button>
+                </div>
 
 
                 <!-- GRUPO: COMUNICACIÓN -->
@@ -2327,13 +2341,12 @@
                 </div>
             </div>
 
-            <!-- SECTION: Configuración (Tabbed) -->
-            <div class="dashboard-section" id="sec-configuracion">
+            <!-- SECTION: Datos de Negocio (Tabbed) -->
+            <div class="dashboard-section" id="sec-config-business">
                 <div class="section-header" style="margin-bottom:0">
-                    <h1 style="display:flex;align-items:center;gap:10px">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                        Configuración
-                    </h1>
+                    <h1>Datos de Negocio</h1>
+                    <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Configuración general de la empresa</span>
+
                 </div>
 
                 <!-- Tab Bar -->
@@ -2663,6 +2676,64 @@
                             <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1rem">📄</span><div style="flex:1"><div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px"><span style="color:var(--text-main);font-weight:500">Documentos</span><span style="color:var(--text-grey)">1.1 MB</span></div><div style="height:6px;border-radius:3px;background:rgba(255,149,0,0.1);overflow:hidden"><div style="height:100%;width:9%;background:#ff9500;border-radius:3px"></div></div></div></div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- SECTION: Claves API -->
+            <div class="dashboard-section" id="sec-config-apikeys">
+                <div class="section-header">
+                    <h1>Claves API</h1>
+                    <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Gestión de API Keys y credenciales</span>
+                </div>
+                <div class="stat-card-glass" style="margin-bottom:20px">
+                    <h3 style="font-size:1rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;color:var(--text-main)">
+                        <span style="font-size:1.2rem">🔑</span> API Keys
+                    </h3>
+                    <div class="nl-config-grid" style="grid-template-columns: 1fr; gap: 14px;">
+                        <div class="nl-config-field">
+                            <label class="nl-config-field-label">Gemini API Key</label>
+                            <div style="display:flex;gap:8px">
+                                <input class="nl-config-input" id="api-key-gemini" type="password" value="••••••••••••••••" style="flex:1;font-family:monospace" />
+                                <button class="btn-secondary" style="padding:6px 14px;font-size:0.78rem;white-space:nowrap" onclick="toggleApiKey('api-key-gemini','Gemini')">👁️ Ver</button>
+                            </div>
+                        </div>
+                        <div class="nl-config-field">
+                            <label class="nl-config-field-label">Hunter.io API Key</label>
+                            <div style="display:flex;gap:8px">
+                                <input class="nl-config-input" id="api-key-hunter" type="password" value="••••••••••••••••" style="flex:1;font-family:monospace" />
+                                <button class="btn-secondary" style="padding:6px 14px;font-size:0.78rem;white-space:nowrap" onclick="toggleApiKey('api-key-hunter','Hunter')">👁️ Ver</button>
+                            </div>
+                        </div>
+                        <div class="nl-config-field">
+                            <label class="nl-config-field-label">Resend API Key</label>
+                            <div style="display:flex;gap:8px">
+                                <input class="nl-config-input" id="api-key-resend" type="password" value="••••••••••••••••" style="flex:1;font-family:monospace" />
+                                <button class="btn-secondary" style="padding:6px 14px;font-size:0.78rem;white-space:nowrap" onclick="toggleApiKey('api-key-resend','Resend')">👁️ Ver</button>
+                            </div>
+                        </div>
+                        <div class="nl-config-field">
+                            <label class="nl-config-field-label">Google Calendar ID</label>
+                            <div style="display:flex;gap:8px">
+                                <input class="nl-config-input" id="api-key-gcal-view" type="password" value="••••••••••••••••" style="flex:1;font-family:monospace" />
+                                <button class="btn-secondary" style="padding:6px 14px;font-size:0.78rem;white-space:nowrap" onclick="toggleApiKey('api-key-gcal-view','GCal')">👁️ Ver</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p style="font-size:0.72rem;color:var(--text-grey);margin-top:12px">🔒 Las claves se almacenan de forma segura en las variables de entorno del servidor (Vercel). No se envían al navegador.</p>
+                </div>
+            </div>
+
+            <!-- SECTION: Formularios -->
+            <div class="dashboard-section" id="sec-config-forms">
+                <div class="section-header">
+                    <h1>Formularios</h1>
+                    <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Crear y gestionar formularios de captación</span>
+                </div>
+                <div class="stat-card-glass" style="padding:40px;text-align:center">
+                    <div style="font-size:3rem;margin-bottom:12px">📋</div>
+                    <h3 style="font-size:1.1rem;font-weight:700;color:var(--text-main);margin-bottom:8px">Constructor de Formularios</h3>
+                    <p style="color:var(--text-grey);font-size:0.85rem;max-width:400px;margin:0 auto 20px">Crea formularios personalizados para captar leads desde tu web, landing pages o campañas de email.</p>
+                    <button class="btn-primary" style="padding:10px 24px;font-size:0.85rem" onclick="showAlert('Próximamente','El constructor de formularios estará disponible próximamente.','🚧')">+ Crear Formulario</button>
                 </div>
             </div>
 
