@@ -1487,104 +1487,165 @@ function switchProposalCategoryTab(categoryKey) {
 
 async function renderOutreachPanel() {
     try {
-        const { data: leadsData } = await _supabase.from('outreach_leads').select('status');
-        const activeLeadsCount = leadsData ? leadsData.filter(l => 
-            ['sent_first', 'followup_1', 'followup_2', 'followup_3', 'followup_4'].includes(l.status)
-        ).length : 0;
-        
-        document.getElementById('outreach-active-leads-subtitle').textContent = `${activeLeadsCount} leads en secuencias activas`;
-        
-        const { data: logsData } = await _supabase.from('outreach_email_logs').select('opened_at, clicked_at, email_type');
-        const totalSent = logsData ? logsData.length : 0;
-        const totalOpened = logsData ? logsData.filter(l => l.opened_at).length : 0;
-        const totalClicked = logsData ? logsData.filter(l => l.clicked_at).length : 0;
-        
-        const openRate = totalSent > 0 ? Math.round((totalOpened / totalSent) * 100) : 0;
-        const clicks = totalClicked;
-        const bajas = leadsData ? leadsData.filter(l => l.status === 'unsubscribed').length : 0;
-        
-        document.getElementById('outreach-stats-enviados').textContent = totalSent;
-        document.getElementById('outreach-stats-aperturas').textContent = `${openRate}%`;
-        document.getElementById('outreach-stats-clicks').textContent = clicks;
-        document.getElementById('outreach-stats-bajas').textContent = bajas;
-        
+        // 1. Fetch all email logs with joined lead data (version, status)
+        const { data: logsRaw } = await _supabase
+            .from('outreach_email_logs')
+            .select('email_type, opened_at, clicked_at, sent_at, subject, outreach_leads(version, status, email, company_name, first_name)')
+            .order('sent_at', { ascending: false });
+
+        const logs = logsRaw || [];
+
+        // 2. Fetch all leads for bajas count
+        const { data: leadsRaw } = await _supabase
+            .from('outreach_leads')
+            .select('status, version');
+
+        const leads = leadsRaw || [];
+
+        // 3. Active leads count (update subtitle)
+        const activeStatuses = [
+            'welcome_1','welcome_2','welcome_3','welcome_4','welcome_5',
+            'followup_1','followup_2','followup_3','followup_4',
+            'nurture_1','nurture_2','nurture_3','nurture_4','nurture_5','nurture_6',
+            'nurture_7','nurture_8','nurture_9','nurture_10','nurture_11','nurture_monthly'
+        ];
+        const activeCount = leads.filter(l => activeStatuses.includes(l.status)).length;
+        const subtitleEl = document.getElementById('outreach-active-leads-subtitle');
+        if (subtitleEl) subtitleEl.textContent = `${activeCount} leads en secuencias activas`;
+
+        // 4. Map email_type → chain number
+        function getChain(emailType) {
+            const m = emailType && emailType.match(/step_(\d+)/);
+            if (!m) return null;
+            const s = parseInt(m[1]);
+            if (s <= 4) return 1;
+            if (s <= 8) return 2;
+            if (s <= 20) return 3;
+            return null;
+        }
+
+        // 5. Build per-chain × per-version stats
+        const chainDefs = [
+            { num: 1, name: 'Bienvenida',    color: '#ff9500' },
+            { num: 2, name: 'Seguimiento',   color: '#007aff' },
+            { num: 3, name: 'Mantenimiento', color: '#34c759' }
+        ];
+        const versionDefs = [
+            { key: 'A', label: 'Conocidos',     color: '#ff6b6b' },
+            { key: 'B', label: 'Desconocidos',  color: '#007aff' },
+            { key: 'C', label: 'Formularios',   color: '#bf5af2' }
+        ];
+
+        const stats = {};
+        chainDefs.forEach(c => {
+            stats[c.num] = { totalSent: 0 };
+            versionDefs.forEach(v => {
+                stats[c.num][v.key] = { sent: 0, opened: 0, clicked: 0 };
+            });
+        });
+
+        logs.forEach(log => {
+            const chain = getChain(log.email_type);
+            if (!chain || !stats[chain]) return;
+            const ver = (log.outreach_leads && log.outreach_leads.version) || 'A';
+            if (!stats[chain][ver]) return;
+            stats[chain][ver].sent++;
+            stats[chain].totalSent++;
+            if (log.opened_at) stats[chain][ver].opened++;
+            if (log.clicked_at) stats[chain][ver].clicked++;
+        });
+
+        // Bajas per version (leads with status 'unsubscribed')
+        const bajas = { A: 0, B: 0, C: 0 };
+        leads.forEach(l => {
+            if (l.status === 'unsubscribed') {
+                const v = l.version || 'A';
+                if (bajas[v] !== undefined) bajas[v]++;
+            }
+        });
+
+        // 6. Render breakdown
         const breakdownDiv = document.getElementById('outreach-chains-breakdown');
         breakdownDiv.innerHTML = '';
-        
-        const chainsInfo = [
-            { num: 1, name: 'Cadena 1 (Bienvenida)', desc: 'Envío inicial y primer seguimiento (C1)' },
-            { num: 2, name: 'Cadena 2 (Seguimiento)', desc: 'Caso de éxito y breakup suave (C2)' },
-            { num: 3, name: 'Cadena 3 (Mantenimiento)', desc: 'Píldora de valor mensual (C3)' }
-        ];
-        
-        chainsInfo.forEach(chain => {
-            const logsForChain = logsData ? logsData.filter(l => l.email_type.includes(`step_${(chain.num - 1) * 2}`) || l.email_type.includes(`step_${(chain.num - 1) * 2 + 1}`)) : [];
-            const sent = logsForChain.length;
-            const opened = logsForChain.filter(l => l.opened_at).length;
-            const rate = sent > 0 ? Math.round((opened / sent) * 100) : 0;
-            
+
+        // Section title
+        const sectionTitle = document.createElement('div');
+        sectionTitle.className = 'or-panel-section-title';
+        sectionTitle.innerHTML = '<span class="or-panel-section-icon">📊</span> Desglose por cadena y versión';
+        breakdownDiv.appendChild(sectionTitle);
+
+        chainDefs.forEach(chain => {
             const card = document.createElement('div');
-            card.className = 'nl-chain-stat-row';
-            card.style.cssText = 'padding:14px; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:12px; display:flex; flex-direction:column; gap:8px;';
-            card.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <strong style="color:var(--text-main); font-size:0.9rem">${chain.name}</strong>
-                        <div style="font-size:0.75rem; color:var(--text-grey);">${chain.desc}</div>
+            card.className = 'or-chain-card';
+            card.style.borderLeftColor = chain.color;
+
+            // Header row
+            let html = `
+                <div class="or-chain-header">
+                    <div class="or-chain-header-left">
+                        <span class="or-chain-badge" style="background:${chain.color}">C${chain.num}</span>
+                        <span class="or-chain-name">${chain.name}</span>
                     </div>
-                    <div style="text-align:right;">
-                        <span style="font-size:0.85rem; color:var(--text-main); font-weight:700;">${sent} enviados</span>
-                        <div style="font-size:0.75rem; color:var(--accent-green); font-weight:700;">${rate}% apertura</div>
-                    </div>
-                </div>
-                <div class="nl-version-bar-track" style="height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden;">
-                    <div class="nl-version-bar-fill" style="height:100%; width:${rate}%; background:linear-gradient(90deg, #0071e3, #5ac8fa); border-radius:3px;"></div>
+                    <span class="or-chain-total">${stats[chain.num].totalSent} envíos</span>
                 </div>
             `;
+
+            // Version rows
+            versionDefs.forEach(v => {
+                const s = stats[chain.num][v.key];
+                const rate = s.sent > 0 ? Math.round((s.opened / s.sent) * 100) : 0;
+                const rateColor = rate > 0 ? '#34c759' : '#ff9500';
+                const bajasVal = bajas[v.key] || 0;
+                const bajasColor = bajasVal > 0 ? '#ff3b30' : 'var(--text-grey)';
+
+                html += `
+                    <div class="or-version-row">
+                        <span class="or-version-label"><span style="color:${v.color};font-weight:800">${v.key}</span> — ${v.label}</span>
+                        <div class="or-version-stats">
+                            <span class="or-vstat"><strong style="color:#007aff">${s.sent}</strong> <em>env.</em></span>
+                            <span class="or-vstat"><strong style="color:${rateColor}">${rate}%</strong> <em>apert.</em></span>
+                            <span class="or-vstat"><strong>${s.clicked}</strong> <em>clicks</em></span>
+                            <span class="or-vstat"><strong style="color:${bajasColor}">${bajasVal}</strong> <em>bajas</em></span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            card.innerHTML = html;
             breakdownDiv.appendChild(card);
         });
-        
+
+        // 7. Render recent sends
         const recentDiv = document.getElementById('outreach-recent-list');
         recentDiv.innerHTML = '';
-        
-        const { data: recentLogs } = await _supabase
-            .from('outreach_email_logs')
-            .select(`
-                id,
-                email_type,
-                subject,
-                sent_at,
-                outreach_leads (email, company_name, first_name)
-            `)
-            .order('sent_at', { ascending: false })
-            .limit(5);
-            
-        if (!recentLogs || recentLogs.length === 0) {
-            recentDiv.innerHTML = '<div style="padding:12px; color:var(--text-grey); font-size:0.8rem; text-align:center;">No hay envíos recientes</div>';
+
+        const recentLogs = logs.slice(0, 8);
+        if (recentLogs.length === 0) {
+            recentDiv.innerHTML = '<div class="or-recent-empty">No hay envíos recientes</div>';
         } else {
             recentLogs.forEach(log => {
-                const lead = log.outreach_leads || { email: 'Desconocido', company_name: '—', first_name: 'Prospecto' };
-                const time = new Date(log.sent_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-                const date = new Date(log.sent_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-                
+                const lead = log.outreach_leads || { email: '—', company_name: '—', first_name: 'Prospecto' };
+                const dt = new Date(log.sent_at);
+                const dateStr = dt.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+                const timeStr = dt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
                 const item = document.createElement('div');
-                item.className = 'nl-recent-item';
-                item.style.cssText = 'padding:10px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; font-size:0.82rem;';
+                item.className = 'or-recent-item';
                 item.innerHTML = `
-                    <div>
-                        <span style="font-weight:700; color:var(--text-main)">${lead.first_name} (${lead.company_name})</span>
-                        <div style="color:var(--text-grey); font-size:0.75rem">${log.subject}</div>
+                    <div class="or-recent-info">
+                        <span class="or-recent-name">${lead.first_name} (${lead.company_name})</span>
+                        <span class="or-recent-subject">${log.subject || '—'}</span>
                     </div>
-                    <div style="text-align:right; font-size:0.75rem; color:var(--text-grey);">
-                        <div>${date}</div>
-                        <div>${time}</div>
+                    <div class="or-recent-date">
+                        <span>${dateStr}</span>
+                        <span>${timeStr}</span>
                     </div>
                 `;
                 recentDiv.appendChild(item);
             });
         }
     } catch(e) {
-        console.error('Error rendering outreach stats:', e);
+        console.error('Error rendering outreach panel:', e);
     }
 }
 

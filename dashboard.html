@@ -802,36 +802,19 @@
 
                     <!-- Outreach: PANEL -->
                     <div id="outreach-sub-panel" class="outreach-sub-content">
-                        <!-- Stats Grid -->
-                        <div class="nl-stats-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
-                            <div class="nl-stat-card" style="--nl-accent: #0071e3; --nl-accent-end: #5ac8fa;">
-                                <div class="nl-stat-header"><div class="nl-stat-icon">📤</div><div class="nl-stat-label">Total Enviados</div></div>
-                                <div class="nl-stat-value" id="outreach-stats-enviados">0</div>
-                            </div>
-                            <div class="nl-stat-card" style="--nl-accent: #34c759; --nl-accent-end: #30d158;">
-                                <div class="nl-stat-header"><div class="nl-stat-icon">👁</div><div class="nl-stat-label">Tasa Apertura</div></div>
-                                <div class="nl-stat-value" id="outreach-stats-aperturas">0%</div>
-                            </div>
-                            <div class="nl-stat-card" style="--nl-accent: #bf5af2; --nl-accent-end: #da8fff;">
-                                <div class="nl-stat-header"><div class="nl-stat-icon">📅</div><div class="nl-stat-label">Clicks Reunión</div></div>
-                                <div class="nl-stat-value" id="outreach-stats-clicks">0</div>
-                            </div>
-                            <div class="nl-stat-card" style="--nl-accent: #ff3b30; --nl-accent-end: #ff6961;">
-                                <div class="nl-stat-header"><div class="nl-stat-icon">🚫</div><div class="nl-stat-label">Bajas</div></div>
-                                <div class="nl-stat-value" id="outreach-stats-bajas">0</div>
-                            </div>
+                        <!-- Chain × Version Breakdown -->
+                        <div class="or-panel-breakdown" id="outreach-chains-breakdown">
+                            <!-- Populated Dynamically by renderOutreachPanel() -->
                         </div>
 
-                        <!-- Per-chain breakdown -->
-                        <h3 class="nl-section-title">Desglose por cadena y versión</h3>
-                        <div class="nl-chain-stats" id="outreach-chains-breakdown" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
-                            <!-- Populated Dynamically -->
-                        </div>
-
-                        <!-- Recent sends -->
-                        <h3 class="nl-section-title">Últimos envíos</h3>
-                        <div class="nl-recent-list" id="outreach-recent-list">
-                            <!-- Populated Dynamically -->
+                        <!-- Recent Sends -->
+                        <div class="or-panel-recent" id="outreach-recent-section">
+                            <div class="or-panel-section-title">
+                                <span class="or-panel-section-icon">🕒</span> Últimos envíos
+                            </div>
+                            <div class="or-panel-recent-list" id="outreach-recent-list">
+                                <!-- Populated Dynamically -->
+                            </div>
                         </div>
                     </div>
 

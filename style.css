@@ -2509,6 +2509,198 @@ body.role-guest td button {
 [class*="status-nurture_"] { background: rgba(255, 100, 130, 0.1); color: #ff6482; }
 
 
+/* --- Outreach Panel: Chain × Version Breakdown --- */
+.or-panel-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.or-panel-section-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.01em;
+}
+
+.or-panel-section-icon {
+    font-size: 1.05rem;
+}
+
+.or-chain-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 0;
+    overflow: hidden;
+    border-left: 4px solid #999;
+    box-shadow: var(--glass-shadow);
+}
+
+.or-chain-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px 12px 20px;
+}
+
+.or-chain-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.or-chain-badge {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+}
+
+.or-chain-name {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.or-chain-total {
+    font-size: 0.82rem;
+    color: var(--text-grey);
+    font-weight: 600;
+}
+
+.or-version-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 20px;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.82rem;
+    gap: 12px;
+}
+
+.or-version-row:last-child {
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.or-version-label {
+    font-weight: 600;
+    color: var(--text-main);
+    min-width: 130px;
+    white-space: nowrap;
+}
+
+.or-version-stats {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.or-vstat {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+    white-space: nowrap;
+}
+
+.or-vstat strong {
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: var(--text-main);
+}
+
+.or-vstat em {
+    font-style: normal;
+    font-weight: 500;
+    font-size: 0.75rem;
+    color: var(--text-grey);
+}
+
+/* Recent Sends Section */
+.or-panel-recent {
+    margin-top: 8px;
+}
+
+.or-panel-recent-list {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.or-recent-empty {
+    padding: 20px;
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--text-grey);
+}
+
+.or-recent-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.82rem;
+    transition: background 0.15s ease;
+}
+
+.or-recent-item:last-child {
+    border-bottom: none;
+}
+
+.or-recent-item:hover {
+    background: rgba(255,255,255,0.02);
+}
+
+.or-recent-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.or-recent-name {
+    font-weight: 700;
+    color: var(--text-main);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.or-recent-subject {
+    font-size: 0.75rem;
+    color: var(--text-grey);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.or-recent-date {
+    text-align: right;
+    font-size: 0.73rem;
+    color: var(--text-grey);
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    flex-shrink: 0;
+    margin-left: 16px;
+}
+
 /* --- Email Inbox / Outbox Layout --- */
 .email-box-grid {
     display: grid;
