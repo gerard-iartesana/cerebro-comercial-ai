@@ -256,108 +256,142 @@
                     <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Outbound + Paid Ads + Ventas</span>
                 </div>
 
-                <!-- 14 Unified Stat Cards Grid (Apple Inspired Layout) -->
-                <div class="bottom-stats-grid">
-                    <!-- 1. Total Leads -->
-                    <div class="bottom-stat-card border-blue">
-                        <div class="bottom-stat-title">👥 Total Leads</div>
-                        <div class="bottom-stat-value color-blue" id="metrics-total">—</div>
-                        <div class="bottom-stat-subtext">Base activa de leads</div>
+                <!-- Reorganized Stat Cards in Blocks (Apple Inspired Layout) -->
+                <!-- Bloque 1: Leads -->
+                <div class="dashboard-block">
+                    <div class="block-header">
+                        <span class="block-tag tag-blue">Bloque 1</span>
+                        <h2>Gestión de Leads</h2>
                     </div>
+                    <div class="stats-grid-5">
+                        <!-- 1. Total Leads -->
+                        <div class="bottom-stat-card border-blue">
+                            <div class="bottom-stat-title">👥 Total Leads</div>
+                            <div class="bottom-stat-value color-blue" id="metrics-total">—</div>
+                            <div class="bottom-stat-subtext">Base activa de leads</div>
+                        </div>
 
-                    <!-- 2. Nuevos -->
-                    <div class="bottom-stat-card border-orange">
-                        <div class="bottom-stat-title">➕ Nuevos</div>
-                        <div class="bottom-stat-value color-orange" id="metrics-new">—</div>
-                        <div class="bottom-stat-subtext">Prospectos sin procesar</div>
-                    </div>
+                        <!-- 2. Nuevos -->
+                        <div class="bottom-stat-card border-orange">
+                            <div class="bottom-stat-title">➕ Nuevos</div>
+                            <div class="bottom-stat-value color-orange" id="metrics-new">—</div>
+                            <div class="bottom-stat-subtext">Prospectos sin procesar</div>
+                        </div>
 
-                    <!-- 3. Enviados -->
-                    <div class="bottom-stat-card border-green">
-                        <div class="bottom-stat-title">✈️ Enviados</div>
-                        <div class="bottom-stat-value color-green" id="metrics-sent">—</div>
-                        <div class="bottom-stat-subtext">Correos de prospección</div>
-                    </div>
+                        <!-- 6. Seguimiento -->
+                        <div class="bottom-stat-card border-yellow">
+                            <div class="bottom-stat-title">🔁 Seguimiento</div>
+                            <div class="bottom-stat-value color-yellow" id="metrics-followup">—</div>
+                            <div class="bottom-stat-subtext">En secuencias activas</div>
+                        </div>
 
-                    <!-- 4. Reuniones -->
-                    <div class="bottom-stat-card border-purple">
-                        <div class="bottom-stat-title">📅 Reuniones</div>
-                        <div class="bottom-stat-value color-purple" id="metrics-booked">—</div>
-                        <div class="bottom-stat-subtext">Reuniones agendadas</div>
-                    </div>
+                        <!-- 4. Reuniones -->
+                        <div class="bottom-stat-card border-purple">
+                            <div class="bottom-stat-title">📅 Reuniones</div>
+                            <div class="bottom-stat-value color-purple" id="metrics-booked">—</div>
+                            <div class="bottom-stat-subtext">Reuniones agendadas</div>
+                        </div>
 
-                    <!-- 5. Clientes -->
-                    <div class="bottom-stat-card border-green">
-                        <div class="bottom-stat-title">✔ Clientes</div>
-                        <div class="bottom-stat-value color-green" id="metrics-clients">—</div>
-                        <div class="bottom-stat-subtext">Leads con trato cerrado</div>
-                    </div>
-
-                    <!-- 6. Seguimiento -->
-                    <div class="bottom-stat-card border-yellow">
-                        <div class="bottom-stat-title">🔁 Seguimiento</div>
-                        <div class="bottom-stat-value color-yellow" id="metrics-followup">—</div>
-                        <div class="bottom-stat-subtext">En secuencias activas</div>
-                    </div>
-
-                    <!-- 7. Perdidos -->
-                    <div class="bottom-stat-card border-red">
-                        <div class="bottom-stat-title">✖ Perdidos</div>
-                        <div class="bottom-stat-value color-red" id="metrics-lost">—</div>
-                        <div class="bottom-stat-subtext">Prospectos descartados</div>
-                    </div>
-
-                    <!-- 8. Propuestas -->
-                    <div class="bottom-stat-card border-blue">
-                        <div class="bottom-stat-title">📄 Propuestas</div>
-                        <div class="bottom-stat-value color-blue" id="metrics-proposals">—</div>
-                        <div class="bottom-stat-subtext">Propuestas comerciales</div>
-                    </div>
-
-                    <!-- 9. Contratos -->
-                    <div class="bottom-stat-card border-green">
-                        <div class="bottom-stat-title">✅ Contratos</div>
-                        <div class="bottom-stat-value color-green" id="metrics-contracts">—</div>
-                        <div class="bottom-stat-subtext">Contratos activos</div>
-                    </div>
-
-                    <!-- 10. Pruebas -->
-                    <div class="bottom-stat-card border-orange dashed">
-                        <div class="bottom-stat-title">🧪 Pruebas</div>
-                        <div class="bottom-stat-value color-orange" id="metrics-pruebas">—</div>
-                        <div class="kpi-pruebas-sub">
-                            <span class="sub-pill pill-l"><span id="metrics-pruebas-l">0</span> L</span>
-                            <span class="sub-pill pill-p"><span id="metrics-pruebas-p">0</span> P</span>
-                            <span class="sub-pill pill-c"><span id="metrics-pruebas-c">0</span> C</span>
+                        <!-- 7. Perdidos -->
+                        <div class="bottom-stat-card border-red">
+                            <div class="bottom-stat-title">✖ Perdidos</div>
+                            <div class="bottom-stat-value color-red" id="metrics-lost">—</div>
+                            <div class="bottom-stat-subtext">Prospectos descartados</div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- 11. Propuestas Acumulado -->
-                    <div class="bottom-stat-card border-purple">
-                        <div class="bottom-stat-title">📄 Propuestas Acumulado</div>
-                        <div class="bottom-stat-value color-purple" id="metrics-prop-accum-val">—</div>
-                        <div class="bottom-stat-subtext" id="metrics-prop-accum-sub">—</div>
+                <!-- Bloque 2: Actividad y Prospección -->
+                <div class="dashboard-block">
+                    <div class="block-header">
+                        <span class="block-tag tag-green">Bloque 2</span>
+                        <h2>Propuestas y Actividad</h2>
                     </div>
+                    <div class="bottom-stats-grid">
+                        <!-- 8. Propuestas -->
+                        <div class="bottom-stat-card border-blue">
+                            <div class="bottom-stat-title">📄 Propuestas</div>
+                            <div class="bottom-stat-value color-blue" id="metrics-proposals">—</div>
+                            <div class="bottom-stat-subtext">Propuestas creadas</div>
+                        </div>
 
-                    <!-- 12. Propuestas Este Mes -->
-                    <div class="bottom-stat-card border-blue">
-                        <div class="bottom-stat-title">📊 Propuestas Este Mes</div>
-                        <div class="bottom-stat-value color-blue" id="metrics-prop-month-val">—</div>
-                        <div class="bottom-stat-subtext" id="metrics-prop-month-sub">—</div>
+                        <!-- 3. Enviados -->
+                        <div class="bottom-stat-card border-green">
+                            <div class="bottom-stat-title">✈️ Enviados</div>
+                            <div class="bottom-stat-value color-green" id="metrics-sent">—</div>
+                            <div class="bottom-stat-subtext">Correos de prospección</div>
+                        </div>
+
+                        <!-- 5. Clientes -->
+                        <div class="bottom-stat-card border-green">
+                            <div class="bottom-stat-title">✔ Clientes</div>
+                            <div class="bottom-stat-value color-green" id="metrics-clients">—</div>
+                            <div class="bottom-stat-subtext">Leads con trato cerrado</div>
+                        </div>
+
+                        <!-- 9. Contratos -->
+                        <div class="bottom-stat-card border-green">
+                            <div class="bottom-stat-title">✅ Contratos</div>
+                            <div class="bottom-stat-value color-green" id="metrics-contracts">—</div>
+                            <div class="bottom-stat-subtext">Contratos activos</div>
+                        </div>
                     </div>
+                </div>
 
-                    <!-- 13. Ventas Acumulado -->
-                    <div class="bottom-stat-card border-green">
-                        <div class="bottom-stat-title">💰 Ventas Acumulado</div>
-                        <div class="bottom-stat-value color-green" id="metrics-ventas-accum-val">—</div>
-                        <div class="bottom-stat-subtext" id="metrics-ventas-accum-sub">—</div>
+                <!-- Bloque 3: Rendimiento y Ventas -->
+                <div class="dashboard-block">
+                    <div class="block-header">
+                        <span class="block-tag tag-purple">Bloque 3</span>
+                        <h2>Rendimiento y Ventas</h2>
                     </div>
+                    <div class="bottom-stats-grid">
+                        <!-- 11. Propuestas Acumulado -->
+                        <div class="bottom-stat-card border-purple">
+                            <div class="bottom-stat-title">📄 Propuestas Acumulado</div>
+                            <div class="bottom-stat-value color-purple" id="metrics-prop-accum-val">—</div>
+                            <div class="bottom-stat-subtext" id="metrics-prop-accum-sub">—</div>
+                        </div>
 
-                    <!-- 14. Ventas Este Mes -->
-                    <div class="bottom-stat-card border-orange">
-                        <div class="bottom-stat-title">🏆 Ventas Este Mes</div>
-                        <div class="bottom-stat-value color-orange" id="metrics-ventas-month-val">—</div>
-                        <div class="bottom-stat-subtext" id="metrics-ventas-month-sub">—</div>
+                        <!-- 13. Ventas Acumulado -->
+                        <div class="bottom-stat-card border-green">
+                            <div class="bottom-stat-title">💰 Ventas Acumulado</div>
+                            <div class="bottom-stat-value color-green" id="metrics-ventas-accum-val">—</div>
+                            <div class="bottom-stat-subtext" id="metrics-ventas-accum-sub">—</div>
+                        </div>
+
+                        <!-- 12. Propuestas Este Mes -->
+                        <div class="bottom-stat-card border-blue">
+                            <div class="bottom-stat-title">📊 Propuestas Este Mes</div>
+                            <div class="bottom-stat-value color-blue" id="metrics-prop-month-val">—</div>
+                            <div class="bottom-stat-subtext" id="metrics-prop-month-sub">—</div>
+                        </div>
+
+                        <!-- 14. Ventas Este Mes -->
+                        <div class="bottom-stat-card border-orange">
+                            <div class="bottom-stat-title">🏆 Ventas Este Mes</div>
+                            <div class="bottom-stat-value color-orange" id="metrics-ventas-month-val">—</div>
+                            <div class="bottom-stat-subtext" id="metrics-ventas-month-sub">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bloque 4: Entorno de Pruebas -->
+                <div class="dashboard-block">
+                    <div class="block-header">
+                        <span class="block-tag tag-orange">Bloque 4</span>
+                        <h2>Sandbox y Pruebas</h2>
+                    </div>
+                    <div class="stats-grid-1">
+                        <!-- 10. Pruebas -->
+                        <div class="bottom-stat-card border-orange dashed">
+                            <div class="bottom-stat-title">🧪 Pruebas</div>
+                            <div class="bottom-stat-value color-orange" id="metrics-pruebas">—</div>
+                            <div class="kpi-pruebas-sub">
+                                <span class="sub-pill pill-l"><span id="metrics-pruebas-l">0</span> L</span>
+                                <span class="sub-pill pill-p"><span id="metrics-pruebas-p">0</span> P</span>
+                                <span class="sub-pill pill-c"><span id="metrics-pruebas-c">0</span> C</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
