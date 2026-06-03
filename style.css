@@ -3849,6 +3849,189 @@ body.role-guest td button {
     border-radius: 10px;
 }
 
+/* --- Lead Registry Enhanced --- */
+/* Client row highlight (works in light + dark) */
+.lead-row-client {
+    background: rgba(255, 204, 0, 0.06) !important;
+    border-left: 3px solid #ffcc00;
+}
+.lead-row-client:hover {
+    background: rgba(255, 204, 0, 0.1) !important;
+}
+/* Test lead row */
+.lead-row-test {
+    opacity: 0.6;
+}
+
+/* Clickable lead name */
+.lead-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.lead-name-clickable {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--text-main);
+    transition: color 0.15s;
+    border-bottom: 1px dashed transparent;
+}
+.lead-name-clickable:hover {
+    color: #007aff;
+    border-bottom-color: #007aff;
+}
+.lead-test-tag {
+    font-size: 0.58rem;
+    font-weight: 800;
+    background: rgba(255, 159, 10, 0.15);
+    color: #ff9f0a;
+    padding: 1px 5px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+/* Company cell: 2-line truncation with tooltip */
+.lead-company-cell {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.3;
+    cursor: help;
+}
+.lead-cargo-cell {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: help;
+}
+
+/* Type select dropdown */
+.lead-type-select {
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    background-size: 8px;
+    padding-right: 18px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M6 8L1 3h10z' fill='%23888'/%3E%3C/svg%3E");
+    transition: all 0.15s;
+}
+.lead-type-select:focus { outline: none; }
+.lead-type-select-a {
+    background-color: rgba(255, 107, 107, 0.12);
+    color: #ff6b6b;
+    border-color: rgba(255, 107, 107, 0.25);
+}
+.lead-type-select-b {
+    background-color: rgba(0, 122, 255, 0.12);
+    color: #007aff;
+    border-color: rgba(0, 122, 255, 0.25);
+}
+.lead-type-select-c {
+    background-color: rgba(191, 90, 242, 0.12);
+    color: #bf5af2;
+    border-color: rgba(191, 90, 242, 0.25);
+}
+
+/* Phone button */
+.lead-action-btn.btn-phone { color: #34c759; }
+.lead-action-btn.btn-phone:hover { background: rgba(52, 199, 89, 0.12); }
+
+/* Test button */
+.lead-action-btn.btn-test { color: #ff9f0a; }
+.lead-action-btn.btn-test:hover { background: rgba(255, 159, 10, 0.12); }
+.lead-action-btn.btn-test.active { background: rgba(255, 159, 10, 0.2); color: #ff9f0a; }
+
+/* Client email badge */
+.email-step-client {
+    background: rgba(255, 204, 0, 0.12);
+    color: #e8a900;
+    border: 1px solid rgba(255, 204, 0, 0.3);
+}
+
+/* --- Lead Detail Expansion Panel --- */
+.lead-detail-row {
+    background: rgba(0, 0, 0, 0.02);
+}
+.lead-detail-cell {
+    padding: 0 !important;
+}
+.lead-detail-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border-color);
+    animation: leadDetailSlide 0.2s ease;
+}
+@keyframes leadDetailSlide {
+    from { opacity: 0; max-height: 0; padding: 0 20px; }
+    to { opacity: 1; max-height: 500px; padding: 16px 20px; }
+}
+.lead-detail-section {
+    min-width: 0;
+}
+.lead-detail-section-title {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--text-grey);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+.lead-detail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.lead-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    font-size: 0.75rem;
+}
+.lead-detail-date {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text-grey);
+    min-width: 70px;
+    flex-shrink: 0;
+}
+.lead-detail-subj {
+    font-weight: 600;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.lead-detail-empty {
+    font-size: 0.75rem;
+    color: var(--text-grey);
+    padding: 8px;
+    font-style: italic;
+}
+.lead-detail-loading {
+    padding: 16px;
+    text-align: center;
+    color: var(--text-grey);
+    font-size: 0.82rem;
+}
+
 /* --- Lead Type Badges --- */
 .lead-type-badge {
     font-size: 0.72rem;

@@ -514,7 +514,6 @@ function renderLeadsGridRows(leads) {
     const tbody = document.getElementById('leads-table-body');
     tbody.innerHTML = '';
 
-    // Status maps
     const activeStatuses = [
         'welcome_1','welcome_2','welcome_3','welcome_4','welcome_5',
         'followup_1','followup_2','followup_3','followup_4',
@@ -528,12 +527,10 @@ function renderLeadsGridRows(leads) {
         const version = lead.version || 'A';
         const step = lead.sequence_step || 0;
         const status = lead.status || 'lead';
+        const isClient = status === 'cliente' || status === 'client';
+        const isTest = lead.is_test === true;
 
-        // Lead type from version
-        const typeMap = { A: { label: 'Conocido', cls: 'lead-type-conocido' }, B: { label: 'Desconocido', cls: 'lead-type-desconocido' }, C: { label: 'Formulario', cls: 'lead-type-formulario' } };
-        const typeInfo = typeMap[version] || typeMap.A;
-
-        // Email status
+        // Email status badge
         let emailStatusHtml;
         const isActive = activeStatuses.includes(status);
         if (status === 'enriched' || status === 'lead') {
@@ -542,6 +539,8 @@ function renderLeadsGridRows(leads) {
             emailStatusHtml = '<span class="email-step-badge email-step-meeting">📅 Reunión</span>';
         } else if (status === 'unsubscribed') {
             emailStatusHtml = '<span class="email-step-badge email-step-unsub">🚫 Baja</span>';
+        } else if (isClient) {
+            emailStatusHtml = '<span class="email-step-badge email-step-client">⭐ Cliente</span>';
         } else if (isActive) {
             let chainName, chainColor, stepInChain;
             if (step < 5) { chainName = 'C1'; chainColor = '#ff9500'; stepInChain = step + 1; }
@@ -552,27 +551,139 @@ function renderLeadsGridRows(leads) {
             emailStatusHtml = '<span class="email-step-badge email-step-done">✅ Completado</span>';
         }
 
+        // Type dropdown
+        const typeOptions = ['A', 'B', 'C'];
+        const typeLabelsMap = { A: 'Conocido', B: 'Desconocido', C: 'Formulario' };
+        let typeSelectHtml = `<select class="lead-type-select lead-type-select-${version.toLowerCase()}" onchange="window.changeLeadType('${lead.id}', this.value)">`;
+        typeOptions.forEach(v => {
+            typeSelectHtml += `<option value="${v}" ${version === v ? 'selected' : ''}>${typeLabelsMap[v]}</option>`;
+        });
+        typeSelectHtml += '</select>';
+
         const tr = document.createElement('tr');
+        tr.className = `lead-row${isClient ? ' lead-row-client' : ''}${isTest ? ' lead-row-test' : ''}`;
+        tr.id = `lead-row-${lead.id}`;
         tr.innerHTML = `
-            <td class="editable-cell" contenteditable="true" onblur="updateLeadField('${lead.id}', 'first_name', this.textContent)">${lead.first_name || ''}</td>
+            <td class="lead-name-cell">
+                <span class="lead-name-clickable" onclick="window.toggleLeadDetail('${lead.id}')" title="Click para ver historial">${lead.first_name || '—'}</span>
+                ${isTest ? '<span class="lead-test-tag">TEST</span>' : ''}
+            </td>
             <td class="lead-email-cell">${lead.email}</td>
             <td class="editable-cell" contenteditable="true" onblur="updateLeadField('${lead.id}', 'phone', this.textContent)">${phone}</td>
-            <td class="editable-cell" contenteditable="true" onblur="updateLeadField('${lead.id}', 'company_name', this.textContent)">${lead.company_name || ''}</td>
-            <td class="lead-cargo-cell">${cargo}</td>
-            <td><span class="lead-type-badge ${typeInfo.cls}">${typeInfo.label}</span></td>
+            <td class="lead-company-cell" title="${(lead.company_name || '').replace(/"/g, '&quot;')}">${lead.company_name || ''}</td>
+            <td class="lead-cargo-cell" title="${cargo.replace(/"/g, '&quot;')}">${cargo}</td>
+            <td>${typeSelectHtml}</td>
             <td>${emailStatusHtml}</td>
-            <td><span class="badge-status status-${lead.status}">${lead.status}</span></td>
             <td class="lead-actions-cell">
-                <button class="lead-action-btn btn-edit" data-tooltip="Editar" onclick="editLeadModal('${lead.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
-                <button class="lead-action-btn btn-delete action-delete" data-tooltip="Borrar" onclick="deleteLead('${lead.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
-                <button class="lead-action-btn btn-email" data-tooltip="Enviar Email" onclick="quickEmailLead('${lead.email}', '${lead.first_name || ''}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></button>
+                <button class="lead-action-btn btn-phone" data-tooltip="Llamar" onclick="window.callLead('${phone}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></button>
+                <button class="lead-action-btn btn-email" data-tooltip="Enviar Email" onclick="window.openComposeForLead('${lead.email}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></button>
                 <button class="lead-action-btn btn-whatsapp" data-tooltip="WhatsApp" onclick="openWhatsApp('${lead.email}', '${lead.first_name || ''}', '${lead.company_name || ''}')"><svg viewBox="0 0 24 24" fill="currentColor" class="svg-icon"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.454 5.709 1.455h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></button>
-                <button class="lead-action-btn btn-signup" data-tooltip="Formulario de alta" onclick="sendSignupForm('${lead.email}', '${lead.first_name || ''}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg></button>
+                <button class="lead-action-btn btn-test ${isTest ? 'active' : ''}" data-tooltip="${isTest ? 'Quitar prueba' : 'Marcar prueba'}" onclick="window.toggleTestLead('${lead.id}', ${!isTest})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg></button>
+                <button class="lead-action-btn btn-delete action-delete" data-tooltip="Borrar" onclick="deleteLead('${lead.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
             </td>
         `;
         tbody.appendChild(tr);
     });
 }
+
+// --- Lead detail expansion ---
+window.toggleLeadDetail = async function(leadId) {
+    const existingDetail = document.getElementById(`lead-detail-${leadId}`);
+    if (existingDetail) {
+        existingDetail.remove();
+        return;
+    }
+
+    const parentRow = document.getElementById(`lead-row-${leadId}`);
+    if (!parentRow) return;
+
+    const detailRow = document.createElement('tr');
+    detailRow.id = `lead-detail-${leadId}`;
+    detailRow.className = 'lead-detail-row';
+    const colSpan = parentRow.children.length;
+    detailRow.innerHTML = `<td colspan="${colSpan}" class="lead-detail-cell"><div class="lead-detail-loading">Cargando historial...</div></td>`;
+    parentRow.after(detailRow);
+
+    try {
+        // Fetch email logs
+        const { data: logs } = await _supabase.from('outreach_email_logs').select('*').eq('lead_id', leadId).order('created_at', { ascending: false }).limit(20);
+        // Fetch proposals
+        const lead = _allLeadsGridData.find(l => l.id === leadId);
+        const { data: proposals } = await _supabase.from('presupuestos').select('id, nombre_proyecto, estado, total, created_at').eq('email_cliente', lead?.email || '').order('created_at', { ascending: false }).limit(10);
+
+        let html = '<div class="lead-detail-content">';
+
+        // Emails section
+        html += '<div class="lead-detail-section"><div class="lead-detail-section-title">📨 Emails enviados</div>';
+        if (logs && logs.length > 0) {
+            html += '<div class="lead-detail-list">';
+            logs.forEach(log => {
+                const d = new Date(log.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                html += `<div class="lead-detail-item"><span class="lead-detail-date">${d}</span><span class="lead-detail-subj">${log.subject || log.email_type || '—'}</span></div>`;
+            });
+            html += '</div>';
+        } else {
+            html += '<div class="lead-detail-empty">Sin emails enviados</div>';
+        }
+        html += '</div>';
+
+        // Proposals section
+        html += '<div class="lead-detail-section"><div class="lead-detail-section-title">📋 Propuestas</div>';
+        if (proposals && proposals.length > 0) {
+            html += '<div class="lead-detail-list">';
+            proposals.forEach(p => {
+                const d = new Date(p.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+                const estBadge = p.estado === 'aceptado' ? 'email-step-done' : p.estado === 'enviado' ? 'email-step-meeting' : 'email-step-pending';
+                html += `<div class="lead-detail-item"><span class="lead-detail-date">${d}</span><span class="lead-detail-subj">${p.nombre_proyecto || '—'}</span><span class="email-step-badge ${estBadge}" style="font-size:0.62rem;padding:2px 6px;">${p.estado || '—'}</span><span style="font-size:0.75rem;font-weight:700;color:var(--text-main);">${p.total ? p.total + '€' : ''}</span></div>`;
+            });
+            html += '</div>';
+        } else {
+            html += '<div class="lead-detail-empty">Sin propuestas</div>';
+        }
+        html += '</div>';
+
+        // Timeline
+        html += '<div class="lead-detail-section"><div class="lead-detail-section-title">🕒 Línea temporal</div><div class="lead-detail-list">';
+        if (lead) {
+            const created = new Date(lead.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+            html += `<div class="lead-detail-item"><span class="lead-detail-date">${created}</span><span class="lead-detail-subj">Lead creado</span></div>`;
+            if (lead.last_contacted_at) {
+                const lc = new Date(lead.last_contacted_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+                html += `<div class="lead-detail-item"><span class="lead-detail-date">${lc}</span><span class="lead-detail-subj">Último contacto</span></div>`;
+            }
+        }
+        html += '</div></div>';
+
+        html += '</div>';
+        detailRow.querySelector('.lead-detail-cell').innerHTML = html;
+    } catch(e) {
+        detailRow.querySelector('.lead-detail-cell').innerHTML = '<div class="lead-detail-empty">Error cargando historial</div>';
+    }
+};
+
+window.changeLeadType = async function(leadId, newVersion) {
+    try {
+        await _supabase.from('outreach_leads').update({ version: newVersion }).eq('id', leadId);
+        const lead = _allLeadsGridData.find(l => l.id === leadId);
+        if (lead) lead.version = newVersion;
+        showToast(`Tipo actualizado a V.${newVersion}`);
+    } catch(e) { showToast('Error al cambiar tipo', true); }
+};
+
+window.toggleTestLead = async function(leadId, setTest) {
+    try {
+        await _supabase.from('outreach_leads').update({ is_test: setTest }).eq('id', leadId);
+        const lead = _allLeadsGridData.find(l => l.id === leadId);
+        if (lead) lead.is_test = setTest;
+        showToast(setTest ? 'Marcado como lead de prueba' : 'Desmarcado como prueba');
+        renderLeadsGridRows(_allLeadsGridData);
+    } catch(e) { showToast('Error', true); }
+};
+
+window.callLead = function(phone) {
+    if (!phone) { showToast('Este lead no tiene número de teléfono', true); return; }
+    window.open(`tel:${phone}`, '_self');
+};
 
 async function updateLeadField(id, field, value) {
     try {
