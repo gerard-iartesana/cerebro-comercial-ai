@@ -2501,6 +2501,13 @@ body.role-guest td button {
 .status-lead { background: rgba(0, 122, 255, 0.1); color: var(--accent); }
 .status-replied { background: rgba(88, 86, 214, 0.1); color: var(--accent-purple); }
 .status-booked { background: rgba(52, 199, 89, 0.1); color: var(--accent-green); }
+.status-enriching { background: rgba(255, 159, 10, 0.1); color: #ff9f0a; }
+.status-enriched { background: rgba(100, 210, 255, 0.1); color: #64d2ff; }
+.status-nurture_monthly { background: rgba(255, 55, 95, 0.1); color: #ff375f; }
+[class*="status-welcome_"] { background: rgba(191, 90, 242, 0.1); color: #bf5af2; }
+[class*="status-followup_"] { background: rgba(94, 92, 230, 0.1); color: #5e5ce6; }
+[class*="status-nurture_"] { background: rgba(255, 100, 130, 0.1); color: #ff6482; }
+
 
 /* --- Email Inbox / Outbox Layout --- */
 .email-box-grid {

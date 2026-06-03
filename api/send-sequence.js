@@ -72,14 +72,25 @@ module.exports = async function handler(req, res) {
         return res.status(404).json({ error: 'Lead no encontrado' });
       }
 
-      // Check current step mapping (0 to 5)
+      // Check current step mapping (0 to 20)
       const currentStep = lead.sequence_step || 0;
-      if (currentStep > 5) {
+      if (currentStep > 20) {
         return res.status(400).json({ error: 'El lead ya ha completado la secuencia inicial de outreach' });
       }
 
-      const chainNum = Math.floor(currentStep / 2) + 1; // 1, 2, 3
-      const stepOrder = (currentStep % 2) + 1; // 1, 2
+      let chainNum = 1;
+      let stepOrder = 1;
+      if (currentStep < 5) {
+        chainNum = 1;
+        stepOrder = currentStep + 1;
+      } else if (currentStep < 9) {
+        chainNum = 2;
+        stepOrder = currentStep - 5 + 1;
+      } else if (currentStep < 21) {
+        chainNum = 3;
+        stepOrder = currentStep - 9 + 1;
+      }
+
       const version = lead.version || 'A';
 
       // Load template from DB
@@ -137,7 +148,11 @@ module.exports = async function handler(req, res) {
         body: bodyText
       });
 
-      const nextStatusMap = ['sent_first', 'followup_1', 'followup_2', 'followup_3', 'followup_4', 'nurture_monthly'];
+      const nextStatusMap = [
+        'welcome_1', 'welcome_2', 'welcome_3', 'welcome_4', 'welcome_5',
+        'followup_1', 'followup_2', 'followup_3', 'followup_4',
+        'nurture_1', 'nurture_2', 'nurture_3', 'nurture_4', 'nurture_5', 'nurture_6', 'nurture_7', 'nurture_8', 'nurture_9', 'nurture_10', 'nurture_11', 'nurture_monthly'
+      ];
       const nextStatus = nextStatusMap[currentStep] || 'nurture_monthly';
 
       await supabase
@@ -162,12 +177,32 @@ module.exports = async function handler(req, res) {
       const { data: templates } = await supabase.from('outreach_sequences').select('*');
       
       const SEQUENCE_RULES = [
-        { step: 0, statusBefore: 'enriched', daysWait: 0, chain: 1, orden: 1, nextStatus: 'sent_first' },
-        { step: 1, statusBefore: 'sent_first', daysWait: outreachCfg.intervalo_c1_a || 2, chain: 1, orden: 2, nextStatus: 'followup_1' },
-        { step: 2, statusBefore: 'followup_1', daysWait: outreachCfg.intervalo_c1_a || 2, chain: 2, orden: 1, nextStatus: 'followup_2' },
-        { step: 3, statusBefore: 'followup_2', daysWait: outreachCfg.intervalo_c2_a || 3, chain: 2, orden: 2, nextStatus: 'followup_3' },
-        { step: 4, statusBefore: 'followup_3', daysWait: outreachCfg.intervalo_c2_a || 3, chain: 3, orden: 1, nextStatus: 'followup_4' },
-        { step: 5, statusBefore: 'followup_4', daysWait: outreachCfg.dia_c3_a || 30, chain: 3, orden: 2, nextStatus: 'nurture_monthly' }
+        // Bienvenida (C1): 5 emails, 1 x día (días de espera relativos)
+        { step: 0, statusBefore: 'enriched', daysWait: 0, chain: 1, orden: 1, nextStatus: 'welcome_1' },
+        { step: 1, statusBefore: 'welcome_1', daysWait: 1, chain: 1, orden: 2, nextStatus: 'welcome_2' },
+        { step: 2, statusBefore: 'welcome_2', daysWait: 1, chain: 1, orden: 3, nextStatus: 'welcome_3' },
+        { step: 3, statusBefore: 'welcome_3', daysWait: 1, chain: 1, orden: 4, nextStatus: 'welcome_4' },
+        { step: 4, statusBefore: 'welcome_4', daysWait: 1, chain: 1, orden: 5, nextStatus: 'welcome_5' },
+
+        // Seguimiento (C2): 4 emails, 1 x semana (7 días de espera)
+        { step: 5, statusBefore: 'welcome_5', daysWait: 7, chain: 2, orden: 1, nextStatus: 'followup_1' },
+        { step: 6, statusBefore: 'followup_1', daysWait: 7, chain: 2, orden: 2, nextStatus: 'followup_2' },
+        { step: 7, statusBefore: 'followup_2', daysWait: 7, chain: 2, orden: 3, nextStatus: 'followup_3' },
+        { step: 8, statusBefore: 'followup_3', daysWait: 7, chain: 2, orden: 4, nextStatus: 'followup_4' },
+
+        // Mantenimiento (C3): 12 emails, 1 x mes (30 días de espera)
+        { step: 9, statusBefore: 'followup_4', daysWait: 30, chain: 3, orden: 1, nextStatus: 'nurture_1' },
+        { step: 10, statusBefore: 'nurture_1', daysWait: 30, chain: 3, orden: 2, nextStatus: 'nurture_2' },
+        { step: 11, statusBefore: 'nurture_2', daysWait: 30, chain: 3, orden: 3, nextStatus: 'nurture_3' },
+        { step: 12, statusBefore: 'nurture_3', daysWait: 30, chain: 3, orden: 4, nextStatus: 'nurture_4' },
+        { step: 13, statusBefore: 'nurture_4', daysWait: 30, chain: 3, orden: 5, nextStatus: 'nurture_5' },
+        { step: 14, statusBefore: 'nurture_5', daysWait: 30, chain: 3, orden: 6, nextStatus: 'nurture_6' },
+        { step: 15, statusBefore: 'nurture_6', daysWait: 30, chain: 3, orden: 7, nextStatus: 'nurture_7' },
+        { step: 16, statusBefore: 'nurture_7', daysWait: 30, chain: 3, orden: 8, nextStatus: 'nurture_8' },
+        { step: 17, statusBefore: 'nurture_8', daysWait: 30, chain: 3, orden: 9, nextStatus: 'nurture_9' },
+        { step: 18, statusBefore: 'nurture_9', daysWait: 30, chain: 3, orden: 10, nextStatus: 'nurture_10' },
+        { step: 19, statusBefore: 'nurture_10', daysWait: 30, chain: 3, orden: 11, nextStatus: 'nurture_11' },
+        { step: 20, statusBefore: 'nurture_11', daysWait: 30, chain: 3, orden: 12, nextStatus: 'nurture_monthly' }
       ];
 
       for (const rule of SEQUENCE_RULES) {
@@ -188,12 +223,12 @@ module.exports = async function handler(req, res) {
             // Resolve custom intervals based on lead version
             let daysToWait = rule.daysWait;
             const versionLower = (lead.version || 'a').toLowerCase();
-            if (rule.step === 1 || rule.step === 2) {
-              daysToWait = outreachCfg[`intervalo_c1_${versionLower}`] || rule.daysWait;
-            } else if (rule.step === 3 || rule.step === 4) {
-              daysToWait = outreachCfg[`intervalo_c2_${versionLower}`] || rule.daysWait;
-            } else if (rule.step === 5) {
-              daysToWait = outreachCfg[`dia_c3_${versionLower}`] || rule.daysWait;
+            if (rule.step >= 1 && rule.step <= 4) {
+              daysToWait = outreachCfg[`intervalo_c1_${versionLower}`] !== undefined ? outreachCfg[`intervalo_c1_${versionLower}`] : rule.daysWait;
+            } else if (rule.step >= 5 && rule.step <= 8) {
+              daysToWait = outreachCfg[`intervalo_c2_${versionLower}`] !== undefined ? outreachCfg[`intervalo_c2_${versionLower}`] : rule.daysWait;
+            } else if (rule.step >= 9 && rule.step <= 20) {
+              daysToWait = outreachCfg[`dia_c3_${versionLower}`] !== undefined ? outreachCfg[`dia_c3_${versionLower}`] : rule.daysWait;
             }
 
             if (diffDays < daysToWait) {
@@ -255,89 +290,6 @@ module.exports = async function handler(req, res) {
 
           sentCount++;
           sendLogs.push({ email: lead.email, type: 'outreach', step: rule.step });
-        }
-      }
-
-      // 2. Process Monthly Nurtures
-      const { data: nurtureLeads } = await supabase
-        .from('outreach_leads')
-        .select('*')
-        .eq('status', 'nurture_monthly')
-        .gte('sequence_step', 6);
-
-      for (const lead of nurtureLeads || []) {
-        if (lead.sequence_step > 17) {
-          await supabase.from('outreach_leads').update({ status: 'lost' }).eq('id', lead.id);
-          continue;
-        }
-
-        if (lead.last_contacted_at) {
-          const lastContact = new Date(lead.last_contacted_at);
-          const diffTime = Math.abs(now - lastContact);
-          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-          
-          if (diffDays < 30) continue;
-        }
-
-        const template = (templates || []).find(t => t.cadena_num === 3 && t.orden === 2 && t.version === (lead.version || 'A'));
-        if (!template) continue;
-
-        const tip = tips[(lead.sequence_step - 6) % tips.length];
-        const subject = `consejo de productividad B2B para ${lead.company_name}`;
-        
-        let bodyText = (template.contenido_html || template.contenido || '')
-          .replace(/{{first_name}}/g, lead.first_name || 'allí')
-          .replace(/{{company_name}}/g, lead.company_name || 'tu empresa')
-          .replace(/{{booking_url}}/g, BOOKING_URL)
-          .replace(/{{tip}}/g, tip)
-          .replace(/{{consejo}}/g, tip);
-
-        const htmlEmail = `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #333333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            ${bodyText}
-            <br><br>
-            <hr style="border: 0; border-top: 1px solid #eeeeee; margin: 24px 0;">
-            <p style="font-size: 12px; color: #888888; text-align: center; line-height: 1.4;">
-              Enviado por ${outreachCfg.remitente_nombre || 'Gerard Fanals'} · Consultoría de IA y Automatización B2B<br>
-              Si no deseas recibir más correos, puedes hacer <a href="${SITE_URL}/unsubscribe?email=${encodeURIComponent(lead.email)}" style="color: #007aff; text-decoration: none;">clic aquí para darte de baja</a>.<br>
-              ${outreachCfg.direccion_fisica || 'Avda Fort de Leau 131, Mahón'}
-            </p>
-          </div>
-        `;
-
-        const emailRes = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${RESEND_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            from: `${outreachCfg.remitente_nombre} <${outreachCfg.remitente_email}>`,
-            to: [lead.email],
-            reply_to: outreachCfg.reply_to || undefined,
-            subject: subject,
-            html: htmlEmail
-          })
-        });
-
-        if (emailRes.ok) {
-          await supabase.from('outreach_email_logs').insert({
-            lead_id: lead.id,
-            email_type: `nurture_${lead.sequence_step}`,
-            subject: subject,
-            body: bodyText
-          });
-
-          await supabase
-            .from('outreach_leads')
-            .update({
-              sequence_step: lead.sequence_step + 1,
-              last_contacted_at: now.toISOString()
-            })
-            .eq('id', lead.id);
-
-          sentCount++;
-          sendLogs.push({ email: lead.email, type: 'nurture', step: lead.sequence_step });
         }
       }
     }

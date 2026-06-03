@@ -319,7 +319,7 @@ async function initializeDashboard() {
         const clientes = [...new Set(propuestasEnviadas.filter(p => p.estado === 'aceptada').map(p => p.lead_email || p.lead_nombre))].length;
         
         // Seguimiento: leads with active followups
-        const seguimiento = leadsList.filter(l => l.status.startsWith('followup_') || l.status === 'nurture_monthly').length;
+        const seguimiento = leadsList.filter(l => l.status.startsWith('welcome_') || l.status.startsWith('followup_') || l.status.startsWith('nurture_') || l.status === 'nurture_monthly').length;
         
         // Perdidos: lost or unsubscribed leads
         const perdidos = leadsList.filter(l => l.status === 'lost' || l.status === 'unsubscribed').length;
@@ -593,7 +593,15 @@ async function loadKanbanCRM() {
         leads.forEach(lead => {
             let col = lead.status;
             // Map sub-statuses to main columns
-            if (col.startsWith('sent_') || col.startsWith('followup_') || col === 'enriching') {
+            if (col === 'new') {
+                col = 'lead';
+            }
+            if (col.startsWith('sent_') || 
+                col.startsWith('followup_') || 
+                col.startsWith('welcome_') || 
+                col.startsWith('nurture_') || 
+                col === 'nurture_monthly' || 
+                col === 'enriching') {
                 col = 'enriched';
             }
             if (col === 'lost' || col === 'unsubscribed') return;
@@ -651,9 +659,15 @@ window.handleDrop = async function(event, targetStatus) {
     
     try {
         // Actualizar el estado en Supabase
+        const updateData = { status: targetStatus };
+        if (targetStatus === 'enriched' || targetStatus === 'lead') {
+            updateData.sequence_step = 0;
+            updateData.last_contacted_at = null;
+        }
+        
         const { error } = await _supabase
             .from('outreach_leads')
-            .update({ status: targetStatus })
+            .update(updateData)
             .eq('id', id);
 
         if (error) throw error;
@@ -1187,6 +1201,18 @@ async function fetchOutreachConfig() {
         const { data, error } = await _supabase.from('outreach_config').select('*').limit(1).maybeSingle();
         if (error) throw error;
         outreachConfig = data || {};
+        
+        // Auto-migration to new defaults (1 x day, 7 x week, 30 x month) if old defaults are present
+        if (data && (data.intervalo_c1_a === 2 || data.intervalo_c1_a === null) && (data.intervalo_c2_a === 3 || data.intervalo_c2_a === null)) {
+            console.log('Outreach config has old default values. Migrating to 1, 7, 30 days intervals...');
+            const updated = {
+                intervalo_c1_a: 1, intervalo_c1_b: 1, intervalo_c1_c: 1,
+                intervalo_c2_a: 7, intervalo_c2_b: 7, intervalo_c2_c: 7,
+                dia_c3_a: 30, dia_c3_b: 30, dia_c3_c: 30
+            };
+            await _supabase.from('outreach_config').update(updated).eq('id', data.id);
+            outreachConfig = { ...data, ...updated };
+        }
     } catch(e) {
         console.warn('Error fetching outreach config:', e);
         outreachConfig = {};
@@ -1209,8 +1235,9 @@ async function fetchOutreachSequences() {
         const { data, error } = await _supabase.from('outreach_sequences').select('*').order('cadena_num', { ascending: true }).order('orden', { ascending: true });
         if (error) throw error;
         outreachSequences = data || [];
-        if (outreachSequences.length === 0) {
-            console.log('No outreach sequences found in DB. Seeding defaults...');
+        if (outreachSequences.length < 63) {
+            console.log('Outreach sequences count is not complete (' + outreachSequences.length + '/63). Re-seeding...');
+            await _supabase.from('outreach_sequences').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             await seedDefaultOutreachSequences();
             const { data: refetched } = await _supabase.from('outreach_sequences').select('*').order('cadena_num', { ascending: true }).order('orden', { ascending: true });
             outreachSequences = refetched || [];
@@ -1248,12 +1275,32 @@ async function fetchOutreachLeadsList() {
 
 async function seedDefaultOutreachSequences() {
     const steps = [
-      { cadena_num: 1, orden: 1, name: 'Bienvenida - Contacto Inicial', subject: 'una idea para {{company_name}}', content: 'Hola {{first_name}},\n\nSoy Gerard. Ayudamos a negocios y agencias a captar más clientes y multiplicar su productividad automatizando procesos combinando Inteligencia Artificial con desarrollo a medida.\n\nTe escribo porque veo una oportunidad muy clara en tu web para automatizar algunos de tus procesos.\n\n¿Te vendría bien charlar 10 o 15 minutos esta semana por Meet?\n\nSi te cuadra, puedes elegir día y hora directamente en mi calendario:\n{{booking_url}}\n\nUn abrazo,\nGerard' },
-      { cadena_num: 1, orden: 2, name: 'Bienvenida - Primer seguimiento', subject: 're: idea para {{company_name}}', content: 'Hola {{first_name}},\n\nTe escribo de forma muy breve por si se te pasó mi correo anterior.\n\n¿Has calculado alguna vez cuánto tiempo pierde tu equipo en tareas repetitivas de administración o captación?\n\nSi te da curiosidad, podemos charlar 10 minutos sin compromiso: {{booking_url}}\n\nUn abrazo,\nGerard' },
-      { cadena_num: 2, orden: 1, name: 'Seguimiento - Caso de Éxito', subject: 'automatizar tareas repetitivas en {{company_name}}', content: 'Hola {{first_name}},\n\nHace poco ayudamos a una empresa similar a la vuestra a ahorrar más de 15 horas de trabajo manual a la semana con IA.\n\nEl objetivo es ver si en {{company_name}} podemos lograr un impacto similar.\n\nElige un hueco cuando te venga bien: {{booking_url}}\n\nUn abrazo,\nGerard' },
-      { cadena_num: 2, orden: 2, name: 'Seguimiento - Breakup suave', subject: '¿demasiado lío, {{first_name}}?', content: 'Hola {{first_name}},\n\nImagino que estarás hasta arriba de trabajo con la gestión de {{company_name}} (¡lo cual es excelente!).\n\nSolo te escribo para saber si os encajaría explorar cómo liberar parte de esa carga administrativa. Si no es un buen momento dímelo y no insistiré.\n\n¡Que tengas una gran semana!\n\nUn abrazo,\nGerard' },
-      { cadena_num: 3, orden: 1, name: 'Mantenimiento - Último intento', subject: 'último intento por mi parte', content: 'Hola {{first_name}},\n\nAsumo que ahora mismo no es una prioridad para {{company_name}} automatizar tareas o implementar IA.\n\nA partir de ahora te dejaré tranquilo, pero si en el futuro decides dar el salto ya sabes dónde encontrarme: {{booking_url}}\n\nUn abrazo,\nGerard' },
-      { cadena_num: 3, orden: 2, name: 'Mantenimiento - Consejo mensual', subject: 'un consejo rápido de IA para {{company_name}}', content: 'Hola {{first_name}},\n\nEspero que todo vaya genial en {{company_name}}.\n\nAquí tienes un consejo de productividad del mes: automatiza tus reportes y clasificación de correos repetitivos usando una simple API conectada a tu bandeja.\n\nSi en algún momento quieres que lo montemos por ti, avísame.\n\nUn abrazo,\nGerard' }
+      // Cadena 1: Bienvenida (5 emails, 1 x día)
+      { cadena_num: 1, orden: 1, name: 'Bienvenida 1 - Contacto Inicial', subject: 'una idea para {{company_name}}', content: 'Hola {{first_name}},\n\nSoy Gerard. Ayudamos a negocios y agencias a captar más clientes y multiplicar su productividad automatizando procesos combinando Inteligencia Artificial con desarrollo a medida.\n\nTe escribo porque veo una oportunidad muy clara en tu web para automatizar algunos de tus procesos.\n\n¿Te vendría bien charlar 10 o 15 minutos esta semana por Meet?\n\nSi te cuadra, puedes elegir día y hora directamente en mi calendario:\n{{booking_url}}\n\nUn abrazo,\nGerard' },
+      { cadena_num: 1, orden: 2, name: 'Bienvenida 2 - Primer seguimiento', subject: 're: idea para {{company_name}}', content: 'Hola {{first_name}},\n\nTe escribo de forma muy breve por si se te pasó mi correo anterior.\n\n¿Has calculado alguna vez cuánto tiempo pierde tu equipo en tareas repetitivas de administración o captación?\n\nSi te da curiosidad, podemos charlar 10 minutos sin compromiso: {{booking_url}}\n\nUn abrazo,\nGerard' },
+      { cadena_num: 1, orden: 3, name: 'Bienvenida 3 - Valor y productividad', subject: 'ahorrar tiempo en {{company_name}} con IA', content: 'Hola {{first_name}},\n\nUna pregunta rápida: ¿cuántas horas a la semana pasa tu equipo pasando datos de un Excel a otro, o respondiendo emails repetitivos?\n\nLa mayoría de las empresas con las que trabajamos ahorran más del 30% de su tiempo administrativo al automatizar estas tareas.\n\n¿Charlamos 10 minutos esta semana? {{booking_url}}\n\nUn abrazo,\nGerard' },
+      { cadena_num: 1, orden: 4, name: 'Bienvenida 4 - Pregunta simple', subject: 'pregunta rápida para {{first_name}}', content: 'Hola {{first_name}},\n\nSolo por curiosidad, ¿actualmente utilizáis alguna herramienta de Inteligencia Artificial para vuestras ventas o administración, o todo lo hacéis de forma manual?\n\nSi te interesa ver ejemplos prácticos de lo que se puede hacer hoy en día, dime y te mando un video corto de 2 minutos.\n\nUn abrazo,\nGerard' },
+      { cadena_num: 1, orden: 5, name: 'Bienvenida 5 - Intento final', subject: 'último intento por mi parte', content: 'Hola {{first_name}},\n\nImagino que estarás al límite de trabajo y por eso no me has respondido. Totalmente comprensible.\n\nNo quiero ser pesado, así que este será mi último correo sobre este tema por ahora.\n\nSi en el futuro decides que es hora de optimizar procesos con IA en {{company_name}}, me puedes escribir por aquí o reservar en: {{booking_url}}\n\n¡Mucha suerte con el negocio!\n\nUn abrazo,\nGerard' },
+
+      // Cadena 2: Seguimiento (4 emails, 1 x semana)
+      { cadena_num: 2, orden: 1, name: 'Seguimiento 1 - Caso de Éxito', subject: 'automatizar tareas en {{company_name}}', content: 'Hola {{first_name}},\n\nHace poco ayudamos a una empresa similar a la vuestra a ahorrar más de 15 horas de trabajo manual a la semana implementando un asistente IA de soporte y automatizando la facturación.\n\nEl objetivo de este correo es ver si en {{company_name}} podemos lograr un impacto similar.\n\n¿Te encajaría revisar vuestro caso 10 minutos? {{booking_url}}\n\nUn abrazo,\nGerard' },
+      { cadena_num: 2, orden: 2, name: 'Seguimiento 2 - Auditoría de procesos', subject: 'auditoría gratuita de flujos para {{company_name}}', content: 'Hola {{first_name}},\n\nEsta semana tengo un par de huecos libres y he pensado en ofrecerte algo muy directo:\n\nAnalizo uno de tus procesos manuales más pesados por videollamada y te digo exactamente cómo automatizarlo gratis. Sin compromiso.\n\nSi te interesa, reserva tu auditoría de 15 minutos aquí: {{booking_url}}\n\nUn abrazo,\nGerard' },
+      { cadena_num: 2, orden: 3, name: 'Seguimiento 3 - El coste de no automatizar', subject: 'el coste invisible de la administración manual', content: 'Hola {{first_name}},\n\nEl trabajo repetitivo no solo cuesta dinero en sueldos, sino que quema a los empleados y reduce la velocidad comercial.\n\nEn {{company_name}}, ¿cuál es el proceso que más pereza le da hacer a tu equipo?\n\nCasi seguro que se puede automatizar en menos de una semana.\n\nUn abrazo,\nGerard' },
+      { cadena_num: 2, orden: 4, name: 'Seguimiento 4 - Cierre temporal', subject: 'reunión de automatización', content: 'Hola {{first_name}},\n\nAsumo que ahora mismo no es el momento de meterse a optimizar procesos en {{company_name}}.\n\nTe dejo tranquilo. Si en unas semanas o meses las cosas cambian, puedes escribirme directamente.\n\nUn abrazo,\nGerard' },
+
+      // Cadena 3: Mantenimiento (12 emails, 1 x mes)
+      { cadena_num: 3, orden: 1, name: 'Mantenimiento 1 - Clasificación de emails', subject: 'consejo IA para {{company_name}} (Clasificación de emails)', content: 'Hola {{first_name}},\n\nEspero que todo vaya genial.\n\nAquí tienes el consejo de automatización del mes: puedes ahorrar horas clasificando y etiquetando automáticamente todos tus correos entrantes usando una simple llamada a la API de OpenAI o Anthropic conectada a tu bandeja.\n\nSi quieres ver cómo implementarlo en tu CRM, avísame.\n\nUn abrazo,\nGerard' },
+      { cadena_num: 3, orden: 2, name: 'Mantenimiento 2 - Agentes de Soporte', subject: 'automatizar soporte en {{company_name}}', content: 'Hola {{first_name}},\n\n¿Sabías que un agente de Inteligencia Artificial bien entrenado puede resolver más del 80% de las preguntas frecuentes de tus clientes en tiempo real y sin coste de personal?\n\nEsto libera a tu equipo de soporte para que solo atiendan los casos complejos.\n\n¿Te gustaría ver una demo aplicada a tu sector?\n\nUn abrazo,\nGerard' },
+      { cadena_num: 3, orden: 3, name: 'Mantenimiento 3 - Conectar Stripe y Contabilidad', subject: 'ahorro de administración para {{company_name}}', content: 'Hola {{first_name}},\n\nEl consejo de este mes es financiero: si cobras mediante Stripe o pasarelas online, puedes conectar de forma directa los pagos con tu software de facturación para emitir facturas y enviarlas sin tocar una sola tecla.\n\nSi necesitas ayuda para integrarlo, no dudes en escribirme.\n\nUn abrazo,\nGerard' },
+      { cadena_num: 3, orden: 4, name: 'Mantenimiento 4 - Monitorización automática', subject: 'monitorización automática de competidores', content: 'Hola {{first_name}},\n\n¿Cómo vigilas lo que hace tu competencia? La mayoría lo hace manualmente una vez al año.\n\nCon un simple script de scraping combinado con un modelo de lenguaje, puedes recibir alertas en tu Slack o email cada vez que un competidor cambie de precios o lance un nuevo servicio.\n\nUn abrazo,\nGerard' },
+      { cadena_num: 3, orden: 5, name: 'Mantenimiento 5 - Dashboards de rentabilidad', subject: 'dashboard de rentabilidad automática', content: 'Hola {{first_name}},\n\n¿Haces cálculos manuales en Excel a final de mes para saber si un proyecto ha sido rentable?\n\nLo ideal es centralizar los datos en un dashboard conectado a tu base de datos de tiempos y gastos para ver el margen neto en tiempo real y poder corregir desviaciones antes de que sea tarde.\n\nUn abrazo,\nGerard' },
+      { cadena_num: 3, orden: 6, name: 'Mantenimiento 6 - Leads automáticos', subject: 'leads automáticos sin picar datos', content: 'Hola {{first_name}},\n\nCuando entra un lead por tu web, ¿alguien tiene que copiarlo a mano a vuestro CRM?\n\nLa automatización de entrada enriqueciendo los datos (empresa, tamaño, LinkedIn) al instante te permite llamar al cliente sabiendo exactamente qué necesita en menos de 5 minutos.\n\nUn abrazo,\nGerard' },
+      { cadena_num: 3, orden: 7, name: 'Mantenimiento 7 - Velocidad comercial', subject: 'responder a presupuestos en < 5 minutos', content: 'Hola {{first_name}},\n\nLa velocidad comercial es el factor número uno que determina si cierras una venta o no.\n\nUsando IA, puedes redactar un borrador de presupuesto personalizado a partir del transcriptor de tu llamada de ventas en menos de un minuto. Solo revisas, apruebas y envías.\n\nUn abrazo,\nGerard' },
+      { cadena_num: 3, orden: 8, name: 'Mantenimiento 8 - WhatsApp e IA', subject: 'conectar WhatsApp y CRM con IA', content: 'Hola {{first_name}},\n\n¿Tu equipo de ventas usa WhatsApp personal para cerrar clientes? El problema es que esa información se pierde y no queda registrada.\n\nIntegrar la API de WhatsApp con tu CRM e IA permite resumir automáticamente las conversaciones y guardar el histórico de forma transparente.\n\nUn abrazo,\nGerard' },
+      { cadena_num: 3, orden: 9, name: 'Mantenimiento 9 - Propuestas persuasivas', subject: 'redacción comercial con IA para {{company_name}}', content: 'Hola {{first_name}},\n\n¿Sigues redactando propuestas desde cero?\n\nUn modelo de IA entrenado con tus mejores propuestas comerciales puede estructurar, redactar y proponer el precio óptimo para cada cliente basándose en las notas de la reunión anterior.\n\nUn abrazo,\nGerard' },
+      { cadena_num: 3, orden: 10, name: 'Mantenimiento 10 - Eliminar silos', subject: 'eliminar silos de información', content: 'Hola {{first_name}},\n\n¿Cuánto tiempo pierde tu equipo buscando archivos, facturas o contratos antiguos?\n\nUn buscador semántico interno permite a tu equipo preguntar por chat "¿Cuánto cobramos a X por el último servicio?" o "Pásame el contrato de Y" y obtener la respuesta en segundos.\n\nUn abrazo,\nGerard' },
+      { cadena_num: 3, orden: 11, name: 'Mantenimiento 11 - Privacidad de datos', subject: 'privacidad en IA corporativa', content: 'Hola {{first_name}},\n\nUna duda frecuente es si usar IA pone en riesgo los datos confidenciales de tus clientes.\n\nLa respuesta es no, siempre que antes de enviar los datos uses APIs empresariales seguras o modelos open-source en servidores propios.\n\nUn abrazo,\nGerard' },
+      { cadena_num: 3, orden: 12, name: 'Mantenimiento 12 - Check-in anual', subject: 'balance tecnológico en {{company_name}}', content: 'Hola {{first_name}},\n\nHa pasado tiempo desde nuestro primer contacto. Quería preguntarte si habéis dado algún paso para automatizar vuestros procesos este año.\n\nSi sigues con tareas repetitivas o quieres dar un salto tecnológico en {{company_name}}, podemos charlar 10 minutos y te oriento: {{booking_url}}\n\nUn abrazo,\nGerard' }
     ];
     
     const rows = [];
