@@ -3,6 +3,24 @@
 // EMAIL COMPOSE - defined early to ensure availability
 window._composeAttachments = [];
 
+// Auto-expand textareas logic
+document.addEventListener('input', function (event) {
+    if (event.target.tagName.toLowerCase() === 'textarea') {
+        autoExpandTextarea(event.target);
+    }
+}, false);
+
+function autoExpandTextarea(field) {
+    // Reset height to calculate scrollHeight properly
+    field.style.height = 'inherit';
+    const computed = window.getComputedStyle(field);
+    const borderTop = parseInt(computed.getPropertyValue('border-top-width'), 10) || 0;
+    const borderBottom = parseInt(computed.getPropertyValue('border-bottom-width'), 10) || 0;
+    const height = field.scrollHeight + borderTop + borderBottom;
+    field.style.height = height + 'px';
+}
+
+
 window.openComposeForLead = function(email) {
     try {
         if (sessionStorage.getItem('cc_role') === 'guest') return;
@@ -603,6 +621,14 @@ function nuevoContrato() {
     // Notas
     if (el('ct-notas')) el('ct-notas').value = '';
     clearFirma();
+    
+    // Auto-expand all textareas
+    setTimeout(() => {
+        document.querySelectorAll('#contrato-tab-editor textarea').forEach(txt => {
+            autoExpandTextarea(txt);
+        });
+    }, 10);
+    
     switchContratoTab('editor');
 }
 
@@ -739,6 +765,14 @@ function editarContrato(id) {
         const container = document.getElementById('firma-preview-container');
         if (preview && container) { preview.src = ct.firma_prestador; container.style.display = ''; }
     }
+    
+    // Auto-expand all textareas based on their initial content
+    setTimeout(() => {
+        document.querySelectorAll('#contrato-tab-editor textarea').forEach(txt => {
+            autoExpandTextarea(txt);
+        });
+    }, 10);
+    
     switchContratoTab('editor');
 }
 
