@@ -1796,6 +1796,7 @@ function toggleApiKey(inputId, realValueLabel) {
 // Load business data
 function loadBizData() {
     try {
+        const el = id => document.getElementById(id);
         const bcRaw = localStorage.getItem('cc_biz_config');
         if (!bcRaw) return;
         const bc = JSON.parse(bcRaw);
@@ -1835,6 +1836,7 @@ function loadBizData() {
 // Save business data
 function saveBizData() {
     try {
+        const el = id => document.getElementById(id);
         const config = {
             stripe: {
                 active: el('cfg-fp-stripe-toggle')?.checked || false,
@@ -1874,10 +1876,10 @@ function saveBizData() {
             status.style.color = '#34c759';
             setTimeout(() => { status.textContent = ''; }, 3000);
         }
-        showToast('Formas de pago guardadas con éxito');
+        showAlert('Datos guardados', 'La información de las formas de pago se ha actualizado correctamente.', '✅');
     } catch (e) {
         console.error('Error saving biz config', e);
-        showToast('Error al guardar las formas de pago', true);
+        showAlert('Error', 'Ha ocurrido un error al guardar las formas de pago.', '❌');
     }
 }
 
