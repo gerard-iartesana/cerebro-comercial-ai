@@ -786,7 +786,9 @@ function editarContrato(id) {
 
     // 13. Cláusulas
     ['cuarta','quinta','sexta','septima','octava','novena','decima','undecima','duodecima','adicional'].forEach(k => {
-        if (el('ct-clausula-' + k)) el('ct-clausula-' + k).value = cl[k] || '';
+        if (el('ct-clausula-' + k)) {
+            el('ct-clausula-' + k).value = cl[k] || CLAUSULAS_DEFAULT[k] || '';
+        }
     });
 
     // 14. Notas
