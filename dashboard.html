@@ -3184,14 +3184,14 @@
                                 <div class="nl-config-field"><label class="nl-config-field-label">Fecha fin</label><input class="nl-config-input" id="ct-fecha-fin" type="date" /></div>
                             </div>
                             <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-                                <div class="nl-config-field" style="grid-column:1/-1"><label class="nl-config-field-label">Precio total proyecto (€)</label><input class="nl-config-input" id="ct-precio-total" type="number" placeholder="0" style="font-size:1.1rem;font-weight:700" oninput="recalcPago()" /></div>
+                                <div class="nl-config-field" style="grid-column:1/-1"><label class="nl-config-field-label">Precio total proyecto (€) + IVA</label><input class="nl-config-input" id="ct-precio-total" type="number" placeholder="0" style="font-size:1.1rem;font-weight:700" oninput="recalcPago()" /></div>
                             </div>
 
                             <!-- Cuota mensual sub-section -->
                             <div style="border:2px solid rgba(175,82,222,0.3);border-radius:14px;padding:16px;background:rgba(175,82,222,0.02);margin-bottom:14px">
                                 <div style="font-size:0.78rem;font-weight:700;color:#af52de;margin-bottom:8px">🔄 Cuota mensual</div>
                                 <div class="nl-config-grid" style="grid-template-columns:1fr 1fr 1fr;gap:10px">
-                                    <div class="nl-config-field"><label class="nl-config-field-label">Cuota mensual (€)</label><input class="nl-config-input" id="ct-precio-mensual" type="number" placeholder="0" /></div>
+                                    <div class="nl-config-field"><label class="nl-config-field-label">Cuota mensual (€) + IVA</label><input class="nl-config-input" id="ct-precio-mensual" type="number" placeholder="0" /></div>
                                     <div class="nl-config-field"><label class="nl-config-field-label">Fecha inicio cuota</label><input class="nl-config-input" id="ct-cuota-fecha-inicio" type="date" /></div>
                                     <div class="nl-config-field"><label class="nl-config-field-label">Concepto</label><input class="nl-config-input" id="ct-cuota-concepto" placeholder="Mantenimiento mensual" /></div>
                                 </div>
@@ -3269,12 +3269,42 @@
                             </div>
                         </div>
 
+                        <!-- ═══ 15. FIRMAS ═══ -->
+                        <div style="margin-bottom:24px;border:2px solid rgba(0,113,227,0.3);border-radius:16px;padding:18px;background:rgba(0,113,227,0.02)">
+                            <div style="font-size:0.82rem;font-weight:700;color:#0071e3;margin-bottom:10px">✍️ Estado de firmas</div>
+                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:16px">
+                                <div>
+                                    <label class="nl-config-field-label">Firma del Prestador</label>
+                                    <div id="firma-prestador-display" style="min-height:80px;border:1px dashed var(--border-color);border-radius:10px;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden">
+                                        <span style="font-size:0.75rem;color:var(--text-grey)">No firmada</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="nl-config-field-label">Firma del Cliente</label>
+                                    <div id="firma-cliente-display" style="min-height:80px;border:1px dashed var(--border-color);border-radius:10px;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden">
+                                        <span style="font-size:0.75rem;color:var(--text-grey)">No firmada</span>
+                                    </div>
+                                    <div id="firma-cliente-fecha" style="font-size:0.65rem;color:var(--text-grey);text-align:center;margin-top:4px"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ═══ 15. ACTION BUTTONS ═══ -->
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:16px;border-top:1px solid var(--border-color)">
+                            <button class="btn-primary" style="padding:10px 22px;font-size:0.82rem" onclick="guardarContrato()" id="btn-guardar-contrato-bottom">💾 Guardar</button>
+                            <button class="btn-secondary" style="padding:10px 18px;font-size:0.82rem" onclick="generarPdfContrato()">📄 Descargar PDF</button>
+                            <button class="btn-secondary" style="padding:10px 18px;font-size:0.82rem" onclick="enviarContratoEmail()">📧 Enviar por Email</button>
+                            <button class="btn-secondary" style="padding:10px 18px;font-size:0.82rem" onclick="enviarContratoWhatsApp()">📱 Enviar por WhatsApp</button>
+                            <button class="btn-secondary" style="padding:10px 18px;font-size:0.82rem" onclick="abrirFirmaPrestador()">✍️ Firma del prestador</button>
+                            <button class="btn-secondary" style="padding:10px 18px;font-size:0.82rem" onclick="generarLinkFirma()">✍️ Link de firma digital</button>
+                        </div>
+
                         <!-- ═══ 11. PRECIO FINAL ═══ -->
                         <div style="margin-bottom:24px;border:2px solid rgba(52,199,89,0.3);border-radius:16px;padding:18px;background:rgba(52,199,89,0.02)">
                             <div style="font-size:0.82rem;font-weight:700;color:#34c759;margin-bottom:10px">💰 Precio final</div>
                             <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:10px">
                                 <div class="nl-config-field">
-                                    <label class="nl-config-field-label">Precio final (€)</label>
+                                    <label class="nl-config-field-label">Precio final (€) + IVA</label>
                                     <input class="nl-config-input" id="ct-precio-final" type="number" style="font-size:1.2rem;font-weight:800;color:#34c759" readonly />
                                 </div>
                                 <div class="nl-config-field">
@@ -3295,6 +3325,28 @@
                                 <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-card);font-size:0.78rem;font-weight:600;color:var(--text-main);cursor:pointer"><input type="checkbox" id="ct-fp-efectivo" onchange="updateFormasPago('efectivo')"> Efectivo</label>
                                 <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-card);font-size:0.78rem;font-weight:600;color:var(--text-main);cursor:pointer"><input type="checkbox" id="ct-fp-otro" onchange="updateFormasPago('otro')"> Otro</label>
                             </div>
+                            
+                            <!-- Payment Instructions (Shown dynamically) -->
+                            <div id="ct-fp-info-giro" style="display:none;margin-bottom:12px;padding:12px;border-radius:10px;background:rgba(88,86,214,0.05);border:1px solid rgba(88,86,214,0.2);font-size:0.8rem;color:var(--text-main)">
+                                <strong>Giro bancario:</strong> El cliente debe rellenar su cuenta bancaria arriba. Se le girará el recibo automáticamente.
+                            </div>
+                            <div id="ct-fp-info-transferencia" style="display:none;margin-bottom:12px;padding:12px;border-radius:10px;background:rgba(88,86,214,0.05);border:1px solid rgba(88,86,214,0.2);font-size:0.8rem;color:var(--text-main)">
+                                <strong>Transferencia bancaria:</strong>
+                                <div class="nl-config-field" style="margin-top:8px"><label class="nl-config-field-label">IBAN para recibir transferencia (Tuyo)</label><input class="nl-config-input" id="ct-prestador-iban" placeholder="ES00 0000 0000 0000 0000 0000" style="font-family:monospace" /></div>
+                            </div>
+                            <div id="ct-fp-info-stripe" style="display:none;margin-bottom:12px;padding:12px;border-radius:10px;background:rgba(88,86,214,0.05);border:1px solid rgba(88,86,214,0.2);font-size:0.8rem;color:var(--text-main)">
+                                <strong>Stripe:</strong>
+                                <div class="nl-config-field" style="margin-top:8px"><label class="nl-config-field-label">Enlace de pago (Link)</label><input class="nl-config-input" id="ct-stripe-link" placeholder="https://buy.stripe.com/..." /></div>
+                            </div>
+                            <div id="ct-fp-info-bizum" style="display:none;margin-bottom:12px;padding:12px;border-radius:10px;background:rgba(88,86,214,0.05);border:1px solid rgba(88,86,214,0.2);font-size:0.8rem;color:var(--text-main)">
+                                <strong>Bizum:</strong>
+                                <div class="nl-config-field" style="margin-top:8px"><label class="nl-config-field-label">Teléfono para Bizum</label><input class="nl-config-input" id="ct-bizum-telefono" placeholder="+34 600 000 000" /></div>
+                            </div>
+                            <div id="ct-fp-info-otro" style="display:none;margin-bottom:12px;padding:12px;border-radius:10px;background:rgba(88,86,214,0.05);border:1px solid rgba(88,86,214,0.2);font-size:0.8rem;color:var(--text-main)">
+                                <strong>Otro método:</strong>
+                                <div class="nl-config-field" style="margin-top:8px"><label class="nl-config-field-label">Detalles del método</label><input class="nl-config-input" id="ct-otro-metodo" placeholder="Especificar..." /></div>
+                            </div>
+
                             <div class="nl-config-field">
                                 <label class="nl-config-field-label">IBAN del cliente</label>
                                 <input class="nl-config-input" id="ct-cuenta-bancaria" placeholder="ES00 0000 0000 0000 0000 0000" style="font-family:monospace" />
@@ -3324,7 +3376,29 @@
                             <textarea class="nl-config-input" id="ct-notas" rows="3" placeholder="Notas internas sobre este contrato (no se incluyen en el PDF)..." style="resize:vertical;font-size:0.85rem"></textarea>
                         </div>
 
-                        <!-- ═══ 15. ACTION BUTTONS ═══ -->
+                        <!-- ═══ 15. FIRMAS ═══ -->
+                        <div style="margin-bottom:24px;border:2px solid rgba(0,113,227,0.3);border-radius:16px;padding:18px;background:rgba(0,113,227,0.02)">
+                            <div style="font-size:0.82rem;font-weight:700;color:#0071e3;margin-bottom:10px">✍️ Estado de firmas</div>
+                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:16px">
+                                <div>
+                                    <label class="nl-config-field-label">Firma del Prestador</label>
+                                    <div id="firma-prestador-display" style="min-height:80px;border:1px dashed var(--border-color);border-radius:10px;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;position:relative">
+                                        <span style="font-size:0.75rem;color:var(--text-grey)" id="firma-prestador-text">No firmada</span>
+                                        <img id="firma-prestador-img" style="display:none;max-height:80px;max-width:100%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="nl-config-field-label">Firma del Cliente</label>
+                                    <div id="firma-cliente-display" style="min-height:80px;border:1px dashed var(--border-color);border-radius:10px;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;position:relative">
+                                        <span style="font-size:0.75rem;color:var(--text-grey)" id="firma-cliente-text">No firmada</span>
+                                        <img id="firma-cliente-img" style="display:none;max-height:80px;max-width:100%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)" />
+                                    </div>
+                                    <div id="firma-cliente-fecha" style="font-size:0.65rem;color:var(--text-grey);text-align:center;margin-top:4px"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ═══ 16. ACTION BUTTONS ═══ -->
                         <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:16px;border-top:1px solid var(--border-color)">
                             <button class="btn-primary" style="padding:10px 22px;font-size:0.82rem" onclick="guardarContrato()" id="btn-guardar-contrato-bottom">💾 Guardar</button>
                             <button class="btn-secondary" style="padding:10px 18px;font-size:0.82rem" onclick="generarPdfContrato()">📄 Descargar PDF</button>
@@ -3592,6 +3666,6 @@
     </div>
 
     <!-- App Scripts -->
-    <script src="app.js?v=20260604f"></script>
+    <script src="app.js?v=20260604g"></script>
 </body>
 </html>

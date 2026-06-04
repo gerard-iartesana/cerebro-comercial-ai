@@ -614,13 +614,27 @@ function nuevoContrato() {
     if (el('ct-precio-final')) el('ct-precio-final').value = '';
     if (el('ct-precio-total-letras')) el('ct-precio-total-letras').value = '';
     // Formas de pago
-    ['ct-fp-giro','ct-fp-transferencia','ct-fp-stripe','ct-fp-bizum','ct-fp-efectivo','ct-fp-otro'].forEach(id => { if (el(id)) el(id).checked = false; });
+    ['giro','transferencia','stripe','bizum','efectivo','otro'].forEach(k => { 
+        if (el('ct-fp-' + k)) el('ct-fp-' + k).checked = false; 
+        updateFormasPago(k);
+    });
     if (el('ct-cuenta-bancaria')) el('ct-cuenta-bancaria').value = '';
+    if (el('ct-prestador-iban')) el('ct-prestador-iban').value = '';
+    if (el('ct-stripe-link')) el('ct-stripe-link').value = '';
+    if (el('ct-bizum-telefono')) el('ct-bizum-telefono').value = '';
+    if (el('ct-otro-metodo')) el('ct-otro-metodo').value = '';
     // Cláusulas
     ['ct-clausula-cuarta','ct-clausula-quinta','ct-clausula-sexta','ct-clausula-septima','ct-clausula-octava','ct-clausula-novena','ct-clausula-decima','ct-clausula-undecima','ct-clausula-duodecima','ct-clausula-adicional'].forEach(id => { if (el(id)) el(id).value = ''; });
     // Notas
     if (el('ct-notas')) el('ct-notas').value = '';
     clearFirma();
+
+    // Reset firmas
+    if (el('firma-prestador-text')) el('firma-prestador-text').style.display = '';
+    if (el('firma-prestador-img')) el('firma-prestador-img').style.display = 'none';
+    if (el('firma-cliente-text')) el('firma-cliente-text').style.display = '';
+    if (el('firma-cliente-img')) el('firma-cliente-img').style.display = 'none';
+    if (el('firma-cliente-fecha')) el('firma-cliente-fecha').textContent = '';
     
     // Auto-expand all textareas
     setTimeout(() => {
@@ -747,8 +761,13 @@ function editarContrato(id) {
     // 12. Formas de pago
     ['giro','transferencia','stripe','bizum','efectivo','otro'].forEach(k => {
         if (el('ct-fp-' + k)) el('ct-fp-' + k).checked = !!(fp[k]);
+        updateFormasPago(k);
     });
     if (el('ct-cuenta-bancaria')) el('ct-cuenta-bancaria').value = ct.cuenta_bancaria || datos.cuenta_bancaria || '';
+    if (el('ct-prestador-iban')) el('ct-prestador-iban').value = ct.prestador_iban || fp.iban || '';
+    if (el('ct-stripe-link')) el('ct-stripe-link').value = ct.stripe_link || fp.stripe_link || '';
+    if (el('ct-bizum-telefono')) el('ct-bizum-telefono').value = ct.bizum_telefono || fp.bizum_telefono || '';
+    if (el('ct-otro-metodo')) el('ct-otro-metodo').value = ct.otro_metodo || fp.otro_metodo || '';
 
     // 13. Cláusulas
     ['cuarta','quinta','sexta','septima','octava','novena','decima','undecima','duodecima','adicional'].forEach(k => {
@@ -760,10 +779,37 @@ function editarContrato(id) {
 
     // Firma prestador
     clearFirma();
+    const prestText = document.getElementById('firma-prestador-text');
+    const prestImg = document.getElementById('firma-prestador-img');
     if (ct.firma_prestador) {
         const preview = document.getElementById('firma-preview-img');
         const container = document.getElementById('firma-preview-container');
         if (preview && container) { preview.src = ct.firma_prestador; container.style.display = ''; }
+        if (prestImg && prestText) {
+            prestImg.src = ct.firma_prestador;
+            prestImg.style.display = '';
+            prestText.style.display = 'none';
+        }
+    } else {
+        if (prestImg && prestText) { prestImg.style.display = 'none'; prestText.style.display = ''; }
+    }
+
+    // Firma cliente
+    const cliText = document.getElementById('firma-cliente-text');
+    const cliImg = document.getElementById('firma-cliente-img');
+    const cliFecha = document.getElementById('firma-cliente-fecha');
+    if (ct.firma_cliente) {
+        if (cliImg && cliText) {
+            cliImg.src = ct.firma_cliente;
+            cliImg.style.display = '';
+            cliText.style.display = 'none';
+        }
+        if (cliFecha && ct.firma_cliente_fecha) {
+            cliFecha.textContent = 'Firmado el ' + new Date(ct.firma_cliente_fecha).toLocaleString('es-ES');
+        }
+    } else {
+        if (cliImg && cliText) { cliImg.style.display = 'none'; cliText.style.display = ''; }
+        if (cliFecha) cliFecha.textContent = '';
     }
     
     // Auto-expand all textareas based on their initial content
@@ -1054,7 +1100,11 @@ function recalcPago() {
 }
 
 function updateFormasPago(key) {
-    // Visual feedback — checkbox handles state
+    const isChecked = document.getElementById('ct-fp-' + key).checked;
+    const infoDiv = document.getElementById('ct-fp-info-' + key);
+    if (infoDiv) {
+        infoDiv.style.display = isChecked ? 'block' : 'none';
+    }
 }
 
 function updateClausula(key, value) {
@@ -1120,9 +1170,20 @@ function guardarFirmaDesdeModal() {
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const hasDrawing = imgData.data.some((v, i) => i % 4 === 3 && v > 0);
     if (!hasDrawing) { showAlert('Sin firma', 'Dibuja tu firma antes de guardar.', '⚠️'); return; }
+    
+    const signatureData = canvas.toDataURL('image/png');
     const preview = document.getElementById('firma-preview-img');
     const container = document.getElementById('firma-preview-container');
-    if (preview && container) { preview.src = canvas.toDataURL('image/png'); container.style.display = ''; }
+    if (preview && container) { preview.src = signatureData; container.style.display = ''; }
+    
+    const prestImg = document.getElementById('firma-prestador-img');
+    const prestText = document.getElementById('firma-prestador-text');
+    if (prestImg && prestText) {
+        prestImg.src = signatureData;
+        prestImg.style.display = '';
+        prestText.style.display = 'none';
+    }
+    
     cerrarFirmaModal();
     showAlert('Firma guardada', 'La firma se ha guardado. Recuerda guardar el contrato.', '✅');
 }
@@ -1228,6 +1289,21 @@ function generarPdfContrato(fromId) {
         fecha: document.getElementById('ct-fecha-contrato')?.value || '',
         fecha_inicio: document.getElementById('ct-fecha-inicio')?.value || '',
         notas: document.getElementById('ct-notas')?.value || '',
+        // Payment methods
+        fp_giro: document.getElementById('ct-fp-giro')?.checked,
+        fp_transferencia: document.getElementById('ct-fp-transferencia')?.checked,
+        fp_stripe: document.getElementById('ct-fp-stripe')?.checked,
+        fp_bizum: document.getElementById('ct-fp-bizum')?.checked,
+        fp_efectivo: document.getElementById('ct-fp-efectivo')?.checked,
+        fp_otro: document.getElementById('ct-fp-otro')?.checked,
+        // Payment details
+        cuenta_bancaria: document.getElementById('ct-cuenta-bancaria')?.value || '',
+        prestador_iban: document.getElementById('ct-prestador-iban')?.value || '',
+        stripe_link: document.getElementById('ct-stripe-link')?.value || '',
+        bizum_telefono: document.getElementById('ct-bizum-telefono')?.value || '',
+        otro_metodo: document.getElementById('ct-otro-metodo')?.value || '',
+        // Selected option
+        pago_opcion: _selectedPagoOpcion || '',
     };
 
     const fechaFmt = c.fecha ? new Date(c.fecha + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '___';
@@ -1366,7 +1442,34 @@ function generarPdfContrato(fromId) {
     }
 
     y += 2;
-    addText('La forma de pago seleccionada por el/la Cliente será comunicada y acordada por ambas partes.', margin, 8.5, 'normal');
+    addText('La forma de pago seleccionada por el/la Cliente y acordada por ambas partes es la siguiente:', margin, 8.5, 'normal');
+    y += 2;
+    
+    // Add payment methods details
+    let selectedMethods = [];
+    if (c.fp_giro) selectedMethods.push(`Giro bancario (Cuenta del cliente: ${c.cuenta_bancaria || 'No indicada'})`);
+    if (c.fp_transferencia) selectedMethods.push(`Transferencia bancaria (IBAN a transferir: ${c.prestador_iban || 'No indicado'})`);
+    if (c.fp_stripe) selectedMethods.push(`Tarjeta bancaria vía Stripe (Enlace: ${c.stripe_link || 'No indicado'})`);
+    if (c.fp_bizum) selectedMethods.push(`Bizum (Teléfono: ${c.bizum_telefono || 'No indicado'})`);
+    if (c.fp_efectivo) selectedMethods.push(`Pago en efectivo`);
+    if (c.fp_otro) selectedMethods.push(`Otro método: ${c.otro_metodo || 'No indicado'}`);
+    
+    if (selectedMethods.length > 0) {
+        selectedMethods.forEach(sm => bullet(sm));
+    } else {
+        bullet('A acordar entre las partes.');
+    }
+
+    // Add selected payment timing (A, B, or C) if configured
+    if (c.pago_opcion) {
+        y += 2;
+        let opcionText = '';
+        if (c.pago_opcion === 'A') opcionText = 'Opción A: Pago aplazado.';
+        if (c.pago_opcion === 'B') opcionText = 'Opción B: Pago fraccionado con descuento.';
+        if (c.pago_opcion === 'C') opcionText = 'Opción C: Pago único adelantado con descuento.';
+        addText(`Modalidad de pago seleccionada: ${opcionText}`, margin, 8.5, 'bold');
+    }
+
     y += 2;
     addText('NOTAS IMPORTANTES:', margin, 8.5, 'bold');
     bullet('En caso de retraso en el pago, se aplicará un recargo del 5% más los gastos bancarios ocasionados sobre el importe impagado.');
