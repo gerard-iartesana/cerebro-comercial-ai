@@ -1834,46 +1834,51 @@ function loadBizData() {
 
 // Save business data
 function saveBizData() {
-    const config = {
-        stripe: {
-            active: el('cfg-fp-stripe-toggle')?.checked || false,
-            titular: el('cfg-fp-stripe-titular')?.value || '',
-            pais: el('cfg-fp-stripe-pais')?.value || '',
-            business: el('cfg-fp-stripe-business')?.value || '',
-            email: el('cfg-fp-stripe-email')?.value || ''
-        },
-        transferencia: {
-            active: el('cfg-fp-transferencia-toggle')?.checked || false,
-            banco: el('cfg-fp-transferencia-banco')?.value || '',
-            titular: el('cfg-fp-transferencia-titular')?.value || '',
-            iban: el('cfg-fp-transferencia-iban')?.value || '',
-            concepto: el('cfg-fp-transferencia-concepto')?.value || ''
-        },
-        bizum: {
-            active: el('cfg-fp-bizum-toggle')?.checked || false,
-            telefono: el('cfg-fp-bizum-telefono')?.value || ''
-        },
-        giro: {
-            active: el('cfg-fp-giro-toggle')?.checked || false,
-            banco: el('cfg-fp-giro-banco')?.value || '',
-            iban: el('cfg-fp-giro-iban')?.value || ''
-        },
-        efectivo: {
-            active: el('cfg-fp-efectivo-toggle')?.checked || false
-        },
-        siniva: {
-            active: el('cfg-fp-siniva-toggle')?.checked || false
-        }
-    };
-    localStorage.setItem('cc_biz_config', JSON.stringify(config));
+    try {
+        const config = {
+            stripe: {
+                active: el('cfg-fp-stripe-toggle')?.checked || false,
+                titular: el('cfg-fp-stripe-titular')?.value || '',
+                pais: el('cfg-fp-stripe-pais')?.value || '',
+                business: el('cfg-fp-stripe-business')?.value || '',
+                email: el('cfg-fp-stripe-email')?.value || ''
+            },
+            transferencia: {
+                active: el('cfg-fp-transferencia-toggle')?.checked || false,
+                banco: el('cfg-fp-transferencia-banco')?.value || '',
+                titular: el('cfg-fp-transferencia-titular')?.value || '',
+                iban: el('cfg-fp-transferencia-iban')?.value || '',
+                concepto: el('cfg-fp-transferencia-concepto')?.value || ''
+            },
+            bizum: {
+                active: el('cfg-fp-bizum-toggle')?.checked || false,
+                telefono: el('cfg-fp-bizum-telefono')?.value || ''
+            },
+            giro: {
+                active: el('cfg-fp-giro-toggle')?.checked || false,
+                banco: el('cfg-fp-giro-banco')?.value || '',
+                iban: el('cfg-fp-giro-iban')?.value || ''
+            },
+            efectivo: {
+                active: el('cfg-fp-efectivo-toggle')?.checked || false
+            },
+            siniva: {
+                active: el('cfg-fp-siniva-toggle')?.checked || false
+            }
+        };
+        localStorage.setItem('cc_biz_config', JSON.stringify(config));
 
-    const status = document.getElementById('biz-save-status');
-    if (status) {
-        status.textContent = '✅ Datos guardados';
-        status.style.color = '#34c759';
-        setTimeout(() => { status.textContent = ''; }, 3000);
+        const status = document.getElementById('biz-save-status');
+        if (status) {
+            status.textContent = '✅ Datos guardados';
+            status.style.color = '#34c759';
+            setTimeout(() => { status.textContent = ''; }, 3000);
+        }
+        showToast('Formas de pago guardadas con éxito');
+    } catch (e) {
+        console.error('Error saving biz config', e);
+        showToast('Error al guardar las formas de pago', true);
     }
-    showAlert('Datos guardados', 'La información de la empresa se ha actualizado correctamente.', '✅');
 }
 
 // Save Google Calendar ID
