@@ -1518,7 +1518,7 @@ document.querySelectorAll('.sidebar-nav-item[data-section]').forEach(btn => {
         if (btn.dataset.section === 'emails') loadEmailsLog();
         if (btn.dataset.section === 'calendar') { renderCalGrid(); loadMeetings(); }
         if (btn.dataset.section === 'proposals') loadProposalsModule();
-    });
+        if (btn.dataset.section === 'contracts') loadContratos();
 });
 
 // 5. Initialize Dashboard Metrics
