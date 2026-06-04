@@ -410,49 +410,110 @@ function renderContratos(contratos) {
         const isFirmadoCliente = !!ct.firma_cliente;
         const isFirmadoPrestador = !!ct.firma_prestador;
         const bothSigned = isFirmadoCliente && isFirmadoPrestador;
+        const isPrueba = !!ct.es_prueba;
         const avatarBg = bothSigned ? 'linear-gradient(135deg,#34c759,#30d158)' : 'linear-gradient(135deg,#007AFF,#5856d6)';
         const initial = (ct.cliente_nombre || '?')[0].toUpperCase();
-        const fecha = ct.fecha_contrato ? new Date(ct.fecha_contrato + 'T00:00:00').toLocaleDateString('es-ES') : '—';
-        const servicios = (ct.servicios || []).slice(0, 3).join(', ') || 'Sin servicios definidos';
 
-        // Progress bar (vigencia)
-        let progressHtml = '';
+        // Dates
+        const fechaContrato = ct.fecha_contrato ? new Date(ct.fecha_contrato + 'T00:00:00').toLocaleDateString('es-ES') : '—';
+        let fechaFinHtml = '';
         if (ct.fecha_contrato && ct.duracion_meses > 0) {
             const inicio = new Date(ct.fecha_contrato + 'T00:00:00');
             const fin = new Date(inicio); fin.setMonth(fin.getMonth() + ct.duracion_meses);
-            const now = new Date();
-            const totalDays = (fin - inicio) / 86400000;
-            const elapsed = (now - inicio) / 86400000;
-            const pct = Math.max(0, Math.min(100, (elapsed / totalDays) * 100));
-            const expired = fin < now;
-            const barColor = expired ? '#ff453a' : pct > 75 ? '#ff9500' : '#34c759';
-            progressHtml = `<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--text-grey);margin-bottom:3px"><span>${expired ? 'Expirado' : Math.round(pct) + '% transcurrido'}</span><span>${fin.toLocaleDateString('es-ES')}</span></div><div style="height:4px;border-radius:2px;background:rgba(0,0,0,0.05);overflow:hidden"><div style="height:100%;width:${pct}%;background:${barColor};border-radius:2px;transition:width 0.5s"></div></div></div>`;
+            const expirado = fin < new Date();
+            fechaFinHtml = `<span style="color:${expirado ? '#ff3b30' : 'var(--text-grey)'};font-weight:${expirado ? '700' : '400'}">🏁 ${fin.toLocaleDateString('es-ES')}${expirado ? ' (expirado)' : ''}</span>`;
         }
 
-        return `<div style="background:var(--bg-card);border-radius:18px;border:1px solid ${bothSigned ? 'rgba(52,199,89,0.2)' : 'var(--border-color)'};padding:22px;transition:all 0.2s;cursor:pointer" onmouseover="this.style.boxShadow='0 6px 24px rgba(0,0,0,0.08)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="editarContrato('${ct.id}')">
+        // Payment method
+        const formasPago = ct.formas_pago || {};
+        const metodoPagoMap = { transferencia: 'Transferencia bancaria', giro: 'Giro bancario', bizum: 'Bizum', stripe: 'Tarjeta (Stripe)' };
+        let pagoHtml = '';
+        if (formasPago.seleccionada) {
+            pagoHtml = `<div style="background:rgba(0,113,227,0.04);border-radius:10px;padding:8px 14px;margin-bottom:14px;font-size:0.72rem;display:flex;align-items:center;gap:8px;border:1px solid rgba(0,113,227,0.1)">
+                <span style="font-weight:700;color:#0071e3">💳 Forma de pago:</span>
+                <span style="color:var(--text-main);font-weight:600">${metodoPagoMap[formasPago.seleccionada] || formasPago.seleccionada}</span>
+                ${formasPago.opcion ? `<span style="color:#86868b"> · Opción ${formasPago.opcion}</span>` : ''}
+            </div>`;
+        }
+
+        // Client data section
+        let clientDataHtml = '';
+        const datos = ct.datos_cliente || {};
+        const hasClientData = ct.cliente_nif || ct.cliente_profesion || datos.nombre_negocio || datos.cif_negocio || ct.cliente_direccion || ct.cliente_email || ct.cliente_telefono;
+        if (hasClientData) {
+            let rows = '';
+            if (ct.cliente_nif) rows += `<span>NIF: <strong style="color:var(--text-main)">${ct.cliente_nif}</strong></span>`;
+            if (ct.cliente_profesion) rows += `<span>Profesión: ${ct.cliente_profesion}</span>`;
+            if (datos.nombre_negocio || ct.cliente_nombre) rows += `<span>Empresa: <strong style="color:var(--text-main)">${datos.nombre_negocio || ct.cliente_nombre}</strong></span>`;
+            if (datos.cif_negocio || ct.cliente_nif) rows += `<span>CIF: ${datos.cif_negocio || ct.cliente_nif}</span>`;
+            if (ct.cliente_direccion) rows += `<span style="grid-column:1/-1">📍 ${ct.cliente_direccion}</span>`;
+            if (ct.cliente_email) rows += `<span>✉️ ${ct.cliente_email}</span>`;
+            if (ct.cliente_telefono) rows += `<span>📞 ${ct.cliente_telefono}</span>`;
+            if (datos.web) rows += `<span>🌐 ${datos.web}</span>`;
+            clientDataHtml = `<div style="background:#f5f5f7;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:0.72rem;color:var(--text-grey);line-height:1.7">
+                <div style="font-weight:700;color:var(--text-main);margin-bottom:4px;font-size:0.74rem">📋 Datos del cliente</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px">${rows}</div>
+            </div>`;
+        }
+
+        // Signature preview
+        let firmaHtml = '';
+        if (isFirmadoCliente && (ct.firma_cliente || ct.firmado_at)) {
+            const firmaImg = ct.firma_cliente && ct.firma_cliente.startsWith('data:') ? `<img src="${ct.firma_cliente}" alt="Firma" style="height:30px;max-width:80px;object-fit:contain;border-radius:4px" />` : '';
+            firmaHtml = `<div style="background:rgba(52,199,89,0.04);border-radius:10px;padding:8px 14px;margin-bottom:14px;font-size:0.72rem;display:flex;align-items:center;gap:10px">
+                ${firmaImg}
+                <div>
+                    <div style="font-weight:700;color:#34c759">✍️ ${ct.firma_nombre_firmante || ct.cliente_nombre || 'CLIENTE'}</div>
+                    ${ct.firmado_at ? `<div style="color:var(--text-grey)">${new Date(ct.firmado_at).toLocaleString('es-ES')}</div>` : ''}
+                </div>
+            </div>`;
+        }
+
+        // Border style
+        const borderStyle = isPrueba ? '2px dashed #ff9500' : `1px solid ${bothSigned ? 'rgba(52,199,89,0.2)' : 'var(--border-color)'}`;
+        const bgStyle = isPrueba ? 'rgba(255,149,0,0.03)' : 'var(--bg-card)';
+
+        return `<div style="background:${bgStyle};border-radius:18px;border:${borderStyle};padding:22px;transition:all 0.2s;display:flex;flex-direction:column" onmouseover="this.style.boxShadow='0 6px 24px rgba(0,0,0,0.08)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
+            <!-- Header: Avatar + Name -->
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
                 <div style="width:48px;height:48px;border-radius:50%;background:${avatarBg};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.2rem;flex-shrink:0">${initial}</div>
                 <div style="flex:1;min-width:0">
-                    <div style="font-weight:700;font-size:1.05rem;letter-spacing:-0.01em;color:var(--text-main)">${ct.cliente_nombre || 'Sin cliente'}</div>
+                    <div style="font-weight:700;font-size:1.05rem;letter-spacing:-0.01em;color:var(--text-main)">${isPrueba ? '<span style="margin-right:4px" title="Contrato de prueba">🧪</span>' : ''}${ct.cliente_nombre || 'Sin cliente'}</div>
                     <div style="font-size:0.74rem;color:var(--text-grey);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ct.cliente_email || '—'} · ${ct.cliente_telefono || '—'}</div>
                 </div>
             </div>
+
+            <!-- Dual Signature Badges -->
             <div style="display:flex;gap:6px;margin-bottom:14px">
                 <span style="flex:1;text-align:center;font-size:0.68rem;padding:5px 8px;border-radius:8px;font-weight:700;background:${isFirmadoCliente ? 'rgba(52,199,89,0.08)' : 'rgba(255,149,0,0.08)'};color:${isFirmadoCliente ? '#34c759' : '#ff9500'};border:1px solid ${isFirmadoCliente ? 'rgba(52,199,89,0.15)' : 'rgba(255,149,0,0.15)'}">${isFirmadoCliente ? '✅ Cliente firmado' : '⏳ Cliente no firmado'}</span>
-                <span style="flex:1;text-align:center;font-size:0.68rem;padding:5px 8px;border-radius:8px;font-weight:700;background:${isFirmadoPrestador ? 'rgba(0,113,227,0.06)' : 'rgba(255,149,0,0.08)'};color:${isFirmadoPrestador ? '#007AFF' : '#ff9500'};border:1px solid ${isFirmadoPrestador ? 'rgba(0,113,227,0.12)' : 'rgba(255,149,0,0.15)'}">${isFirmadoPrestador ? '🖊️ Prestador firmado' : '⏳ Prestador no firmado'}</span>
+                <span style="flex:1;text-align:center;font-size:0.68rem;padding:5px 8px;border-radius:8px;font-weight:700;background:${isFirmadoPrestador ? 'rgba(0,113,227,0.06)' : 'rgba(255,149,0,0.08)'};color:${isFirmadoPrestador ? '#0071e3' : '#ff9500'};border:1px solid ${isFirmadoPrestador ? 'rgba(0,113,227,0.12)' : 'rgba(255,149,0,0.15)'}">${isFirmadoPrestador ? '🖊️ Prestador firmado' : '⏳ Prestador no firmado'}</span>
             </div>
-            <div style="font-size:0.78rem;color:var(--text-grey);display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px">
+
+            <!-- Contract Info -->
+            <div style="font-size:0.78rem;color:var(--text-grey);display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">
                 ${ct.codigo_contrato ? `<span style="font-family:monospace;font-weight:600;color:#5856d6">📋 ${ct.codigo_contrato}</span>` : ''}
                 <span>💰 ${(parseFloat(ct.precio_total) || 0).toLocaleString('es-ES')}€</span>
                 ${ct.precio_mensual > 0 ? `<span>🔄 ${ct.precio_mensual}€/mes</span>` : ''}
                 <span>📅 ${ct.duracion_meses || 0} meses</span>
-                <span>🕐 ${fecha}</span>
+                <span>🕐 ${fechaContrato}</span>
+                ${fechaFinHtml}
             </div>
-            <div style="font-size:0.72rem;color:var(--text-grey);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📌 ${servicios}</div>
-            ${progressHtml}
-            <div style="display:flex;gap:6px;margin-top:14px;justify-content:flex-end" onclick="event.stopPropagation()">
-                <button class="btn-secondary" style="padding:5px 10px;font-size:0.72rem" onclick="editarContrato('${ct.id}')">✏️ Editar</button>
-                <button class="btn-secondary" style="padding:5px 10px;font-size:0.72rem;color:#ff453a;border-color:rgba(255,69,58,0.2)" onclick="eliminarContrato('${ct.id}','${(ct.cliente_nombre||'').replace(/'/g,'\\&#39;')}')">🗑️</button>
+
+            <!-- Payment Method -->
+            ${pagoHtml}
+
+            <!-- Client Data Section -->
+            ${clientDataHtml}
+
+            <!-- Signature Preview -->
+            ${firmaHtml}
+
+            <!-- Action Buttons -->
+            <div style="margin-top:auto;padding-top:4px;display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn-secondary" style="font-size:0.7rem;padding:5px 12px" onclick="event.stopPropagation();editarContrato('${ct.id}')">👁 Ver / Editar</button>
+                <button class="btn-secondary" style="font-size:0.7rem;padding:5px 12px;border-color:rgba(0,113,227,0.2);color:#0071e3" onclick="event.stopPropagation();generarPdfContrato('${ct.id}')">📄 PDF</button>
+                <button class="btn-secondary" style="font-size:0.7rem;padding:5px 12px;border-color:rgba(255,59,48,0.2);color:#ff3b30" onclick="event.stopPropagation();eliminarContrato('${ct.id}','${(ct.cliente_nombre||'').replace(/'/g,'\\&#39;')}')">🗑 Borrar</button>
+                <button class="btn-secondary" style="font-size:0.7rem;padding:5px 12px;margin-left:auto;border-color:${isPrueba ? '#ff9500' : 'rgba(0,0,0,0.1)'};background:${isPrueba ? 'rgba(255,149,0,0.1)' : 'transparent'};color:${isPrueba ? '#ff9500' : '#aeaeb2'}" onclick="event.stopPropagation();togglePruebaContrato('${ct.id}',${isPrueba})" title="${isPrueba ? 'Quitar modo prueba' : 'Marcar como prueba'}">🧪 ${isPrueba ? 'Quitar prueba' : 'Prueba'}</button>
             </div>
         </div>`;
     }).join('');
@@ -618,6 +679,24 @@ async function eliminarContrato(id, nombre) {
     }
 }
 
+async function togglePruebaContrato(id, currentValue) {
+    const newVal = !currentValue;
+    try {
+        const res = await fetch(`/api/contratos?id=${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, es_prueba: newVal })
+        });
+        const result = await res.json();
+        if (result.success) {
+            showAlert(newVal ? '🧪 Prueba' : '✅ Real', newVal ? 'Contrato marcado como prueba' : 'Contrato marcado como real', newVal ? '🧪' : '✅');
+            await loadContratos();
+        }
+    } catch (e) {
+        showAlert('Error', e.message, '❌');
+    }
+}
+
 // ── Firma Canvas ─────────────────────────────────────────────
 let firmaDrawing = false;
 function initFirmaCanvas() {
@@ -662,7 +741,12 @@ function clearFirma() {
 }
 
 // ── PDF Generation ───────────────────────────────────────────
-function generarPdfContrato() {
+function generarPdfContrato(fromId) {
+    // If called from a card with ID, load into editor first then generate
+    if (fromId && typeof fromId === 'string') {
+        const ct = contratosData.find(c => c.id === fromId);
+        if (ct) { editarContrato(fromId); setTimeout(() => generarPdfContrato(), 200); return; }
+    }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const W = 210, H = 297, margin = 25, cW = W - margin * 2;
