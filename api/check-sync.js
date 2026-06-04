@@ -59,39 +59,26 @@ module.exports = async function handler(req, res) {
     results.supabase = { ok: false, error: e.message };
   }
 
-  // 5. Google Calendar — real ping with Service Account
+  // 5. Google Calendar — real ping with OAuth2 refresh token
   try {
     const calId = process.env.GOOGLE_CALENDAR_ID;
-    const saKeyRaw = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-    if (!calId || !saKeyRaw) {
+    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+    if (!calId || !refreshToken) {
       results.google_calendar = { ok: false, error: 'Pendiente configurar', pending: true };
     } else {
-      // Parse service account key and generate JWT
-      const crypto = require('crypto');
-      const sa = JSON.parse(saKeyRaw);
-
-      // Create JWT for Google OAuth2
-      const now = Math.floor(Date.now() / 1000);
-      const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
-      const payload = Buffer.from(JSON.stringify({
-        iss: sa.client_email,
-        scope: 'https://www.googleapis.com/auth/calendar.readonly',
-        aud: 'https://oauth2.googleapis.com/token',
-        iat: now,
-        exp: now + 3600
-      })).toString('base64url');
-
-      const signable = header + '.' + payload;
-      const sign = crypto.createSign('RSA-SHA256');
-      sign.update(signable);
-      const signature = sign.sign(sa.private_key, 'base64url');
-      const jwt = signable + '.' + signature;
-
-      // Exchange JWT for access token
+      // Use refresh token to get access token
       const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+        body: new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          refresh_token: refreshToken,
+          grant_type: 'refresh_token'
+        }).toString()
       });
       const tokenData = await tokenRes.json();
 
