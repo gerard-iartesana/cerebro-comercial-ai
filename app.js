@@ -151,6 +151,8 @@ function switchConfigTab(tabName) {
     if (tabName === 'sync') checkSyncStatus();
     // Auto-load storage data when switching to the storage tab
     if (tabName === 'storage') loadStorageData();
+    // Auto-load contratos when switching to the contracts tab
+    if (tabName === 'contracts') loadContratos();
 }
 
 // ── User Management ──────────────────────────────────────────
@@ -359,6 +361,306 @@ async function toggleUserActive(userId, currentIsActive) {
         showAlert('Error', 'No se pudo cambiar el estado: ' + e.message, '❌');
     }
 }
+// ── Contratos Management ─────────────────────────────────────
+let contratosData = [];
+let contratoEditId = null;
+
+async function loadContratos() {
+    try {
+        const res = await fetch('/api/contratos');
+        const data = await res.json();
+        contratosData = data.contratos || [];
+        renderContratos(contratosData);
+    } catch (e) {
+        console.error('Error loading contratos:', e);
+        document.getElementById('contratos-grid').innerHTML = `<div style="text-align:center;padding:40px;color:#ff453a;font-size:0.85rem;grid-column:1/-1">Error al cargar: ${e.message}</div>`;
+    }
+}
+
+function filterContratos() {
+    const q = (document.getElementById('contrato-search')?.value || '').toLowerCase().trim();
+    if (!q) { renderContratos(contratosData); return; }
+    const filtered = contratosData.filter(ct =>
+        (ct.cliente_nombre || '').toLowerCase().includes(q) ||
+        (ct.cliente_email || '').toLowerCase().includes(q) ||
+        (ct.codigo_contrato || '').toLowerCase().includes(q) ||
+        (ct.notas || '').toLowerCase().includes(q)
+    );
+    renderContratos(filtered);
+}
+
+function renderContratos(contratos) {
+    // Stats
+    const total = contratos.length;
+    const firmados = contratos.filter(c => c.estado === 'firmado' || (c.firma_cliente && c.firma_prestador)).length;
+    const pendientes = total - firmados;
+    const valor = contratos.reduce((s, c) => s + (parseFloat(c.precio_total) || 0), 0);
+    document.getElementById('ct-stat-total').textContent = total;
+    document.getElementById('ct-stat-firmados').textContent = firmados;
+    document.getElementById('ct-stat-pendientes').textContent = pendientes;
+    document.getElementById('ct-stat-valor').textContent = valor.toLocaleString('es-ES') + '€';
+
+    const grid = document.getElementById('contratos-grid');
+    if (contratos.length === 0) {
+        grid.innerHTML = `<div style="text-align:center;padding:50px 20px;grid-column:1/-1"><div style="font-size:3rem;margin-bottom:12px;opacity:0.3">📝</div><div style="font-size:0.95rem;font-weight:600;color:var(--text-grey)">No hay contratos</div><div style="font-size:0.78rem;color:var(--text-grey);margin-top:4px">Crea tu primer contrato con el botón "+ Nuevo contrato"</div></div>`;
+        return;
+    }
+
+    grid.innerHTML = contratos.map(ct => {
+        const isFirmadoCliente = !!ct.firma_cliente;
+        const isFirmadoPrestador = !!ct.firma_prestador;
+        const bothSigned = isFirmadoCliente && isFirmadoPrestador;
+        const avatarBg = bothSigned ? 'linear-gradient(135deg,#34c759,#30d158)' : 'linear-gradient(135deg,#007AFF,#5856d6)';
+        const initial = (ct.cliente_nombre || '?')[0].toUpperCase();
+        const fecha = ct.fecha_contrato ? new Date(ct.fecha_contrato + 'T00:00:00').toLocaleDateString('es-ES') : '—';
+        const servicios = (ct.servicios || []).slice(0, 3).join(', ') || 'Sin servicios definidos';
+
+        // Progress bar (vigencia)
+        let progressHtml = '';
+        if (ct.fecha_contrato && ct.duracion_meses > 0) {
+            const inicio = new Date(ct.fecha_contrato + 'T00:00:00');
+            const fin = new Date(inicio); fin.setMonth(fin.getMonth() + ct.duracion_meses);
+            const now = new Date();
+            const totalDays = (fin - inicio) / 86400000;
+            const elapsed = (now - inicio) / 86400000;
+            const pct = Math.max(0, Math.min(100, (elapsed / totalDays) * 100));
+            const expired = fin < now;
+            const barColor = expired ? '#ff453a' : pct > 75 ? '#ff9500' : '#34c759';
+            progressHtml = `<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--text-grey);margin-bottom:3px"><span>${expired ? 'Expirado' : Math.round(pct) + '% transcurrido'}</span><span>${fin.toLocaleDateString('es-ES')}</span></div><div style="height:4px;border-radius:2px;background:rgba(0,0,0,0.05);overflow:hidden"><div style="height:100%;width:${pct}%;background:${barColor};border-radius:2px;transition:width 0.5s"></div></div></div>`;
+        }
+
+        return `<div style="background:var(--bg-card);border-radius:18px;border:1px solid ${bothSigned ? 'rgba(52,199,89,0.2)' : 'var(--border-color)'};padding:22px;transition:all 0.2s;cursor:pointer" onmouseover="this.style.boxShadow='0 6px 24px rgba(0,0,0,0.08)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="editarContrato('${ct.id}')">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+                <div style="width:48px;height:48px;border-radius:50%;background:${avatarBg};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.2rem;flex-shrink:0">${initial}</div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:700;font-size:1.05rem;letter-spacing:-0.01em;color:var(--text-main)">${ct.cliente_nombre || 'Sin cliente'}</div>
+                    <div style="font-size:0.74rem;color:var(--text-grey);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ct.cliente_email || '—'} · ${ct.cliente_telefono || '—'}</div>
+                </div>
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:14px">
+                <span style="flex:1;text-align:center;font-size:0.68rem;padding:5px 8px;border-radius:8px;font-weight:700;background:${isFirmadoCliente ? 'rgba(52,199,89,0.08)' : 'rgba(255,149,0,0.08)'};color:${isFirmadoCliente ? '#34c759' : '#ff9500'};border:1px solid ${isFirmadoCliente ? 'rgba(52,199,89,0.15)' : 'rgba(255,149,0,0.15)'}">${isFirmadoCliente ? '✅ Cliente firmado' : '⏳ Cliente no firmado'}</span>
+                <span style="flex:1;text-align:center;font-size:0.68rem;padding:5px 8px;border-radius:8px;font-weight:700;background:${isFirmadoPrestador ? 'rgba(0,113,227,0.06)' : 'rgba(255,149,0,0.08)'};color:${isFirmadoPrestador ? '#007AFF' : '#ff9500'};border:1px solid ${isFirmadoPrestador ? 'rgba(0,113,227,0.12)' : 'rgba(255,149,0,0.15)'}">${isFirmadoPrestador ? '🖊️ Prestador firmado' : '⏳ Prestador no firmado'}</span>
+            </div>
+            <div style="font-size:0.78rem;color:var(--text-grey);display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px">
+                ${ct.codigo_contrato ? `<span style="font-family:monospace;font-weight:600;color:#5856d6">📋 ${ct.codigo_contrato}</span>` : ''}
+                <span>💰 ${(parseFloat(ct.precio_total) || 0).toLocaleString('es-ES')}€</span>
+                ${ct.precio_mensual > 0 ? `<span>🔄 ${ct.precio_mensual}€/mes</span>` : ''}
+                <span>📅 ${ct.duracion_meses || 0} meses</span>
+                <span>🕐 ${fecha}</span>
+            </div>
+            <div style="font-size:0.72rem;color:var(--text-grey);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📌 ${servicios}</div>
+            ${progressHtml}
+            <div style="display:flex;gap:6px;margin-top:14px;justify-content:flex-end" onclick="event.stopPropagation()">
+                <button class="btn-secondary" style="padding:5px 10px;font-size:0.72rem" onclick="editarContrato('${ct.id}')">✏️ Editar</button>
+                <button class="btn-secondary" style="padding:5px 10px;font-size:0.72rem;color:#ff453a;border-color:rgba(255,69,58,0.2)" onclick="eliminarContrato('${ct.id}','${(ct.cliente_nombre||'').replace(/'/g,'\\&#39;')}')">🗑️</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function switchContratoTab(tab) {
+    document.getElementById('contrato-tab-lista').style.display = tab === 'lista' ? '' : 'none';
+    document.getElementById('contrato-tab-editor').style.display = tab === 'editor' ? '' : 'none';
+    document.querySelectorAll('#contratos-subtabs button').forEach(b => {
+        const isActive = b.dataset.tab === tab;
+        b.style.fontWeight = isActive ? '700' : '500';
+        b.style.background = isActive ? '#fff' : 'transparent';
+        b.style.color = isActive ? 'var(--accent-blue)' : 'var(--text-grey)';
+        b.style.boxShadow = isActive ? '0 1px 4px rgba(0,0,0,0.08)' : 'none';
+    });
+    if (tab === 'editor') initFirmaCanvas();
+}
+
+function nuevoContrato() {
+    contratoEditId = null;
+    const year = new Date().getFullYear();
+    const num = contratosData.filter(c => (c.codigo_contrato || '').includes(`CC-${year}`)).length;
+    const codigo = `CC-${year}-${String(num + 1).padStart(3, '0')}`;
+    document.getElementById('editor-title').textContent = 'Nuevo Contrato';
+    document.getElementById('editor-codigo').textContent = codigo;
+    // Clear all fields
+    ['ct-cliente-nombre','ct-cliente-email','ct-cliente-telefono','ct-cliente-nif','ct-cliente-direccion','ct-cliente-profesion'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.getElementById('ct-cliente-representacion').value = 'en su propio nombre y representación';
+    document.getElementById('ct-servicios').value = '';
+    document.getElementById('ct-precio-total').value = '';
+    document.getElementById('ct-precio-mensual').value = '';
+    document.getElementById('ct-duracion').value = '12';
+    document.getElementById('ct-lugar').value = 'Mahón (Menorca)';
+    document.getElementById('ct-fecha-contrato').value = new Date().toISOString().split('T')[0];
+    document.getElementById('ct-fecha-inicio').value = '';
+    document.getElementById('ct-notas').value = '';
+    clearFirma();
+    switchContratoTab('editor');
+}
+
+function editarContrato(id) {
+    const ct = contratosData.find(c => c.id === id);
+    if (!ct) return;
+    contratoEditId = id;
+    document.getElementById('editor-title').textContent = 'Editar: ' + (ct.cliente_nombre || 'Contrato');
+    document.getElementById('editor-codigo').textContent = ct.codigo_contrato || '';
+    document.getElementById('ct-cliente-nombre').value = ct.cliente_nombre || '';
+    document.getElementById('ct-cliente-email').value = ct.cliente_email || '';
+    document.getElementById('ct-cliente-telefono').value = ct.cliente_telefono || '';
+    document.getElementById('ct-cliente-nif').value = ct.cliente_nif || '';
+    document.getElementById('ct-cliente-direccion').value = ct.cliente_direccion || '';
+    document.getElementById('ct-cliente-profesion').value = ct.cliente_profesion || '';
+    document.getElementById('ct-cliente-representacion').value = ct.cliente_representacion || 'en su propio nombre y representación';
+    document.getElementById('ct-prestador-nombre').value = ct.prestador_nombre || 'Gerard Fanals';
+    document.getElementById('ct-prestador-empresa').value = ct.prestador_empresa || 'Vigila y Actúa S.L.';
+    document.getElementById('ct-prestador-cif').value = ct.prestador_cif || 'B 57973562';
+    document.getElementById('ct-prestador-actividad').value = ct.prestador_actividad || '';
+    document.getElementById('ct-prestador-direccion').value = ct.prestador_direccion || '';
+    document.getElementById('ct-servicios').value = (ct.servicios || []).join('\n');
+    document.getElementById('ct-precio-total').value = ct.precio_total || '';
+    document.getElementById('ct-precio-mensual').value = ct.precio_mensual || '';
+    document.getElementById('ct-duracion').value = ct.duracion_meses || 12;
+    document.getElementById('ct-lugar').value = ct.lugar || 'Mahón (Menorca)';
+    document.getElementById('ct-fecha-contrato').value = ct.fecha_contrato || '';
+    document.getElementById('ct-fecha-inicio').value = ct.fecha_inicio || '';
+    document.getElementById('ct-notas').value = ct.notas || '';
+    // Load firma prestador if exists
+    clearFirma();
+    if (ct.firma_prestador) {
+        const preview = document.getElementById('firma-preview-img');
+        const container = document.getElementById('firma-preview-container');
+        preview.src = ct.firma_prestador;
+        container.style.display = '';
+    }
+    switchContratoTab('editor');
+}
+
+async function guardarContrato() {
+    const btn = document.getElementById('btn-guardar-contrato');
+    btn.textContent = '⏳ Guardando...';
+    btn.disabled = true;
+
+    const serviciosRaw = document.getElementById('ct-servicios').value;
+    const servicios = serviciosRaw.split('\n').map(s => s.trim()).filter(Boolean);
+
+    // Get firma from canvas
+    const canvas = document.getElementById('firma-canvas');
+    let firmaPrestador = null;
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const hasDrawing = imgData.data.some((v, i) => i % 4 === 3 && v > 0);
+        if (hasDrawing) firmaPrestador = canvas.toDataURL('image/png');
+    }
+    // Keep existing firma if canvas is empty
+    if (!firmaPrestador && contratoEditId) {
+        const existing = contratosData.find(c => c.id === contratoEditId);
+        if (existing) firmaPrestador = existing.firma_prestador;
+    }
+
+    const body = {
+        codigo_contrato: document.getElementById('editor-codigo').textContent,
+        cliente_nombre: document.getElementById('ct-cliente-nombre').value,
+        cliente_email: document.getElementById('ct-cliente-email').value,
+        cliente_telefono: document.getElementById('ct-cliente-telefono').value,
+        cliente_nif: document.getElementById('ct-cliente-nif').value,
+        cliente_direccion: document.getElementById('ct-cliente-direccion').value,
+        cliente_profesion: document.getElementById('ct-cliente-profesion').value,
+        prestador_nombre: document.getElementById('ct-prestador-nombre').value,
+        prestador_empresa: document.getElementById('ct-prestador-empresa').value,
+        prestador_cif: document.getElementById('ct-prestador-cif').value,
+        prestador_actividad: document.getElementById('ct-prestador-actividad').value,
+        prestador_direccion: document.getElementById('ct-prestador-direccion').value,
+        servicios,
+        precio_total: parseFloat(document.getElementById('ct-precio-total').value) || 0,
+        precio_mensual: parseFloat(document.getElementById('ct-precio-mensual').value) || 0,
+        duracion_meses: parseInt(document.getElementById('ct-duracion').value) || 12,
+        fecha_contrato: document.getElementById('ct-fecha-contrato').value || null,
+        fecha_inicio: document.getElementById('ct-fecha-inicio').value || null,
+        notas: document.getElementById('ct-notas').value,
+        firma_prestador: firmaPrestador,
+        estado: firmaPrestador ? 'firmado_prestador' : 'no_firmado',
+    };
+
+    try {
+        const method = contratoEditId ? 'PUT' : 'POST';
+        const url = contratoEditId ? `/api/contratos?id=${contratoEditId}` : '/api/contratos';
+        if (contratoEditId) body.id = contratoEditId;
+
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const result = await res.json();
+        if (result.success) {
+            showAlert('Contrato guardado', 'El contrato se ha guardado correctamente.', '✅');
+            await loadContratos();
+            switchContratoTab('lista');
+        } else {
+            showAlert('Error', result.error || 'No se pudo guardar el contrato.', '❌');
+        }
+    } catch (e) {
+        showAlert('Error', e.message, '❌');
+    }
+    btn.textContent = '💾 Guardar';
+    btn.disabled = false;
+}
+
+async function eliminarContrato(id, nombre) {
+    if (!confirm(`¿Eliminar el contrato de "${nombre}"? Esta acción no se puede deshacer.`)) return;
+    try {
+        const res = await fetch(`/api/contratos?id=${id}`, { method: 'DELETE' });
+        const result = await res.json();
+        if (result.success) {
+            showAlert('Eliminado', 'Contrato eliminado correctamente.', '🗑️');
+            await loadContratos();
+        } else {
+            showAlert('Error', result.error || 'No se pudo eliminar.', '❌');
+        }
+    } catch (e) {
+        showAlert('Error', e.message, '❌');
+    }
+}
+
+// ── Firma Canvas ─────────────────────────────────────────────
+let firmaDrawing = false;
+function initFirmaCanvas() {
+    const canvas = document.getElementById('firma-canvas');
+    if (!canvas || canvas._initialized) return;
+    canvas._initialized = true;
+    const ctx = canvas.getContext('2d');
+    ctx.strokeStyle = '#1d1d1f';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches ? e.touches[0] : e;
+        return {
+            x: (touch.clientX - rect.left) * (canvas.width / rect.width),
+            y: (touch.clientY - rect.top) * (canvas.height / rect.height)
+        };
+    }
+    function startDraw(e) { e.preventDefault(); firmaDrawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }
+    function draw(e) { if (!firmaDrawing) return; e.preventDefault(); const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }
+    function endDraw() { firmaDrawing = false; }
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', endDraw);
+    canvas.addEventListener('mouseleave', endDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', endDraw);
+}
+
+function clearFirma() {
+    const canvas = document.getElementById('firma-canvas');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    const container = document.getElementById('firma-preview-container');
+    if (container) container.style.display = 'none';
+}
+
 // ── Storage Data ─────────────────────────────────────────────
 function formatFileSize(bytes) {
     if (!bytes || bytes === 0) return '0 B';

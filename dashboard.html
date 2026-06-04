@@ -2991,51 +2991,145 @@
                     <h1>Contratos Comerciales</h1>
                     <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Firma digital & Acuerdos</span>
                 </div>
-                <div class="stat-card-glass" style="padding:30px">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                        <p style="color:var(--text-grey);font-size:0.9rem;margin:0">Listado de contratos de servicios y consultoría de iadebarrio.com.</p>
-                        <button class="btn-primary" style="padding:8px 16px; font-size:0.8rem">+ Nuevo Contrato</button>
+
+                <!-- Sub-tabs -->
+                <div style="display:flex;gap:0;margin-bottom:20px;background:rgba(0,0,0,0.04);border-radius:12px;padding:3px" id="contratos-subtabs">
+                    <button class="contrato-tab-btn active" data-tab="lista" onclick="switchContratoTab('lista')" style="flex:1;padding:10px 12px;border-radius:10px;border:none;cursor:pointer;font-size:0.82rem;font-weight:700;background:#fff;color:var(--accent-blue);box-shadow:0 1px 4px rgba(0,0,0,0.08);transition:all 0.2s;font-family:inherit">📋 Lista</button>
+                    <button class="contrato-tab-btn" data-tab="editor" onclick="switchContratoTab('editor')" style="flex:1;padding:10px 12px;border-radius:10px;border:none;cursor:pointer;font-size:0.82rem;font-weight:500;background:transparent;color:var(--text-grey);box-shadow:none;transition:all 0.2s;font-family:inherit">📝 Editor</button>
+                </div>
+
+                <!-- TAB: Lista de contratos -->
+                <div id="contrato-tab-lista">
+                    <!-- Search + New -->
+                    <div style="display:flex;gap:12px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
+                        <input class="nl-config-input" id="contrato-search" placeholder="🔍 Buscar cliente, email, código..." oninput="filterContratos()" style="flex:1;min-width:200px;margin-bottom:0" />
+                        <button class="btn-secondary" style="padding:8px 14px;font-size:0.82rem;flex-shrink:0" onclick="loadContratos()" title="Refrescar">🔄</button>
+                        <button class="btn-primary" style="padding:8px 16px;font-size:0.82rem;flex-shrink:0" onclick="nuevoContrato()">+ Nuevo contrato</button>
                     </div>
-                    
-                    <div class="spreadsheet-container" style="overflow-x:auto">
-                        <table class="spreadsheet-table" style="width:100%; border-collapse:collapse;">
-                            <thead>
-                                <tr>
-                                    <th style="text-align:left; padding:12px">Cliente</th>
-                                    <th style="text-align:left; padding:12px">Servicio / Proyecto</th>
-                                    <th style="text-align:right; padding:12px">Importe</th>
-                                    <th style="text-align:left; padding:12px">Fecha Firma</th>
-                                    <th style="text-align:center; padding:12px">Estado</th>
-                                    <th style="text-align:center; padding:12px">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td style="padding:12px; font-weight:600">iadebarrio.com</td>
-                                    <td style="padding:12px">Sistema Captación AI & CRM</td>
-                                    <td style="padding:12px; text-align:right">€1,500/mes</td>
-                                    <td style="padding:12px">01/06/2026</td>
-                                    <td style="padding:12px; text-align:center"><span style="background:rgba(52,199,89,0.1); color:#34c759; padding:4px 10px; border-radius:10px; font-size:0.75rem; font-weight:700">Firmado</span></td>
-                                    <td style="padding:12px; text-align:center"><button class="btn-secondary" style="padding:4px 8px; font-size:0.75rem">Ver PDF</button></td>
-                                </tr>
-                                <tr>
-                                    <td style="padding:12px; font-weight:600">Basquet Manacor</td>
-                                    <td style="padding:12px">Secuencia Outreach &amp; Leads Decisores</td>
-                                    <td style="padding:12px; text-align:right">€450/mes</td>
-                                    <td style="padding:12px">Pendiente</td>
-                                    <td style="padding:12px; text-align:center"><span style="background:rgba(255,149,0,0.1); color:#ff9500; padding:4px 10px; border-radius:10px; font-size:0.75rem; font-weight:700">Enviado</span></td>
-                                    <td style="padding:12px; text-align:center"><button class="btn-secondary" style="padding:4px 8px; font-size:0.75rem">Reenviar</button></td>
-                                </tr>
-                                <tr>
-                                    <td style="padding:12px; font-weight:600">Cabinbox S.L.</td>
-                                    <td style="padding:12px">Auditoría Procesos &amp; Automatización</td>
-                                    <td style="padding:12px; text-align:right">€3,200</td>
-                                    <td style="padding:12px">18/05/2026</td>
-                                    <td style="padding:12px; text-align:center"><span style="background:rgba(52,199,89,0.1); color:#34c759; padding:4px 10px; border-radius:10px; font-size:0.75rem; font-weight:700">Firmado</span></td>
-                                    <td style="padding:12px; text-align:center"><button class="btn-secondary" style="padding:4px 8px; font-size:0.75rem">Ver PDF</button></td>
-                                </tr>
-                            </tbody>
-                        </table>
+
+                    <!-- Stats mini -->
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px" id="contrato-stats">
+                        <div class="stat-card-glass" style="text-align:center;padding:14px">
+                            <div style="font-size:0.68rem;color:var(--text-grey);font-weight:600">Total</div>
+                            <div style="font-size:1.4rem;font-weight:800;color:var(--text-main)" id="ct-stat-total">—</div>
+                        </div>
+                        <div class="stat-card-glass" style="text-align:center;padding:14px">
+                            <div style="font-size:0.68rem;color:var(--text-grey);font-weight:600">Firmados</div>
+                            <div style="font-size:1.4rem;font-weight:800;color:#34c759" id="ct-stat-firmados">—</div>
+                        </div>
+                        <div class="stat-card-glass" style="text-align:center;padding:14px">
+                            <div style="font-size:0.68rem;color:var(--text-grey);font-weight:600">Pendientes</div>
+                            <div style="font-size:1.4rem;font-weight:800;color:#ff9500" id="ct-stat-pendientes">—</div>
+                        </div>
+                        <div class="stat-card-glass" style="text-align:center;padding:14px">
+                            <div style="font-size:0.68rem;color:var(--text-grey);font-weight:600">Valor total</div>
+                            <div style="font-size:1.1rem;font-weight:800;color:var(--text-main)" id="ct-stat-valor">—</div>
+                        </div>
+                    </div>
+
+                    <!-- Cards grid -->
+                    <div id="contratos-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px">
+                        <div style="text-align:center;padding:40px;color:var(--text-grey);font-size:0.85rem;grid-column:1/-1">
+                            <div style="font-size:2.5rem;margin-bottom:12px;opacity:0.4">📝</div>
+                            Cargando contratos...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: Editor de contrato -->
+                <div id="contrato-tab-editor" style="display:none">
+                    <div class="stat-card-glass" style="padding:28px">
+                        <!-- Editor Header -->
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+                            <div>
+                                <h3 style="font-size:1.05rem;font-weight:800;color:var(--text-main);margin:0;letter-spacing:-0.01em" id="editor-title">Nuevo Contrato</h3>
+                                <p style="font-size:0.75rem;color:var(--text-grey);margin:4px 0 0" id="editor-codigo"></p>
+                            </div>
+                            <div style="display:flex;gap:8px">
+                                <button class="btn-secondary" style="padding:8px 16px;font-size:0.8rem" onclick="switchContratoTab('lista')">← Volver</button>
+                                <button class="btn-primary" style="padding:8px 20px;font-size:0.8rem" onclick="guardarContrato()" id="btn-guardar-contrato">💾 Guardar</button>
+                            </div>
+                        </div>
+
+                        <!-- Datos del cliente -->
+                        <div style="margin-bottom:24px">
+                            <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-main);margin-bottom:14px;display:flex;align-items:center;gap:8px">
+                                <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#007AFF,#5856d6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800">1</span>
+                                Datos del Cliente
+                            </h4>
+                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:12px">
+                                <div class="nl-config-field"><label class="nl-config-field-label">Nombre completo</label><input class="nl-config-input" id="ct-cliente-nombre" placeholder="Nombre del cliente" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Email</label><input class="nl-config-input" id="ct-cliente-email" placeholder="email@empresa.com" type="email" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Teléfono</label><input class="nl-config-input" id="ct-cliente-telefono" placeholder="+34 600 000 000" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">NIF / CIF</label><input class="nl-config-input" id="ct-cliente-nif" placeholder="12345678A" /></div>
+                                <div class="nl-config-field" style="grid-column:1/-1"><label class="nl-config-field-label">Dirección</label><input class="nl-config-input" id="ct-cliente-direccion" placeholder="Dirección completa" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Profesión / Actividad</label><input class="nl-config-input" id="ct-cliente-profesion" placeholder="Ej: CEO, Autónomo..." /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Representación</label><input class="nl-config-input" id="ct-cliente-representacion" value="en su propio nombre y representación" /></div>
+                            </div>
+                        </div>
+
+                        <!-- Datos del prestador -->
+                        <div style="margin-bottom:24px">
+                            <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-main);margin-bottom:14px;display:flex;align-items:center;gap:8px">
+                                <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#34c759,#30d158);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800">2</span>
+                                Datos del Prestador
+                            </h4>
+                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:12px">
+                                <div class="nl-config-field"><label class="nl-config-field-label">Nombre</label><input class="nl-config-input" id="ct-prestador-nombre" value="Gerard Fanals" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Empresa</label><input class="nl-config-input" id="ct-prestador-empresa" value="Vigila y Actúa S.L." /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">CIF</label><input class="nl-config-input" id="ct-prestador-cif" value="B 57973562" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Actividad</label><input class="nl-config-input" id="ct-prestador-actividad" value="Tecnología Online y OFFline a través de inteligencia artificial" /></div>
+                                <div class="nl-config-field" style="grid-column:1/-1"><label class="nl-config-field-label">Dirección</label><input class="nl-config-input" id="ct-prestador-direccion" value="Avda. Fort de L'eau 131, Mahón 07701, Menorca" /></div>
+                            </div>
+                        </div>
+
+                        <!-- Servicios y condiciones -->
+                        <div style="margin-bottom:24px">
+                            <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-main);margin-bottom:14px;display:flex;align-items:center;gap:8px">
+                                <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#ff9500,#ff6723);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800">3</span>
+                                Servicios y Condiciones
+                            </h4>
+                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:12px">
+                                <div class="nl-config-field" style="grid-column:1/-1">
+                                    <label class="nl-config-field-label">Servicios contratados <span style="font-weight:400;color:var(--text-grey)">(uno por línea)</span></label>
+                                    <textarea class="nl-config-input" id="ct-servicios" rows="4" placeholder="Diseño web&#10;SEO&#10;Mantenimiento mensual" style="resize:vertical;font-size:0.85rem"></textarea>
+                                </div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Precio total (€)</label><input class="nl-config-input" id="ct-precio-total" type="number" placeholder="0" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Precio mensual (€)</label><input class="nl-config-input" id="ct-precio-mensual" type="number" placeholder="0" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Duración (meses)</label><input class="nl-config-input" id="ct-duracion" type="number" value="12" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Lugar</label><input class="nl-config-input" id="ct-lugar" value="Mahón (Menorca)" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Fecha del contrato</label><input class="nl-config-input" id="ct-fecha-contrato" type="date" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Fecha inicio</label><input class="nl-config-input" id="ct-fecha-inicio" type="date" /></div>
+                            </div>
+                        </div>
+
+                        <!-- Firma digital -->
+                        <div style="margin-bottom:24px">
+                            <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-main);margin-bottom:14px;display:flex;align-items:center;gap:8px">
+                                <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#ff453a,#ff375f);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800">4</span>
+                                Firma Digital del Prestador
+                            </h4>
+                            <div style="background:rgba(0,0,0,0.02);border-radius:14px;border:1px solid var(--border-color);padding:20px">
+                                <p style="font-size:0.78rem;color:var(--text-grey);margin:0 0 12px">Firma en el recuadro con el ratón o el dedo:</p>
+                                <canvas id="firma-canvas" width="500" height="150" style="width:100%;max-width:500px;height:150px;border-radius:12px;border:2px dashed var(--border-color);background:#fff;cursor:crosshair;touch-action:none"></canvas>
+                                <div style="display:flex;gap:8px;margin-top:10px">
+                                    <button class="btn-secondary" style="padding:6px 14px;font-size:0.75rem" onclick="clearFirma()">🗑️ Limpiar</button>
+                                    <div style="flex:1"></div>
+                                    <div id="firma-preview-container" style="display:none">
+                                        <img id="firma-preview-img" style="height:40px;border-radius:6px;border:1px solid var(--border-color)" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notas -->
+                        <div style="margin-bottom:8px">
+                            <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-main);margin-bottom:14px;display:flex;align-items:center;gap:8px">
+                                <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#5856d6,#af52de);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800">5</span>
+                                Notas adicionales
+                            </h4>
+                            <textarea class="nl-config-input" id="ct-notas" rows="3" placeholder="Notas internas sobre este contrato..." style="resize:vertical;font-size:0.85rem"></textarea>
+                        </div>
                     </div>
                 </div>
             </div>
