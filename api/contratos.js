@@ -237,18 +237,9 @@ module.exports = async function handler(req, res) {
       if (firma_prestador !== undefined) updates.firma_prestador = firma_prestador;
       if (firmado_at !== undefined) updates.firmado_at = firmado_at;
       if (pdf_url !== undefined) updates.pdf_url = pdf_url;
-      if (objeto_texto !== undefined) updates.objeto_texto = objeto_texto;
-      if (plazo_entrega !== undefined) updates.plazo_entrega = plazo_entrega;
-      if (prueba_inicio !== undefined) updates.prueba_inicio = prueba_inicio;
-      if (prueba_fin !== undefined) updates.prueba_fin = prueba_fin;
-      if (cuota_fecha_inicio !== undefined) updates.cuota_fecha_inicio = cuota_fecha_inicio;
-      if (cuota_concepto !== undefined) updates.cuota_concepto = cuota_concepto;
-      if (precio_texto !== undefined) updates.precio_texto = precio_texto;
       if (precio_total_letras !== undefined) updates.precio_total_letras = precio_total_letras;
-      if (cuenta_bancaria !== undefined) updates.cuenta_bancaria = cuenta_bancaria;
       if (datos_cliente !== undefined) updates.datos_cliente = datos_cliente;
       if (pago_config !== undefined) updates.pago_config = pago_config;
-      if (clausulas_custom !== undefined) updates.clausulas_custom = clausulas_custom;
 
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({ success: false, error: 'No se proporcionaron campos para actualizar' });
