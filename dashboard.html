@@ -2861,37 +2861,67 @@
 
                 <!-- ═══ TAB: Storage ═══ -->
                 <div class="cfg-panel" id="cfg-storage">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
                         <div>
-                            <h3 style="font-size:0.9rem;font-weight:600;color:var(--text-main)">📦 Almacenamiento</h3>
-                            <p style="font-size:0.75rem;color:var(--text-grey);margin:4px 0 0">Uso de almacenamiento y archivos subidos</p>
+                            <h3 style="font-size:1rem;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:8px">📦 Almacenamiento</h3>
+                            <p style="font-size:0.75rem;color:var(--text-grey);margin:4px 0 0">Archivos almacenados en Supabase Storage</p>
                         </div>
+                        <button class="btn-primary" style="padding:8px 18px;font-size:0.8rem;display:flex;align-items:center;gap:6px" onclick="loadStorageData()">
+                            🔄 Actualizar
+                        </button>
                     </div>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px">
+
+                    <!-- Stats cards (dynamic) -->
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px" id="storage-stats">
                         <div class="stat-card-glass" style="text-align:center">
                             <span class="stat-label">Espacio Usado</span>
-                            <div class="stat-value" style="font-size:1.6rem;margin:6px 0;color:var(--text-main)">12.4 MB</div>
-                            <span style="font-size:0.72rem;color:var(--text-grey)">de 500 MB disponibles</span>
+                            <div class="stat-value" style="font-size:1.6rem;margin:6px 0;color:var(--text-main)" id="storage-total-size">—</div>
+                            <span style="font-size:0.72rem;color:var(--text-grey)">de 1 GB disponible</span>
                         </div>
                         <div class="stat-card-glass" style="text-align:center">
                             <span class="stat-label">Archivos</span>
-                            <div class="stat-value" style="font-size:1.6rem;margin:6px 0;color:var(--text-main)">23</div>
-                            <span style="font-size:0.72rem;color:var(--text-grey)">logos, adjuntos, docs</span>
+                            <div class="stat-value" style="font-size:1.6rem;margin:6px 0;color:var(--text-main)" id="storage-total-files">—</div>
+                            <span style="font-size:0.72rem;color:var(--text-grey)">en todos los buckets</span>
                         </div>
                         <div class="stat-card-glass" style="text-align:center">
-                            <span class="stat-label">Último upload</span>
-                            <div class="stat-value" style="font-size:1.2rem;margin:6px 0;color:var(--text-main)">Hoy</div>
-                            <span style="font-size:0.72rem;color:var(--text-grey)">logo_iadebarrio.png</span>
+                            <span class="stat-label">Buckets</span>
+                            <div class="stat-value" style="font-size:1.6rem;margin:6px 0;color:var(--text-main)" id="storage-total-buckets">—</div>
+                            <span style="font-size:0.72rem;color:var(--text-grey)">carpetas de almacenamiento</span>
+                        </div>
+                        <div class="stat-card-glass" style="text-align:center">
+                            <span class="stat-label">Contratos</span>
+                            <div class="stat-value" style="font-size:1.6rem;margin:6px 0;color:var(--text-main)" id="storage-contratos-count">0</div>
+                            <span style="font-size:0.72rem;color:var(--text-grey)">firmados y archivados</span>
                         </div>
                     </div>
-                    <div style="background:var(--bg-card);border-radius:14px;border:1px solid var(--border-color);overflow:hidden">
+
+                    <!-- Usage by category (dynamic) -->
+                    <div style="background:var(--bg-card);border-radius:14px;border:1px solid var(--border-color);overflow:hidden;margin-bottom:20px">
                         <div style="padding:12px 18px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center">
                             <span style="font-weight:600;font-size:0.85rem;color:var(--text-main)">Uso por categoría</span>
                         </div>
-                        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:12px">
-                            <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1rem">🖼️</span><div style="flex:1"><div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px"><span style="color:var(--text-main);font-weight:500">Imágenes y logos</span><span style="color:var(--text-grey)">8.2 MB</span></div><div style="height:6px;border-radius:3px;background:rgba(0,113,227,0.1);overflow:hidden"><div style="height:100%;width:65%;background:#007AFF;border-radius:3px"></div></div></div></div>
-                            <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1rem">📎</span><div style="flex:1"><div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px"><span style="color:var(--text-main);font-weight:500">Adjuntos email</span><span style="color:var(--text-grey)">3.1 MB</span></div><div style="height:6px;border-radius:3px;background:rgba(52,199,89,0.1);overflow:hidden"><div style="height:100%;width:25%;background:#34c759;border-radius:3px"></div></div></div></div>
-                            <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1rem">📄</span><div style="flex:1"><div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px"><span style="color:var(--text-main);font-weight:500">Documentos</span><span style="color:var(--text-grey)">1.1 MB</span></div><div style="height:6px;border-radius:3px;background:rgba(255,149,0,0.1);overflow:hidden"><div style="height:100%;width:9%;background:#ff9500;border-radius:3px"></div></div></div></div>
+                        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:12px" id="storage-categories">
+                            <div style="text-align:center;padding:20px;color:var(--text-grey);font-size:0.8rem">Cargando...</div>
+                        </div>
+                    </div>
+
+                    <!-- Contracts notice -->
+                    <div style="padding:14px 18px;border-radius:12px;background:rgba(0,113,227,0.05);border:1px solid rgba(0,113,227,0.15);margin-bottom:20px;display:flex;align-items:flex-start;gap:12px">
+                        <span style="font-size:1.2rem">📝</span>
+                        <div>
+                            <div style="font-size:0.82rem;font-weight:600;color:var(--text-main);margin-bottom:2px">Contratos firmados</div>
+                            <div style="font-size:0.72rem;color:var(--text-grey)">Cuando la sección de contratos esté activa, los contratos firmados por ambas partes se archivarán automáticamente aquí en Supabase Storage.</div>
+                        </div>
+                    </div>
+
+                    <!-- File list (dynamic) -->
+                    <div style="background:var(--bg-card);border-radius:14px;border:1px solid var(--border-color);overflow:hidden">
+                        <div style="padding:12px 18px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center">
+                            <span style="font-weight:600;font-size:0.85rem;color:var(--text-main)">Archivos</span>
+                            <span style="font-size:0.72rem;color:var(--text-grey)" id="storage-file-count-label">— archivos</span>
+                        </div>
+                        <div id="storage-file-list" style="max-height:400px;overflow-y:auto">
+                            <div style="text-align:center;padding:30px;color:var(--text-grey);font-size:0.8rem">Cargando archivos...</div>
                         </div>
                     </div>
                 </div>

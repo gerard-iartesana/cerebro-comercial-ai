@@ -149,6 +149,8 @@ function switchConfigTab(tabName) {
     if (tabName === 'usuarios') loadUsers();
     // Auto-check sync when switching to the sync tab
     if (tabName === 'sync') checkSyncStatus();
+    // Auto-load storage data when switching to the storage tab
+    if (tabName === 'storage') loadStorageData();
 }
 
 // ── User Management ──────────────────────────────────────────
@@ -355,6 +357,75 @@ async function toggleUserActive(userId, currentIsActive) {
         loadUsers();
     } catch (e) {
         showAlert('Error', 'No se pudo cambiar el estado: ' + e.message, '❌');
+    }
+}
+// ── Storage Data ─────────────────────────────────────────────
+function formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+}
+
+async function loadStorageData() {
+    try {
+        const res = await fetch('/api/storage');
+        const data = await res.json();
+
+        // Stats
+        document.getElementById('storage-total-size').textContent = formatFileSize(data.stats?.total_size || 0);
+        document.getElementById('storage-total-files').textContent = data.stats?.total_files || 0;
+        document.getElementById('storage-total-buckets').textContent = (data.buckets || []).length;
+        document.getElementById('storage-contratos-count').textContent = data.stats?.categories?.contratos?.count || 0;
+
+        // Categories
+        const catContainer = document.getElementById('storage-categories');
+        const cats = data.stats?.categories || {};
+        const catConfig = {
+            contratos: { label: 'Contratos', color: '#ff453a', bgColor: 'rgba(255,69,58,0.1)', icon: '📝' },
+            imagenes: { label: 'Imágenes', color: '#007AFF', bgColor: 'rgba(0,113,227,0.1)', icon: '🖼️' },
+            adjuntos: { label: 'Adjuntos', color: '#34c759', bgColor: 'rgba(52,199,89,0.1)', icon: '📎' },
+            documentos: { label: 'Documentos', color: '#ff9500', bgColor: 'rgba(255,149,0,0.1)', icon: '📄' },
+            otros: { label: 'Otros', color: '#8e8e93', bgColor: 'rgba(142,142,147,0.1)', icon: '📦' }
+        };
+        const totalSize = data.stats?.total_size || 1;
+        let catHtml = '';
+        Object.entries(catConfig).forEach(([key, cfg]) => {
+            const cat = cats[key] || { count: 0, size: 0 };
+            if (cat.count === 0 && key !== 'contratos') return;
+            const pct = Math.max(2, Math.round((cat.size / totalSize) * 100));
+            catHtml += `<div style="display:flex;align-items:center;gap:12px"><span style="font-size:1rem">${cfg.icon}</span><div style="flex:1"><div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px"><span style="color:var(--text-main);font-weight:500">${cfg.label} (${cat.count})</span><span style="color:var(--text-grey)">${formatFileSize(cat.size)}</span></div><div style="height:6px;border-radius:3px;background:${cfg.bgColor};overflow:hidden"><div style="height:100%;width:${pct}%;background:${cfg.color};border-radius:3px;transition:width 0.5s ease"></div></div></div></div>`;
+        });
+        catContainer.innerHTML = catHtml || '<div style="text-align:center;padding:16px;color:var(--text-grey);font-size:0.78rem">Sin datos de categorías</div>';
+
+        // File list
+        const fileList = document.getElementById('storage-file-list');
+        const files = data.files || [];
+        document.getElementById('storage-file-count-label').textContent = files.length + ' archivos';
+
+        if (files.length === 0) {
+            fileList.innerHTML = `<div style="text-align:center;padding:40px 20px"><div style="font-size:2.5rem;margin-bottom:12px;opacity:0.4">📂</div><div style="font-size:0.85rem;color:var(--text-grey);font-weight:500">No hay archivos en Storage</div><div style="font-size:0.72rem;color:var(--text-grey);margin-top:4px">Los contratos firmados se guardarán aquí automáticamente.</div></div>`;
+        } else {
+            const iconMap = { pdf: '📕', doc: '📘', docx: '📘', xls: '📊', xlsx: '📊', csv: '📊', jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', svg: '🎨', webp: '🖼️', zip: '📦', rar: '📦', txt: '📝' };
+            let html = '';
+            files.forEach(f => {
+                const ext = (f.name.split('.').pop() || '').toLowerCase();
+                const icon = iconMap[ext] || '📄';
+                const dateStr = f.created_at ? new Date(f.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+                html += `<div style="display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--border-color)">
+                    <span style="font-size:1.2rem">${icon}</span>
+                    <div style="flex:1;min-width:0">
+                        <div style="font-size:0.82rem;font-weight:500;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
+                        <div style="font-size:0.68rem;color:var(--text-grey)">${f.bucket} · ${formatFileSize(f.size)} · ${dateStr}</div>
+                    </div>
+                    ${f.url ? `<a href="${f.url}" target="_blank" style="color:#007AFF;font-size:0.72rem;font-weight:600;text-decoration:none;white-space:nowrap">⬇️ Ver</a>` : ''}
+                </div>`;
+            });
+            fileList.innerHTML = html;
+        }
+    } catch (e) {
+        console.error('Error loading storage:', e);
+        document.getElementById('storage-file-list').innerHTML = `<div style="text-align:center;padding:30px;color:#ff453a;font-size:0.8rem">Error al cargar: ${e.message}</div>`;
     }
 }
 
