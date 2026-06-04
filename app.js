@@ -1,5 +1,18 @@
 // 🧠 CerebroComercial AI — Frontend Orchestrator (app.js)
 
+const CLAUSULAS_DEFAULT = {
+    cuarta: "El Prestador se compromete a:\n• Realizar los servicios y entregables con la mayor diligencia y profesionalidad conforme al calendario acordado.\n• Se acordará día y hora para cada reunión, pudiendo ser una reunión al mes si el cliente lo desea.\n• Realizar las rondas necesarias hasta la fecha de entrega para tener el proyecto 100% aceptado por el cliente.\n• A petición del cliente, se entregarán todos los archivos y documentos existentes del proyecto, excepto el código fuente que es propio del prestador.",
+    quinta: "El/la Cliente se compromete a:\n• Facilitar al Prestador la información y materiales necesarios para el desarrollo de los servicios.\n• Respetar los plazos de pago según el desglose de la cláusula tercera.\n• Proporcionar acceso a plataformas y herramientas necesarias para la ejecución de los servicios.",
+    sexta: "Una vez abonados íntegramente los servicios entregables, todos los trabajos desarrollados serán propiedad exclusiva del/la Cliente. El Prestador entregará todo el material realizado, incluidos los archivos definitivos y manuales, a la finalización y pago completo de los servicios. NO se entregará el código fuente del proyecto, es propiedad del prestador.\n\nTus Datos son tuyos: Los datos operativos del cliente son de su exclusiva propiedad y exportables en cualquier momento.",
+    septima: "1. Entrega del Código Fuente por Cese de Actividad:\nEn caso de que el Prestador cese definitivamente su actividad empresarial, se compromete a entregar al Cliente el código fuente completo del proyecto técnico.\n\n2. Viabilidad de Migración a Terceros:\nEl Prestador certifica que la arquitectura general del sistema se construye utilizando tecnologías de mercado estándar, abiertas y ampliamente documentadas. El sistema es técnicamente viable para ser transferido y mantenido por cualquier equipo de desarrollo externo.\n\n3. Exportación de Datos:\nEl Prestador garantiza que la funcionalidad de \"Exportación Total de Datos\" permitirá extraer la base de datos completa en formatos estándar (CSV/Excel).",
+    octava: "Si el Cliente o el Prestador comercializa o sublicencia la idea, concepto o proyecto desarrollado, se aplicará una comisión del 10% sobre los ingresos netos derivados de dicha comercialización. Esta cláusula será revisada anualmente para la aceptación por ambas partes.",
+    novena: "El presente contrato podrá resolverse por:\n• Mutuo acuerdo de ambas partes.\n• Incumplimiento de alguna de las partes, previa notificación por escrito y sin subsanación en 30 días.\n• Causas de fuerza mayor que imposibiliten la ejecución del contrato.",
+    decima: "Ambas partes se comprometen a mantener confidenciales todos los datos, información y documentos intercambiados durante la vigencia del contrato.",
+    undecima: "Cumplimiento de la Normativa de Protección de Datos (RGPD y LOPD-GDD):\nEn cumplimiento de la Ley Orgánica 3/2018 (LOPD-GDD) y el Reglamento General de Protección de Datos (RGPD UE 2016/679), el Prestador actuará exclusivamente en calidad de Encargado del Tratamiento de los datos personales introducidos por el Cliente, quien ostenta la condición de Responsable del Tratamiento. El Prestador tratará dichos datos únicamente siguiendo las instrucciones del Cliente y para el fin del presente contrato.\n\nCumplimiento de la Ley de Inteligencia Artificial (AI Act / Reglamento UE 2024/1689):\nAmbas partes reconocen que los módulos de Inteligencia Artificial integrados se diseñan y utilizan de conformidad con el Reglamento Europeo de IA (AI Act). El sistema se categoriza como de \"Riesgo Mínimo o Nulo\".",
+    duodecima: "Compromiso de Ciberseguridad y Medidas Técnicas:\nAmbas partes se comprometen a implementar y mantener las medidas de seguridad técnicas y organizativas necesarias para garantizar un nivel de seguridad adecuado al riesgo, protegiendo el ecosistema tecnológico de accesos no autorizados, alteraciones, pérdidas o tratamientos ilícitos.\n\nProtocolo de Gestión de Brechas de Seguridad:\n• Notificación inmediata: La parte que detecte la brecha notificará a la otra parte por escrito en un plazo máximo de 48 horas.\n• Mitigación y Colaboración: Ambas partes colaborarán estrechamente para contener el incidente y restaurar la normalidad.\n• Exención de Responsabilidad: El Prestador no será responsable de las brechas provocadas por negligencia del Cliente o fallos en infraestructuras de terceros.",
+    adicional: ""
+};
+
 // EMAIL COMPOSE - defined early to ensure availability
 window._composeAttachments = [];
 
@@ -624,8 +637,10 @@ function nuevoContrato() {
     if (el('ct-bizum-telefono')) el('ct-bizum-telefono').value = '';
     if (el('ct-otro-metodo')) el('ct-otro-metodo').value = '';
     // Cláusulas
-    ['ct-clausula-cuarta','ct-clausula-quinta','ct-clausula-sexta','ct-clausula-septima','ct-clausula-octava','ct-clausula-novena','ct-clausula-decima','ct-clausula-undecima','ct-clausula-duodecima','ct-clausula-adicional'].forEach(id => { if (el(id)) el(id).value = ''; });
-    // Notas
+    ['cuarta','quinta','sexta','septima','octava','novena','decima','undecima','duodecima','adicional'].forEach(k => {
+        const input = el('ct-clausula-' + k);
+        if (input) input.value = CLAUSULAS_DEFAULT[k] || '';
+    });
     if (el('ct-notas')) el('ct-notas').value = '';
     clearFirma();
 
@@ -1304,9 +1319,21 @@ function generarPdfContrato(fromId) {
         otro_metodo: document.getElementById('ct-otro-metodo')?.value || '',
         // Selected option
         pago_opcion: _selectedPagoOpcion || '',
+        pago_opcion: _selectedPagoOpcion || '',
+        // Textos de cláusulas custom
+        clausulas: {
+            cuarta: document.getElementById('ct-clausula-cuarta')?.value || CLAUSULAS_DEFAULT.cuarta,
+            quinta: document.getElementById('ct-clausula-quinta')?.value || CLAUSULAS_DEFAULT.quinta,
+            sexta: document.getElementById('ct-clausula-sexta')?.value || CLAUSULAS_DEFAULT.sexta,
+            septima: document.getElementById('ct-clausula-septima')?.value || CLAUSULAS_DEFAULT.septima,
+            octava: document.getElementById('ct-clausula-octava')?.value || CLAUSULAS_DEFAULT.octava,
+            novena: document.getElementById('ct-clausula-novena')?.value || CLAUSULAS_DEFAULT.novena,
+            decima: document.getElementById('ct-clausula-decima')?.value || CLAUSULAS_DEFAULT.decima,
+            undecima: document.getElementById('ct-clausula-undecima')?.value || CLAUSULAS_DEFAULT.undecima,
+            duodecima: document.getElementById('ct-clausula-duodecima')?.value || CLAUSULAS_DEFAULT.duodecima,
+            adicional: document.getElementById('ct-clausula-adicional')?.value || ''
+        }
     };
-
-    const fechaFmt = c.fecha ? new Date(c.fecha + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '___';
     const fechaFinDate = c.fecha ? new Date(new Date(c.fecha + 'T00:00:00').setMonth(new Date(c.fecha + 'T00:00:00').getMonth() + c.duracion)) : null;
     const fechaFin = fechaFinDate ? fechaFinDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '___';
 
@@ -1477,11 +1504,7 @@ function generarPdfContrato(fromId) {
 
     y += 4;
     sectionTitle('CUARTA.- OBLIGACIONES DEL PRESTADOR:');
-    addText('El Prestador se compromete a:', margin, 8.5, 'normal');
-    bullet('Realizar los servicios y entregables con la mayor diligencia y profesionalidad conforme al calendario acordado.');
-    bullet('Se acordará día y hora para cada reunión, pudiendo ser una reunión al mes si el cliente lo desea.');
-    bullet('Realizar las rondas necesarias hasta la fecha de entrega para tener el proyecto 100% aceptado por el cliente.');
-    bullet('A petición del cliente, se entregarán todos los archivos y documentos existentes del proyecto, excepto el código fuente que es propio del prestador.');
+    addText(c.clausulas.cuarta, margin, 8.5, 'normal');
 
     footer(2);
 
@@ -1491,27 +1514,15 @@ function generarPdfContrato(fromId) {
     doc.addPage(); y = 30;
 
     sectionTitle('QUINTA.- OBLIGACIONES DEL CLIENTE:');
-    addText('El/la Cliente se compromete a:', margin, 8.5, 'normal');
-    bullet('Facilitar al Prestador la información y materiales necesarios para el desarrollo de los servicios.');
-    bullet('Respetar los plazos de pago según el desglose de la cláusula tercera.');
-    bullet('Proporcionar acceso a plataformas y herramientas necesarias para la ejecución de los servicios.');
+    addText(c.clausulas.quinta, margin, 8.5, 'normal');
 
     y += 4;
     sectionTitle('SEXTA.- PROPIEDAD INTELECTUAL Y ENTREGA DE TRABAJOS:');
-    addText('Una vez abonados íntegramente los servicios entregables, todos los trabajos desarrollados serán propiedad exclusiva del/la Cliente. El Prestador entregará todo el material realizado, incluidos los archivos definitivos y manuales, a la finalización y pago completo de los servicios. NO se entregará el código fuente del proyecto, es propiedad del prestador.', margin, 8.5, 'normal');
-    y += 2;
-    addText('Tus Datos son tuyos: Los datos operativos del cliente son de su exclusiva propiedad y exportables en cualquier momento.', margin, 8.5, 'normal');
+    addText(c.clausulas.sexta, margin, 8.5, 'normal');
 
     y += 4;
     sectionTitle('SÉPTIMA.- GARANTÍA Y CONTINUIDAD:');
-    addText('1. Entrega del Código Fuente por Cese de Actividad:', margin, 8.5, 'bold');
-    addText('En caso de que el Prestador cese definitivamente su actividad empresarial, se compromete a entregar al Cliente el código fuente completo del proyecto técnico.', margin, 8.5, 'normal');
-    y += 2;
-    addText('2. Viabilidad de Migración a Terceros:', margin, 8.5, 'bold');
-    addText('El Prestador certifica que la arquitectura general del sistema se construye utilizando tecnologías de mercado estándar, abiertas y ampliamente documentadas. El sistema es técnicamente viable para ser transferido y mantenido por cualquier equipo de desarrollo externo.', margin, 8.5, 'normal');
-    y += 2;
-    addText('3. Exportación de Datos:', margin, 8.5, 'bold');
-    addText('El Prestador garantiza que la funcionalidad de "Exportación Total de Datos" permitirá extraer la base de datos completa en formatos estándar (CSV/Excel).', margin, 8.5, 'normal');
+    addText(c.clausulas.septima, margin, 8.5, 'normal');
 
     footer(3);
 
@@ -1521,26 +1532,19 @@ function generarPdfContrato(fromId) {
     doc.addPage(); y = 30;
 
     sectionTitle('OCTAVA.- COMISIÓN POR COMERCIALIZACIÓN:');
-    addText('Si el Cliente o el Prestador comercializa o sublicencia la idea, concepto o proyecto desarrollado, se aplicará una comisión del 10% sobre los ingresos netos derivados de dicha comercialización. Esta cláusula será revisada anualmente para la aceptación por ambas partes.', margin, 8.5, 'normal');
+    addText(c.clausulas.octava, margin, 8.5, 'normal');
 
     y += 4;
     sectionTitle('NOVENA.- RESOLUCIÓN DEL CONTRATO:');
-    addText('El presente contrato podrá resolverse por:', margin, 8.5, 'normal');
-    bullet('Mutuo acuerdo de ambas partes.');
-    bullet('Incumplimiento de alguna de las partes, previa notificación por escrito y sin subsanación en 30 días.');
-    bullet('Causas de fuerza mayor que imposibiliten la ejecución del contrato.');
+    addText(c.clausulas.novena, margin, 8.5, 'normal');
 
     y += 4;
     sectionTitle('DÉCIMA.- CONFIDENCIALIDAD:');
-    addText('Ambas partes se comprometen a mantener confidenciales todos los datos, información y documentos intercambiados durante la vigencia del contrato.', margin, 8.5, 'normal');
+    addText(c.clausulas.decima, margin, 8.5, 'normal');
 
     y += 4;
     sectionTitle('UNDÉCIMA.- PROTECCIÓN DE DATOS:');
-    addText('Cumplimiento de la Normativa de Protección de Datos (RGPD y LOPD-GDD):', margin, 8.5, 'bold');
-    addText('En cumplimiento de la Ley Orgánica 3/2018 (LOPD-GDD) y el Reglamento General de Protección de Datos (RGPD UE 2016/679), el Prestador actuará exclusivamente en calidad de Encargado del Tratamiento de los datos personales introducidos por el Cliente, quien ostenta la condición de Responsable del Tratamiento. El Prestador tratará dichos datos únicamente siguiendo las instrucciones del Cliente y para el fin del presente contrato.', margin, 8.5, 'normal');
-    y += 2;
-    addText('Cumplimiento de la Ley de Inteligencia Artificial (AI Act / Reglamento UE 2024/1689):', margin, 8.5, 'bold');
-    addText('Ambas partes reconocen que los módulos de Inteligencia Artificial integrados se diseñan y utilizan de conformidad con el Reglamento Europeo de IA (AI Act). El sistema se categoriza como de "Riesgo Mínimo o Nulo".', margin, 8.5, 'normal');
+    addText(c.clausulas.undecima, margin, 8.5, 'normal');
 
     footer(4);
 
@@ -1549,14 +1553,15 @@ function generarPdfContrato(fromId) {
     // ═══════════════════════════════════════════════════════════
     doc.addPage(); y = 30;
 
-    sectionTitle('CLÁUSULAS ADICIONALES - SEGURIDAD DE LA INFORMACIÓN:');
-    addText('Compromiso de Ciberseguridad y Medidas Técnicas:', margin, 8.5, 'bold');
-    addText('Ambas partes se comprometen a implementar y mantener las medidas de seguridad técnicas y organizativas necesarias para garantizar un nivel de seguridad adecuado al riesgo, protegiendo el ecosistema tecnológico de accesos no autorizados, alteraciones, pérdidas o tratamientos ilícitos.', margin, 8.5, 'normal');
-    y += 2;
-    addText('Protocolo de Gestión de Brechas de Seguridad:', margin, 8.5, 'bold');
-    bullet('Notificación inmediata: La parte que detecte la brecha notificará a la otra parte por escrito en un plazo máximo de 48 horas.');
-    bullet('Mitigación y Colaboración: Ambas partes colaborarán estrechamente para contener el incidente y restaurar la normalidad.');
-    bullet('Exención de Responsabilidad: El Prestador no será responsable de las brechas provocadas por negligencia del Cliente o fallos en infraestructuras de terceros.');
+    sectionTitle('DUODÉCIMA.- CIBERSEGURIDAD Y SEGURIDAD DE LA INFORMACIÓN:');
+    addText(c.clausulas.duodecima, margin, 8.5, 'normal');
+
+    if (c.clausulas.adicional && c.clausulas.adicional.trim() !== '') {
+        y += 4;
+        sectionTitle('CLÁUSULAS ADICIONALES:');
+        addText(c.clausulas.adicional, margin, 8.5, 'normal');
+    }
+
 
     // NOTAS (if any)
     if (c.notas) {
