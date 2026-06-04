@@ -59,14 +59,56 @@ module.exports = async function handler(req, res) {
     results.supabase = { ok: false, error: e.message };
   }
 
-  // 5. Google Calendar — check if calendar ID is set
+  // 5. Google Calendar — real ping with Service Account
   try {
     const calId = process.env.GOOGLE_CALENDAR_ID;
-    const saKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-    if (!calId || !saKey) {
+    const saKeyRaw = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+    if (!calId || !saKeyRaw) {
       results.google_calendar = { ok: false, error: 'Pendiente configurar', pending: true };
     } else {
-      results.google_calendar = { ok: true, calendar_id: calId };
+      // Parse service account key and generate JWT
+      const crypto = require('crypto');
+      const sa = JSON.parse(saKeyRaw);
+
+      // Create JWT for Google OAuth2
+      const now = Math.floor(Date.now() / 1000);
+      const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+      const payload = Buffer.from(JSON.stringify({
+        iss: sa.client_email,
+        scope: 'https://www.googleapis.com/auth/calendar.readonly',
+        aud: 'https://oauth2.googleapis.com/token',
+        iat: now,
+        exp: now + 3600
+      })).toString('base64url');
+
+      const signable = header + '.' + payload;
+      const sign = crypto.createSign('RSA-SHA256');
+      sign.update(signable);
+      const signature = sign.sign(sa.private_key, 'base64url');
+      const jwt = signable + '.' + signature;
+
+      // Exchange JWT for access token
+      const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+      });
+      const tokenData = await tokenRes.json();
+
+      if (!tokenData.access_token) {
+        results.google_calendar = { ok: false, error: 'Error de autenticación: ' + (tokenData.error_description || tokenData.error || 'desconocido') };
+      } else {
+        // Ping the calendar
+        const calRes = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}`, {
+          headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
+        });
+        if (calRes.status === 200) {
+          const calData = await calRes.json();
+          results.google_calendar = { ok: true, calendar_id: calId, summary: calData.summary || calId };
+        } else {
+          results.google_calendar = { ok: false, error: 'Calendario no accesible (HTTP ' + calRes.status + ')' };
+        }
+      }
     }
   } catch (e) {
     results.google_calendar = { ok: false, error: e.message };
