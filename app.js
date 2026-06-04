@@ -547,17 +547,61 @@ function nuevoContrato() {
     const codigo = `CC-${year}-${String(num + 1).padStart(3, '0')}`;
     document.getElementById('editor-title').textContent = 'Nuevo Contrato';
     document.getElementById('editor-codigo').textContent = codigo;
-    // Clear all fields
-    ['ct-cliente-nombre','ct-cliente-email','ct-cliente-telefono','ct-cliente-nif','ct-cliente-direccion','ct-cliente-profesion'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-    document.getElementById('ct-cliente-representacion').value = 'en su propio nombre y representación';
-    document.getElementById('ct-servicios').value = '';
-    document.getElementById('ct-precio-total').value = '';
-    document.getElementById('ct-precio-mensual').value = '';
-    document.getElementById('ct-duracion').value = '12';
-    document.getElementById('ct-lugar').value = 'Mahón (Menorca)';
-    document.getElementById('ct-fecha-contrato').value = new Date().toISOString().split('T')[0];
-    document.getElementById('ct-fecha-inicio').value = '';
-    document.getElementById('ct-notas').value = '';
+    // Datos generales
+    const el = id => document.getElementById(id);
+    if (el('ct-codigo-contrato')) el('ct-codigo-contrato').value = codigo;
+    if (el('ct-lugar')) el('ct-lugar').value = 'Mahón (Menorca)';
+    if (el('ct-fecha-contrato')) el('ct-fecha-contrato').value = new Date().toISOString().split('T')[0];
+    // Client personal
+    ['ct-cliente-nombre','ct-cli-apellidos','ct-cliente-nif','ct-cli-fecha-nacimiento','ct-cliente-profesion','ct-cliente-email','ct-cliente-telefono','ct-cliente-direccion'].forEach(id => { if (el(id)) el(id).value = ''; });
+    if (el('ct-cliente-representacion')) el('ct-cliente-representacion').value = 'en su propio nombre y representación';
+    // Client business
+    ['ct-cli-nombre-negocio','ct-cli-nombre-comercial','ct-cli-cif-negocio','ct-cli-actividad','ct-cli-direccion-negocio','ct-cli-codigo-postal','ct-cli-localidad','ct-cli-provincia'].forEach(id => { if (el(id)) el(id).value = ''; });
+    if (el('ct-cli-pais')) el('ct-cli-pais').value = 'España';
+    // Client contact
+    ['ct-cli-email-negocio','ct-cli-telefono-negocio','ct-cli-web','ct-cli-instagram','ct-cli-facebook','ct-cli-linkedin','ct-cli-tiktok','ct-cli-youtube','ct-cli-twitter','ct-cli-pinterest'].forEach(id => { if (el(id)) el(id).value = ''; });
+    // Prestador defaults
+    if (el('ct-prestador-nombre')) el('ct-prestador-nombre').value = 'Gerard Fanals';
+    if (el('ct-prestador-cargo')) el('ct-prestador-cargo').value = 'Director';
+    if (el('ct-prestador-empresa')) el('ct-prestador-empresa').value = 'Vigila y Actúa S.L.';
+    if (el('ct-prestador-cif')) el('ct-prestador-cif').value = 'B 57973562';
+    if (el('ct-prestador-telefono')) el('ct-prestador-telefono').value = '+34 629 494 167';
+    if (el('ct-prestador-email')) el('ct-prestador-email').value = 'gerard@iartesana.es';
+    if (el('ct-prestador-direccion')) el('ct-prestador-direccion').value = "Avda. Fort de L'eau 131, Mahón 07701, Menorca";
+    if (el('ct-prestador-actividad')) el('ct-prestador-actividad').value = 'Tecnología Online y OFFline a través de inteligencia artificial';
+    // Objeto + servicios
+    if (el('ct-objeto-texto')) el('ct-objeto-texto').value = '';
+    const servList = el('ct-servicios-list');
+    if (servList) servList.innerHTML = '';
+    // Plazo entrega
+    ['ct-plazo-entrega','ct-clausula-plazo'].forEach(id => { if (el(id)) el(id).value = ''; });
+    if (el('ct-plazo-countdown')) el('ct-plazo-countdown').textContent = '— días restantes';
+    // Prueba
+    ['ct-prueba-inicio','ct-prueba-fin'].forEach(id => { if (el(id)) el(id).value = ''; });
+    if (el('ct-prueba-status')) { el('ct-prueba-status').textContent = 'Sin periodo de prueba definido'; el('ct-prueba-status').style.background = 'rgba(142,142,147,0.1)'; el('ct-prueba-status').style.color = '#8e8e93'; }
+    // Duración y precios
+    if (el('ct-duracion')) el('ct-duracion').value = '12';
+    ['ct-fecha-inicio','ct-fecha-fin','ct-precio-total','ct-precio-mensual','ct-cuota-fecha-inicio','ct-cuota-concepto','ct-cli-banco','ct-cli-titular-cuenta','ct-cli-cuenta-bancaria','ct-precio-texto'].forEach(id => { if (el(id)) el(id).value = ''; });
+    // Payment options
+    ['ct-pago-a-entrada'].forEach(id => { if (el(id)) el(id).value = '30'; });
+    ['ct-pago-a-plazos'].forEach(id => { if (el(id)) el(id).value = '3'; });
+    ['ct-pago-b-descuento'].forEach(id => { if (el(id)) el(id).value = '5'; });
+    ['ct-pago-c-descuento'].forEach(id => { if (el(id)) el(id).value = '10'; });
+    ['ct-pago-a-fecha','ct-pago-b-fecha','ct-pago-c-fecha'].forEach(id => { if (el(id)) el(id).value = ''; });
+    ['ct-pago-a-resumen','ct-pago-b-resumen','ct-pago-c-resumen'].forEach(id => { if (el(id)) el(id).textContent = ''; });
+    _selectedPagoOpcion = null;
+    if (el('ct-pago-seleccionada')) el('ct-pago-seleccionada').style.display = 'none';
+    ['ct-pago-opcion-a','ct-pago-opcion-b','ct-pago-opcion-c'].forEach(id => { if (el(id)) el(id).style.borderColor = 'var(--border-color)'; });
+    // Precio final
+    if (el('ct-precio-final')) el('ct-precio-final').value = '';
+    if (el('ct-precio-total-letras')) el('ct-precio-total-letras').value = '';
+    // Formas de pago
+    ['ct-fp-giro','ct-fp-transferencia','ct-fp-stripe','ct-fp-bizum','ct-fp-efectivo','ct-fp-otro'].forEach(id => { if (el(id)) el(id).checked = false; });
+    if (el('ct-cuenta-bancaria')) el('ct-cuenta-bancaria').value = '';
+    // Cláusulas
+    ['ct-clausula-cuarta','ct-clausula-quinta','ct-clausula-sexta','ct-clausula-septima','ct-clausula-octava','ct-clausula-novena','ct-clausula-decima','ct-clausula-undecima','ct-clausula-duodecima','ct-clausula-adicional'].forEach(id => { if (el(id)) el(id).value = ''; });
+    // Notas
+    if (el('ct-notas')) el('ct-notas').value = '';
     clearFirma();
     switchContratoTab('editor');
 }
@@ -566,46 +610,208 @@ function editarContrato(id) {
     const ct = contratosData.find(c => c.id === id);
     if (!ct) return;
     contratoEditId = id;
+    const el = fid => document.getElementById(fid);
     document.getElementById('editor-title').textContent = 'Editar: ' + (ct.cliente_nombre || 'Contrato');
     document.getElementById('editor-codigo').textContent = ct.codigo_contrato || '';
-    document.getElementById('ct-cliente-nombre').value = ct.cliente_nombre || '';
-    document.getElementById('ct-cliente-email').value = ct.cliente_email || '';
-    document.getElementById('ct-cliente-telefono').value = ct.cliente_telefono || '';
-    document.getElementById('ct-cliente-nif').value = ct.cliente_nif || '';
-    document.getElementById('ct-cliente-direccion').value = ct.cliente_direccion || '';
-    document.getElementById('ct-cliente-profesion').value = ct.cliente_profesion || '';
-    document.getElementById('ct-cliente-representacion').value = ct.cliente_representacion || 'en su propio nombre y representación';
-    document.getElementById('ct-prestador-nombre').value = ct.prestador_nombre || 'Gerard Fanals';
-    document.getElementById('ct-prestador-empresa').value = ct.prestador_empresa || 'Vigila y Actúa S.L.';
-    document.getElementById('ct-prestador-cif').value = ct.prestador_cif || 'B 57973562';
-    document.getElementById('ct-prestador-actividad').value = ct.prestador_actividad || '';
-    document.getElementById('ct-prestador-direccion').value = ct.prestador_direccion || '';
-    document.getElementById('ct-servicios').value = (ct.servicios || []).join('\n');
-    document.getElementById('ct-precio-total').value = ct.precio_total || '';
-    document.getElementById('ct-precio-mensual').value = ct.precio_mensual || '';
-    document.getElementById('ct-duracion').value = ct.duracion_meses || 12;
-    document.getElementById('ct-lugar').value = ct.lugar || 'Mahón (Menorca)';
-    document.getElementById('ct-fecha-contrato').value = ct.fecha_contrato || '';
-    document.getElementById('ct-fecha-inicio').value = ct.fecha_inicio || '';
-    document.getElementById('ct-notas').value = ct.notas || '';
-    // Load firma prestador if exists
+    const datos = ct.datos_cliente || {};
+    const fp = ct.formas_pago || {};
+    const pc = ct.pago_config || {};
+    const cl = ct.clausulas_custom || {};
+
+    // 1. Datos generales
+    if (el('ct-codigo-contrato')) el('ct-codigo-contrato').value = ct.codigo_contrato || '';
+    if (el('ct-lugar')) el('ct-lugar').value = ct.lugar || 'Mahón (Menorca)';
+    if (el('ct-fecha-contrato')) el('ct-fecha-contrato').value = ct.fecha_contrato || '';
+
+    // 2. Datos personales del cliente
+    if (el('ct-cliente-nombre')) el('ct-cliente-nombre').value = ct.cliente_nombre || '';
+    if (el('ct-cli-apellidos')) el('ct-cli-apellidos').value = datos.apellidos || '';
+    if (el('ct-cliente-nif')) el('ct-cliente-nif').value = ct.cliente_nif || '';
+    if (el('ct-cli-fecha-nacimiento')) el('ct-cli-fecha-nacimiento').value = datos.fecha_nacimiento || '';
+    if (el('ct-cliente-profesion')) el('ct-cliente-profesion').value = ct.cliente_profesion || '';
+    if (el('ct-cliente-email')) el('ct-cliente-email').value = ct.cliente_email || '';
+    if (el('ct-cliente-telefono')) el('ct-cliente-telefono').value = ct.cliente_telefono || '';
+    if (el('ct-cliente-direccion')) el('ct-cliente-direccion').value = ct.cliente_direccion || '';
+    if (el('ct-cliente-representacion')) el('ct-cliente-representacion').value = ct.cliente_representacion || 'en su propio nombre y representación';
+
+    // 3. Datos del negocio del cliente
+    if (el('ct-cli-nombre-negocio')) el('ct-cli-nombre-negocio').value = datos.nombre_negocio || '';
+    if (el('ct-cli-nombre-comercial')) el('ct-cli-nombre-comercial').value = datos.nombre_comercial || '';
+    if (el('ct-cli-cif-negocio')) el('ct-cli-cif-negocio').value = datos.cif_negocio || '';
+    if (el('ct-cli-actividad')) el('ct-cli-actividad').value = datos.actividad || '';
+    if (el('ct-cli-direccion-negocio')) el('ct-cli-direccion-negocio').value = datos.direccion_negocio || '';
+    if (el('ct-cli-codigo-postal')) el('ct-cli-codigo-postal').value = datos.codigo_postal || '';
+    if (el('ct-cli-localidad')) el('ct-cli-localidad').value = datos.localidad || '';
+    if (el('ct-cli-provincia')) el('ct-cli-provincia').value = datos.provincia || '';
+    if (el('ct-cli-pais')) el('ct-cli-pais').value = datos.pais || 'España';
+
+    // 4. Contacto del negocio
+    if (el('ct-cli-email-negocio')) el('ct-cli-email-negocio').value = datos.email_negocio || '';
+    if (el('ct-cli-telefono-negocio')) el('ct-cli-telefono-negocio').value = datos.telefono_negocio || '';
+    if (el('ct-cli-web')) el('ct-cli-web').value = datos.web || '';
+    if (el('ct-cli-instagram')) el('ct-cli-instagram').value = datos.instagram || '';
+    if (el('ct-cli-facebook')) el('ct-cli-facebook').value = datos.facebook || '';
+    if (el('ct-cli-linkedin')) el('ct-cli-linkedin').value = datos.linkedin || '';
+    if (el('ct-cli-tiktok')) el('ct-cli-tiktok').value = datos.tiktok || '';
+    if (el('ct-cli-youtube')) el('ct-cli-youtube').value = datos.youtube || '';
+    if (el('ct-cli-twitter')) el('ct-cli-twitter').value = datos.twitter || '';
+    if (el('ct-cli-pinterest')) el('ct-cli-pinterest').value = datos.pinterest || '';
+
+    // 5. Datos del prestador
+    if (el('ct-prestador-nombre')) el('ct-prestador-nombre').value = ct.prestador_nombre || 'Gerard Fanals';
+    if (el('ct-prestador-cargo')) el('ct-prestador-cargo').value = ct.prestador_cargo || 'Director';
+    if (el('ct-prestador-empresa')) el('ct-prestador-empresa').value = ct.prestador_empresa || 'Vigila y Actúa S.L.';
+    if (el('ct-prestador-cif')) el('ct-prestador-cif').value = ct.prestador_cif || 'B 57973562';
+    if (el('ct-prestador-telefono')) el('ct-prestador-telefono').value = ct.prestador_telefono || '+34 629 494 167';
+    if (el('ct-prestador-email')) el('ct-prestador-email').value = ct.prestador_email || 'gerard@iartesana.es';
+    if (el('ct-prestador-direccion')) el('ct-prestador-direccion').value = ct.prestador_direccion || '';
+    if (el('ct-prestador-actividad')) el('ct-prestador-actividad').value = ct.prestador_actividad || '';
+
+    // 6. Objeto del contrato + servicios
+    if (el('ct-objeto-texto')) el('ct-objeto-texto').value = ct.objeto_texto || '';
+    const servList = el('ct-servicios-list');
+    if (servList) {
+        servList.innerHTML = '';
+        (ct.servicios || []).forEach(s => addServicio(s));
+    }
+
+    // 7. Plazo de entrega
+    if (el('ct-plazo-entrega')) el('ct-plazo-entrega').value = ct.plazo_entrega || '';
+    if (el('ct-clausula-plazo')) el('ct-clausula-plazo').value = ct.clausula_plazo || '';
+    updateCountdown();
+
+    // 8. Periodo de prueba
+    if (el('ct-prueba-inicio')) el('ct-prueba-inicio').value = ct.prueba_inicio || '';
+    if (el('ct-prueba-fin')) el('ct-prueba-fin').value = ct.prueba_fin || '';
+    updatePruebaStatus();
+
+    // 9. Duración y precios
+    if (el('ct-duracion')) el('ct-duracion').value = ct.duracion_meses || 12;
+    if (el('ct-fecha-inicio')) el('ct-fecha-inicio').value = ct.fecha_inicio || '';
+    if (el('ct-fecha-fin')) el('ct-fecha-fin').value = ct.fecha_fin || '';
+    if (el('ct-precio-total')) el('ct-precio-total').value = ct.precio_total || '';
+    if (el('ct-precio-mensual')) el('ct-precio-mensual').value = ct.precio_mensual || '';
+    if (el('ct-cuota-fecha-inicio')) el('ct-cuota-fecha-inicio').value = ct.cuota_fecha_inicio || '';
+    if (el('ct-cuota-concepto')) el('ct-cuota-concepto').value = ct.cuota_concepto || '';
+    if (el('ct-cli-banco')) el('ct-cli-banco').value = datos.banco || '';
+    if (el('ct-cli-titular-cuenta')) el('ct-cli-titular-cuenta').value = datos.titular_cuenta || '';
+    if (el('ct-cli-cuenta-bancaria')) el('ct-cli-cuenta-bancaria').value = datos.cuenta_bancaria || ct.cuenta_bancaria || '';
+    if (el('ct-precio-texto')) el('ct-precio-texto').value = ct.precio_texto || '';
+
+    // 10. Opciones de pago
+    if (el('ct-pago-a-entrada')) el('ct-pago-a-entrada').value = pc.a_entrada || 30;
+    if (el('ct-pago-a-plazos')) el('ct-pago-a-plazos').value = pc.a_plazos || 3;
+    if (el('ct-pago-a-fecha')) el('ct-pago-a-fecha').value = pc.a_fecha || '';
+    if (el('ct-pago-b-descuento')) el('ct-pago-b-descuento').value = pc.b_descuento || 5;
+    if (el('ct-pago-b-fecha')) el('ct-pago-b-fecha').value = pc.b_fecha || '';
+    if (el('ct-pago-c-descuento')) el('ct-pago-c-descuento').value = pc.c_descuento || 10;
+    if (el('ct-pago-c-fecha')) el('ct-pago-c-fecha').value = pc.c_fecha || '';
+    _selectedPagoOpcion = pc.opcion_seleccionada || null;
+    if (_selectedPagoOpcion) selectPagoOpcion(_selectedPagoOpcion, true);
+    else {
+        if (el('ct-pago-seleccionada')) el('ct-pago-seleccionada').style.display = 'none';
+        ['ct-pago-opcion-a','ct-pago-opcion-b','ct-pago-opcion-c'].forEach(fid => { if (el(fid)) el(fid).style.borderColor = 'var(--border-color)'; });
+    }
+    recalcPago();
+
+    // 11. Precio final
+    if (el('ct-precio-final')) el('ct-precio-final').value = ct.precio_final || ct.precio_total || '';
+    if (el('ct-precio-total-letras')) el('ct-precio-total-letras').value = ct.precio_total_letras || '';
+
+    // 12. Formas de pago
+    ['giro','transferencia','stripe','bizum','efectivo','otro'].forEach(k => {
+        if (el('ct-fp-' + k)) el('ct-fp-' + k).checked = !!(fp[k]);
+    });
+    if (el('ct-cuenta-bancaria')) el('ct-cuenta-bancaria').value = ct.cuenta_bancaria || datos.cuenta_bancaria || '';
+
+    // 13. Cláusulas
+    ['cuarta','quinta','sexta','septima','octava','novena','decima','undecima','duodecima','adicional'].forEach(k => {
+        if (el('ct-clausula-' + k)) el('ct-clausula-' + k).value = cl[k] || '';
+    });
+
+    // 14. Notas
+    if (el('ct-notas')) el('ct-notas').value = ct.notas || '';
+
+    // Firma prestador
     clearFirma();
     if (ct.firma_prestador) {
         const preview = document.getElementById('firma-preview-img');
         const container = document.getElementById('firma-preview-container');
-        preview.src = ct.firma_prestador;
-        container.style.display = '';
+        if (preview && container) { preview.src = ct.firma_prestador; container.style.display = ''; }
     }
     switchContratoTab('editor');
 }
 
 async function guardarContrato() {
     const btn = document.getElementById('btn-guardar-contrato');
-    btn.textContent = '⏳ Guardando...';
-    btn.disabled = true;
+    const btnBottom = document.getElementById('btn-guardar-contrato-bottom');
+    if (btn) { btn.textContent = '⏳ Guardando...'; btn.disabled = true; }
+    if (btnBottom) { btnBottom.textContent = '⏳ Guardando...'; btnBottom.disabled = true; }
 
-    const serviciosRaw = document.getElementById('ct-servicios').value;
-    const servicios = serviciosRaw.split('\n').map(s => s.trim()).filter(Boolean);
+    const el = id => { const e = document.getElementById(id); return e ? (e.type === 'checkbox' ? e.checked : e.value) : ''; };
+
+    // Collect services from dynamic list
+    const servicios = [];
+    document.querySelectorAll('#ct-servicios-list input').forEach(inp => {
+        const v = inp.value.trim();
+        if (v) servicios.push(v);
+    });
+
+    // Build datos_cliente JSON
+    const datos_cliente = {
+        apellidos: el('ct-cli-apellidos'),
+        fecha_nacimiento: el('ct-cli-fecha-nacimiento'),
+        email_personal: el('ct-cliente-email'),
+        telefono_personal: el('ct-cliente-telefono'),
+        nombre_negocio: el('ct-cli-nombre-negocio'),
+        nombre_comercial: el('ct-cli-nombre-comercial'),
+        cif_negocio: el('ct-cli-cif-negocio'),
+        actividad: el('ct-cli-actividad'),
+        direccion_negocio: el('ct-cli-direccion-negocio'),
+        codigo_postal: el('ct-cli-codigo-postal'),
+        localidad: el('ct-cli-localidad'),
+        provincia: el('ct-cli-provincia'),
+        pais: el('ct-cli-pais'),
+        email_negocio: el('ct-cli-email-negocio'),
+        telefono_negocio: el('ct-cli-telefono-negocio'),
+        web: el('ct-cli-web'),
+        instagram: el('ct-cli-instagram'),
+        facebook: el('ct-cli-facebook'),
+        linkedin: el('ct-cli-linkedin'),
+        tiktok: el('ct-cli-tiktok'),
+        youtube: el('ct-cli-youtube'),
+        twitter: el('ct-cli-twitter'),
+        pinterest: el('ct-cli-pinterest'),
+        banco: el('ct-cli-banco'),
+        titular_cuenta: el('ct-cli-titular-cuenta'),
+        cuenta_bancaria: el('ct-cli-cuenta-bancaria'),
+    };
+
+    // Build formas_pago JSON
+    const formas_pago = {};
+    ['giro','transferencia','stripe','bizum','efectivo','otro'].forEach(k => {
+        formas_pago[k] = el('ct-fp-' + k);
+    });
+    if (_selectedPagoOpcion) formas_pago.opcion = _selectedPagoOpcion;
+
+    // Build pago_config JSON
+    const pago_config = {
+        a_entrada: parseFloat(el('ct-pago-a-entrada')) || 30,
+        a_plazos: parseInt(el('ct-pago-a-plazos')) || 3,
+        a_fecha: el('ct-pago-a-fecha'),
+        b_descuento: parseFloat(el('ct-pago-b-descuento')) || 5,
+        b_fecha: el('ct-pago-b-fecha'),
+        c_descuento: parseFloat(el('ct-pago-c-descuento')) || 10,
+        c_fecha: el('ct-pago-c-fecha'),
+        opcion_seleccionada: _selectedPagoOpcion || null,
+    };
+
+    // Build clausulas_custom JSON
+    const clausulas_custom = {};
+    ['cuarta','quinta','sexta','septima','octava','novena','decima','undecima','duodecima','adicional'].forEach(k => {
+        const v = el('ct-clausula-' + k);
+        if (v) clausulas_custom[k] = v;
+    });
 
     // Get firma from canvas
     const canvas = document.getElementById('firma-canvas');
@@ -624,26 +830,46 @@ async function guardarContrato() {
 
     const body = {
         codigo_contrato: document.getElementById('editor-codigo').textContent,
-        cliente_nombre: document.getElementById('ct-cliente-nombre').value,
-        cliente_email: document.getElementById('ct-cliente-email').value,
-        cliente_telefono: document.getElementById('ct-cliente-telefono').value,
-        cliente_nif: document.getElementById('ct-cliente-nif').value,
-        cliente_direccion: document.getElementById('ct-cliente-direccion').value,
-        cliente_profesion: document.getElementById('ct-cliente-profesion').value,
-        prestador_nombre: document.getElementById('ct-prestador-nombre').value,
-        prestador_empresa: document.getElementById('ct-prestador-empresa').value,
-        prestador_cif: document.getElementById('ct-prestador-cif').value,
-        prestador_actividad: document.getElementById('ct-prestador-actividad').value,
-        prestador_direccion: document.getElementById('ct-prestador-direccion').value,
+        lugar: el('ct-lugar'),
+        fecha_contrato: el('ct-fecha-contrato') || null,
+        cliente_nombre: el('ct-cliente-nombre'),
+        cliente_email: el('ct-cliente-email'),
+        cliente_telefono: el('ct-cliente-telefono'),
+        cliente_nif: el('ct-cliente-nif'),
+        cliente_direccion: el('ct-cliente-direccion'),
+        cliente_profesion: el('ct-cliente-profesion'),
+        cliente_representacion: el('ct-cliente-representacion'),
+        prestador_nombre: el('ct-prestador-nombre'),
+        prestador_cargo: el('ct-prestador-cargo'),
+        prestador_empresa: el('ct-prestador-empresa'),
+        prestador_cif: el('ct-prestador-cif'),
+        prestador_telefono: el('ct-prestador-telefono'),
+        prestador_email: el('ct-prestador-email'),
+        prestador_direccion: el('ct-prestador-direccion'),
+        prestador_actividad: el('ct-prestador-actividad'),
         servicios,
-        precio_total: parseFloat(document.getElementById('ct-precio-total').value) || 0,
-        precio_mensual: parseFloat(document.getElementById('ct-precio-mensual').value) || 0,
-        duracion_meses: parseInt(document.getElementById('ct-duracion').value) || 12,
-        fecha_contrato: document.getElementById('ct-fecha-contrato').value || null,
-        fecha_inicio: document.getElementById('ct-fecha-inicio').value || null,
-        notas: document.getElementById('ct-notas').value,
+        objeto_texto: el('ct-objeto-texto'),
+        plazo_entrega: el('ct-plazo-entrega') || null,
+        clausula_plazo: el('ct-clausula-plazo'),
+        prueba_inicio: el('ct-prueba-inicio') || null,
+        prueba_fin: el('ct-prueba-fin') || null,
+        duracion_meses: parseInt(el('ct-duracion')) || 12,
+        fecha_inicio: el('ct-fecha-inicio') || null,
+        fecha_fin: el('ct-fecha-fin') || null,
+        precio_total: parseFloat(el('ct-precio-total')) || 0,
+        precio_mensual: parseFloat(el('ct-precio-mensual')) || 0,
+        cuota_fecha_inicio: el('ct-cuota-fecha-inicio') || null,
+        cuota_concepto: el('ct-cuota-concepto'),
+        precio_texto: el('ct-precio-texto'),
+        precio_total_letras: el('ct-precio-total-letras'),
+        cuenta_bancaria: el('ct-cuenta-bancaria'),
+        notas: el('ct-notas'),
         firma_prestador: firmaPrestador,
         estado: firmaPrestador ? 'firmado_prestador' : 'no_firmado',
+        datos_cliente,
+        formas_pago,
+        pago_config,
+        clausulas_custom,
     };
 
     try {
@@ -667,8 +893,8 @@ async function guardarContrato() {
     } catch (e) {
         showAlert('Error', e.message, '❌');
     }
-    btn.textContent = '💾 Guardar';
-    btn.disabled = false;
+    if (btn) { btn.textContent = '💾 Guardar'; btn.disabled = false; }
+    if (btnBottom) { btnBottom.textContent = '💾 Guardar'; btnBottom.disabled = false; }
 }
 
 async function eliminarContrato(id, nombre) {
@@ -703,6 +929,191 @@ async function togglePruebaContrato(id, currentValue) {
     } catch (e) {
         showAlert('Error', e.message, '❌');
     }
+}
+
+// ── Contract Editor Helpers ──────────────────────────────────
+let _selectedPagoOpcion = null;
+
+function addServicio(value) {
+    const list = document.getElementById('ct-servicios-list');
+    if (!list) return;
+    const idx = list.children.length;
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:6px;align-items:center';
+    row.innerHTML = `<input class="nl-config-input" value="${(value || '').replace(/"/g, '&quot;')}" placeholder="Servicio ${idx + 1}" style="flex:1;margin-bottom:0" /><button class="btn-secondary" style="padding:4px 8px;font-size:0.7rem;flex-shrink:0" onclick="removeServicio(this)" title="Eliminar">✕</button>`;
+    list.appendChild(row);
+}
+
+function removeServicio(btn) {
+    const row = btn.parentElement;
+    if (row) row.remove();
+}
+
+function updateCountdown() {
+    const plazoEl = document.getElementById('ct-plazo-entrega');
+    const countEl = document.getElementById('ct-plazo-countdown');
+    if (!plazoEl || !countEl) return;
+    const fecha = plazoEl.value;
+    if (!fecha) { countEl.textContent = '— días restantes'; countEl.style.color = 'var(--text-grey)'; return; }
+    const diff = Math.ceil((new Date(fecha + 'T00:00:00') - new Date()) / (1000 * 60 * 60 * 24));
+    if (diff < 0) { countEl.textContent = `⚠️ Vencido hace ${Math.abs(diff)} días`; countEl.style.color = '#ff453a'; }
+    else if (diff === 0) { countEl.textContent = '⚡ Hoy es el último día'; countEl.style.color = '#ff9500'; }
+    else if (diff <= 7) { countEl.textContent = `⏳ ${diff} días restantes`; countEl.style.color = '#ff9500'; }
+    else { countEl.textContent = `✅ ${diff} días restantes`; countEl.style.color = '#34c759'; }
+}
+
+function updatePruebaStatus() {
+    const inicio = document.getElementById('ct-prueba-inicio');
+    const fin = document.getElementById('ct-prueba-fin');
+    const status = document.getElementById('ct-prueba-status');
+    if (!status) return;
+    if (!inicio || !inicio.value || !fin || !fin.value) {
+        status.textContent = 'Sin periodo de prueba definido';
+        status.style.background = 'rgba(142,142,147,0.1)'; status.style.color = '#8e8e93';
+        return;
+    }
+    const now = new Date();
+    const start = new Date(inicio.value + 'T00:00:00');
+    const end = new Date(fin.value + 'T00:00:00');
+    if (now < start) { status.textContent = '🕐 Pendiente de inicio'; status.style.background = 'rgba(0,113,227,0.1)'; status.style.color = '#0071e3'; }
+    else if (now >= start && now <= end) { status.textContent = '🟢 En curso'; status.style.background = 'rgba(52,199,89,0.1)'; status.style.color = '#34c759'; }
+    else { status.textContent = '✅ Finalizado'; status.style.background = 'rgba(142,142,147,0.1)'; status.style.color = '#8e8e93'; }
+}
+
+function selectPagoOpcion(opcion, silent) {
+    _selectedPagoOpcion = opcion;
+    const el = id => document.getElementById(id);
+    const colors = { A: '#0071e3', B: '#34c759', C: '#ff9500' };
+    ['ct-pago-opcion-a','ct-pago-opcion-b','ct-pago-opcion-c'].forEach(id => { if (el(id)) el(id).style.borderColor = 'var(--border-color)'; });
+    const selectedId = 'ct-pago-opcion-' + opcion.toLowerCase();
+    if (el(selectedId)) el(selectedId).style.borderColor = colors[opcion] || '#0071e3';
+    const indicator = el('ct-pago-seleccionada');
+    if (indicator) { indicator.style.display = ''; indicator.textContent = `✅ Opción ${opcion} seleccionada`; }
+    recalcPago();
+    if (!silent) showAlert('Opción de pago', `Has seleccionado la opción ${opcion}`, '✅');
+}
+
+function recalcPago() {
+    const total = parseFloat(document.getElementById('ct-precio-total')?.value) || 0;
+    const el = id => document.getElementById(id);
+    // Option A
+    const entradaPct = parseFloat(el('ct-pago-a-entrada')?.value) || 30;
+    const plazos = parseInt(el('ct-pago-a-plazos')?.value) || 3;
+    const entrada = total * entradaPct / 100;
+    const restA = total - entrada;
+    const cuotaA = plazos > 0 ? restA / plazos : 0;
+    if (el('ct-pago-a-resumen')) el('ct-pago-a-resumen').innerHTML = total > 0 ? `Entrada: <strong>${entrada.toFixed(2)}€</strong> (${entradaPct}%) + ${plazos} plazos de <strong>${cuotaA.toFixed(2)}€</strong>` : '';
+    // Option B
+    const descB = parseFloat(el('ct-pago-b-descuento')?.value) || 5;
+    const totalB = total * (1 - descB / 100);
+    const cuotaB = totalB / 3;
+    if (el('ct-pago-b-resumen')) el('ct-pago-b-resumen').innerHTML = total > 0 ? `Total con ${descB}% dto: <strong>${totalB.toFixed(2)}€</strong> — 3 pagos de <strong>${cuotaB.toFixed(2)}€</strong>` : '';
+    // Option C
+    const descC = parseFloat(el('ct-pago-c-descuento')?.value) || 10;
+    const totalC = total * (1 - descC / 100);
+    if (el('ct-pago-c-resumen')) el('ct-pago-c-resumen').innerHTML = total > 0 ? `Pago único con ${descC}% dto: <strong>${totalC.toFixed(2)}€</strong>` : '';
+    // Update precio final based on selected option
+    let precioFinal = total;
+    if (_selectedPagoOpcion === 'B') precioFinal = totalB;
+    else if (_selectedPagoOpcion === 'C') precioFinal = totalC;
+    if (el('ct-precio-final')) el('ct-precio-final').value = precioFinal > 0 ? precioFinal.toFixed(2) : '';
+}
+
+function updateFormasPago(key) {
+    // Visual feedback — checkbox handles state
+}
+
+function updateClausula(key, value) {
+    // Stored on save — this is a hook for future live-preview
+}
+
+function numALetras(n) {
+    if (n === 0) return 'cero';
+    const unidades = ['','un','dos','tres','cuatro','cinco','seis','siete','ocho','nueve'];
+    const especiales = ['diez','once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve'];
+    const decenas = ['','diez','veinte','treinta','cuarenta','cincuenta','sesenta','setenta','ochenta','noventa'];
+    const centenas = ['','ciento','doscientos','trescientos','cuatrocientos','quinientos','seiscientos','setecientos','ochocientos','novecientos'];
+    function bloque(num) {
+        if (num === 0) return '';
+        if (num === 100) return 'cien';
+        let txt = '';
+        if (num >= 100) { txt += centenas[Math.floor(num / 100)] + ' '; num %= 100; }
+        if (num >= 20) { txt += decenas[Math.floor(num / 10)]; if (num % 10 > 0) txt += ' y ' + unidades[num % 10]; }
+        else if (num >= 10) { txt += especiales[num - 10]; }
+        else if (num > 0) { txt += unidades[num]; }
+        return txt.trim();
+    }
+    let resultado = '';
+    const entero = Math.floor(Math.abs(n));
+    const centimos = Math.round((Math.abs(n) - entero) * 100);
+    if (entero >= 1000000) {
+        const millones = Math.floor(entero / 1000000);
+        resultado += (millones === 1 ? 'un millón' : bloque(millones) + ' millones') + ' ';
+    }
+    const resto = entero % 1000000;
+    if (resto >= 1000) {
+        const miles = Math.floor(resto / 1000);
+        resultado += (miles === 1 ? 'mil' : bloque(miles) + ' mil') + ' ';
+    }
+    const final = resto % 1000;
+    if (final > 0 || entero === 0) resultado += bloque(final);
+    resultado = resultado.trim() + ' euros';
+    if (centimos > 0) resultado += ' con ' + bloque(centimos) + ' céntimos';
+    return resultado.charAt(0).toUpperCase() + resultado.slice(1);
+}
+
+function autoRellenarLetras() {
+    const precio = parseFloat(document.getElementById('ct-precio-final')?.value || document.getElementById('ct-precio-total')?.value) || 0;
+    const letras = numALetras(precio);
+    const el = document.getElementById('ct-precio-total-letras');
+    if (el) el.value = letras;
+}
+
+function abrirFirmaPrestador() {
+    const modal = document.getElementById('firma-modal');
+    if (modal) { modal.style.display = 'flex'; initFirmaCanvas(); }
+}
+
+function cerrarFirmaModal() {
+    const modal = document.getElementById('firma-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function guardarFirmaDesdeModal() {
+    const canvas = document.getElementById('firma-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const hasDrawing = imgData.data.some((v, i) => i % 4 === 3 && v > 0);
+    if (!hasDrawing) { showAlert('Sin firma', 'Dibuja tu firma antes de guardar.', '⚠️'); return; }
+    const preview = document.getElementById('firma-preview-img');
+    const container = document.getElementById('firma-preview-container');
+    if (preview && container) { preview.src = canvas.toDataURL('image/png'); container.style.display = ''; }
+    cerrarFirmaModal();
+    showAlert('Firma guardada', 'La firma se ha guardado. Recuerda guardar el contrato.', '✅');
+}
+
+function enviarContratoEmail() {
+    showAlert('Próximamente', 'El envío por email estará disponible próximamente.', '📧');
+}
+
+function enviarContratoWhatsApp() {
+    const nombre = document.getElementById('ct-cliente-nombre')?.value || '';
+    const tel = document.getElementById('ct-cliente-telefono')?.value || '';
+    if (!tel) { showAlert('Sin teléfono', 'Introduce el teléfono del cliente primero.', '⚠️'); return; }
+    const cleanTel = tel.replace(/[^0-9+]/g, '');
+    const msg = encodeURIComponent(`Hola ${nombre}, te envío el contrato para revisión.`);
+    window.open(`https://wa.me/${cleanTel}?text=${msg}`, '_blank');
+}
+
+function generarLinkFirma() {
+    if (!contratoEditId) { showAlert('Guarda primero', 'Guarda el contrato antes de generar el link de firma.', '⚠️'); return; }
+    const link = `${window.location.origin}/firma/${contratoEditId}`;
+    navigator.clipboard.writeText(link).then(() => {
+        showAlert('Link copiado', `Link de firma digital copiado al portapapeles:\n${link}`, '✅');
+    }).catch(() => {
+        showAlert('Link de firma', link, '🔗');
+    });
 }
 
 // ── Firma Canvas ─────────────────────────────────────────────
@@ -775,7 +1186,7 @@ function generarPdfContrato(fromId) {
         pre_cif: document.getElementById('ct-prestador-cif')?.value || 'B 57973562',
         pre_actividad: document.getElementById('ct-prestador-actividad')?.value || '',
         pre_direccion: document.getElementById('ct-prestador-direccion')?.value || '',
-        servicios: (document.getElementById('ct-servicios')?.value || '').split('\n').filter(Boolean),
+        servicios: Array.from(document.querySelectorAll('#ct-servicios-list input')).map(i => i.value.trim()).filter(Boolean),
         precio_total: parseFloat(document.getElementById('ct-precio-total')?.value) || 0,
         precio_mensual: parseFloat(document.getElementById('ct-precio-mensual')?.value) || 0,
         duracion: parseInt(document.getElementById('ct-duracion')?.value) || 12,

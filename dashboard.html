@@ -3040,97 +3040,319 @@
                 <!-- TAB: Editor de contrato -->
                 <div id="contrato-tab-editor" style="display:none">
                     <div class="stat-card-glass" style="padding:28px">
-                        <!-- Editor Header -->
+
+                        <!-- ═══ HEADER ═══ -->
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
-                            <div>
-                                <h3 style="font-size:1.05rem;font-weight:800;color:var(--text-main);margin:0;letter-spacing:-0.01em" id="editor-title">Nuevo Contrato</h3>
-                                <p style="font-size:0.75rem;color:var(--text-grey);margin:4px 0 0" id="editor-codigo"></p>
+                            <div style="display:flex;align-items:center;gap:12px">
+                                <button class="btn-secondary" style="padding:8px 14px;font-size:0.82rem" onclick="switchContratoTab('lista')">← Volver</button>
+                                <div>
+                                    <h3 style="font-size:1.05rem;font-weight:800;color:var(--text-main);margin:0;letter-spacing:-0.01em" id="editor-title">Nuevo Contrato</h3>
+                                    <p style="font-size:0.75rem;color:var(--text-grey);margin:4px 0 0" id="editor-codigo"></p>
+                                </div>
                             </div>
-                            <div style="display:flex;gap:8px">
-                                <button class="btn-secondary" style="padding:8px 16px;font-size:0.8rem" onclick="switchContratoTab('lista')">← Volver</button>
-                                <button class="btn-secondary" style="padding:8px 16px;font-size:0.8rem" onclick="generarPdfContrato()">📄 Descargar PDF</button>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap">
                                 <button class="btn-primary" style="padding:8px 20px;font-size:0.8rem" onclick="guardarContrato()" id="btn-guardar-contrato">💾 Guardar</button>
+                                <button class="btn-secondary" style="padding:8px 16px;font-size:0.8rem" onclick="generarPdfContrato()">📄 PDF</button>
                             </div>
                         </div>
 
-                        <!-- Datos del cliente -->
+                        <!-- ═══ 1. DATOS GENERALES ═══ -->
                         <div style="margin-bottom:24px">
-                            <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-main);margin-bottom:14px;display:flex;align-items:center;gap:8px">
-                                <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#007AFF,#5856d6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800">1</span>
-                                Datos del Cliente
-                            </h4>
-                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:12px">
-                                <div class="nl-config-field"><label class="nl-config-field-label">Nombre completo</label><input class="nl-config-input" id="ct-cliente-nombre" placeholder="Nombre del cliente" /></div>
-                                <div class="nl-config-field"><label class="nl-config-field-label">Email</label><input class="nl-config-input" id="ct-cliente-email" placeholder="email@empresa.com" type="email" /></div>
-                                <div class="nl-config-field"><label class="nl-config-field-label">Teléfono</label><input class="nl-config-input" id="ct-cliente-telefono" placeholder="+34 600 000 000" /></div>
-                                <div class="nl-config-field"><label class="nl-config-field-label">NIF / CIF</label><input class="nl-config-input" id="ct-cliente-nif" placeholder="12345678A" /></div>
-                                <div class="nl-config-field" style="grid-column:1/-1"><label class="nl-config-field-label">Dirección</label><input class="nl-config-input" id="ct-cliente-direccion" placeholder="Dirección completa" /></div>
-                                <div class="nl-config-field"><label class="nl-config-field-label">Profesión / Actividad</label><input class="nl-config-input" id="ct-cliente-profesion" placeholder="Ej: CEO, Autónomo..." /></div>
-                                <div class="nl-config-field"><label class="nl-config-field-label">Representación</label><input class="nl-config-input" id="ct-cliente-representacion" value="en su propio nombre y representación" /></div>
+                            <div style="font-size:0.82rem;font-weight:700;color:#0071e3;margin-bottom:10px">📍 Datos generales</div>
+                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr 1fr;gap:10px">
+                                <div class="nl-config-field"><label class="nl-config-field-label">Código contrato</label><input class="nl-config-input" id="ct-codigo-contrato" style="font-family:monospace;font-weight:700" readonly /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Lugar</label><input class="nl-config-input" id="ct-lugar" value="Mahón (Menorca)" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Fecha</label><input class="nl-config-input" id="ct-fecha-contrato" type="date" /></div>
                             </div>
                         </div>
 
-                        <!-- Datos del prestador -->
+                        <!-- ═══ 2. DATOS PERSONALES DEL CLIENTE ═══ -->
                         <div style="margin-bottom:24px">
-                            <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-main);margin-bottom:14px;display:flex;align-items:center;gap:8px">
-                                <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#34c759,#30d158);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800">2</span>
-                                Datos del Prestador
-                            </h4>
-                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:12px">
+                            <div style="font-size:0.82rem;font-weight:700;color:#0071e3;margin-bottom:10px">👤 Datos personales del cliente</div>
+                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:10px">
+                                <div class="nl-config-field"><label class="nl-config-field-label">Nombre *</label><input class="nl-config-input" id="ct-cliente-nombre" placeholder="Nombre del cliente" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Apellidos</label><input class="nl-config-input" id="ct-cli-apellidos" placeholder="Apellidos" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">NIF/DNI</label><input class="nl-config-input" id="ct-cliente-nif" placeholder="12345678A" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Fecha nacimiento</label><input class="nl-config-input" id="ct-cli-fecha-nacimiento" type="date" /></div>
+                                <div class="nl-config-field" style="grid-column:1/-1"><label class="nl-config-field-label">Profesión/Cargo</label><input class="nl-config-input" id="ct-cliente-profesion" placeholder="Ej: CEO, Autónomo..." /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Email personal</label><input class="nl-config-input" id="ct-cliente-email" placeholder="email@personal.com" type="email" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Teléfono personal</label><input class="nl-config-input" id="ct-cliente-telefono" placeholder="+34 600 000 000" /></div>
+                                <div class="nl-config-field" style="grid-column:1/-1"><label class="nl-config-field-label">Dirección</label><input class="nl-config-input" id="ct-cliente-direccion" placeholder="Dirección completa del cliente" /></div>
+                                <div class="nl-config-field" style="grid-column:1/-1"><label class="nl-config-field-label">Representación</label><input class="nl-config-input" id="ct-cliente-representacion" value="en su propio nombre y representación" /></div>
+                            </div>
+                        </div>
+
+                        <!-- ═══ 3. DATOS DEL NEGOCIO DEL CLIENTE ═══ -->
+                        <div style="margin-bottom:24px">
+                            <div style="font-size:0.82rem;font-weight:700;color:#0071e3;margin-bottom:10px">🏢 Datos del negocio del cliente</div>
+                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:10px">
+                                <div class="nl-config-field"><label class="nl-config-field-label">Empresa</label><input class="nl-config-input" id="ct-cli-nombre-negocio" placeholder="Nombre de la empresa" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Nombre comercial</label><input class="nl-config-input" id="ct-cli-nombre-comercial" placeholder="Nombre comercial" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">CIF empresa</label><input class="nl-config-input" id="ct-cli-cif-negocio" placeholder="B12345678" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Actividad/Sector</label><input class="nl-config-input" id="ct-cli-actividad" placeholder="Ej: Hostelería, Retail..." /></div>
+                                <div class="nl-config-field" style="grid-column:1/-1"><label class="nl-config-field-label">Dirección negocio</label><input class="nl-config-input" id="ct-cli-direccion-negocio" placeholder="Dirección del negocio" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Código postal</label><input class="nl-config-input" id="ct-cli-codigo-postal" placeholder="07701" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Localidad</label><input class="nl-config-input" id="ct-cli-localidad" placeholder="Mahón" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Provincia</label><input class="nl-config-input" id="ct-cli-provincia" placeholder="Baleares" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">País</label><input class="nl-config-input" id="ct-cli-pais" value="España" /></div>
+                            </div>
+                        </div>
+
+                        <!-- ═══ 4. CONTACTO DEL NEGOCIO ═══ -->
+                        <div style="margin-bottom:24px">
+                            <div style="font-size:0.82rem;font-weight:700;color:#0071e3;margin-bottom:10px">📱 Contacto del negocio</div>
+                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:10px">
+                                <div class="nl-config-field"><label class="nl-config-field-label">Email negocio</label><input class="nl-config-input" id="ct-cli-email-negocio" placeholder="info@empresa.com" type="email" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Teléfono negocio</label><input class="nl-config-input" id="ct-cli-telefono-negocio" placeholder="+34 971 000 000" /></div>
+                                <div class="nl-config-field" style="grid-column:1/-1"><label class="nl-config-field-label">Página web</label><input class="nl-config-input" id="ct-cli-web" placeholder="https://www.empresa.com" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Instagram</label><input class="nl-config-input" id="ct-cli-instagram" placeholder="@usuario" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Facebook</label><input class="nl-config-input" id="ct-cli-facebook" placeholder="facebook.com/..." /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">LinkedIn</label><input class="nl-config-input" id="ct-cli-linkedin" placeholder="linkedin.com/in/..." /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">TikTok</label><input class="nl-config-input" id="ct-cli-tiktok" placeholder="@usuario" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">YouTube</label><input class="nl-config-input" id="ct-cli-youtube" placeholder="youtube.com/..." /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">X (Twitter)</label><input class="nl-config-input" id="ct-cli-twitter" placeholder="@usuario" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Pinterest</label><input class="nl-config-input" id="ct-cli-pinterest" placeholder="pinterest.com/..." /></div>
+                            </div>
+                        </div>
+
+                        <!-- ═══ 5. DATOS DEL PRESTADOR ═══ -->
+                        <div style="margin-bottom:24px">
+                            <div style="font-size:0.82rem;font-weight:700;color:#34c759;margin-bottom:10px">🏢 Datos del prestador</div>
+                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:10px">
                                 <div class="nl-config-field"><label class="nl-config-field-label">Nombre</label><input class="nl-config-input" id="ct-prestador-nombre" value="Gerard Fanals" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Cargo</label><input class="nl-config-input" id="ct-prestador-cargo" value="Director" /></div>
                                 <div class="nl-config-field"><label class="nl-config-field-label">Empresa</label><input class="nl-config-input" id="ct-prestador-empresa" value="Vigila y Actúa S.L." /></div>
                                 <div class="nl-config-field"><label class="nl-config-field-label">CIF</label><input class="nl-config-input" id="ct-prestador-cif" value="B 57973562" /></div>
-                                <div class="nl-config-field"><label class="nl-config-field-label">Actividad</label><input class="nl-config-input" id="ct-prestador-actividad" value="Tecnología Online y OFFline a través de inteligencia artificial" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Teléfono prestador</label><input class="nl-config-input" id="ct-prestador-telefono" value="+34 629 494 167" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Email prestador</label><input class="nl-config-input" id="ct-prestador-email" value="gerard@iartesana.es" type="email" /></div>
                                 <div class="nl-config-field" style="grid-column:1/-1"><label class="nl-config-field-label">Dirección</label><input class="nl-config-input" id="ct-prestador-direccion" value="Avda. Fort de L'eau 131, Mahón 07701, Menorca" /></div>
+                                <div class="nl-config-field" style="grid-column:1/-1"><label class="nl-config-field-label">Actividad</label><input class="nl-config-input" id="ct-prestador-actividad" value="Tecnología Online y OFFline a través de inteligencia artificial" /></div>
                             </div>
                         </div>
 
-                        <!-- Servicios y condiciones -->
+                        <!-- ═══ 6. OBJETO DEL CONTRATO ═══ -->
                         <div style="margin-bottom:24px">
-                            <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-main);margin-bottom:14px;display:flex;align-items:center;gap:8px">
-                                <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#ff9500,#ff6723);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800">3</span>
-                                Servicios y Condiciones
-                            </h4>
-                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:12px">
-                                <div class="nl-config-field" style="grid-column:1/-1">
-                                    <label class="nl-config-field-label">Servicios contratados <span style="font-weight:400;color:var(--text-grey)">(uno por línea)</span></label>
-                                    <textarea class="nl-config-input" id="ct-servicios" rows="4" placeholder="Diseño web&#10;SEO&#10;Mantenimiento mensual" style="resize:vertical;font-size:0.85rem"></textarea>
+                            <div style="font-size:0.82rem;font-weight:700;color:#ff9500;margin-bottom:10px">📋 Objeto del contrato (Cláusula Primera)</div>
+                            <div class="nl-config-field" style="margin-bottom:12px">
+                                <label class="nl-config-field-label">Texto del objeto</label>
+                                <textarea class="nl-config-input" id="ct-objeto-texto" rows="3" placeholder="El objeto del presente contrato es la prestación de los siguientes servicios profesionales..." style="resize:vertical;font-size:0.85rem"></textarea>
+                            </div>
+                            <div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+                                <label class="nl-config-field-label" style="margin-bottom:0">Servicios contratados</label>
+                                <button class="btn-secondary" style="padding:4px 12px;font-size:0.72rem" onclick="addServicio()">+ Añadir servicio</button>
+                            </div>
+                            <div id="ct-servicios-list" style="display:flex;flex-direction:column;gap:6px">
+                                <!-- Dynamic service rows added by JS -->
+                            </div>
+                        </div>
+
+                        <!-- ═══ 7. PLAZO DE ENTREGA ═══ -->
+                        <div style="margin-bottom:24px">
+                            <div style="font-size:0.82rem;font-weight:700;color:#ff9500;margin-bottom:10px">📦 Plazo final de entrega (Cláusula Segunda)</div>
+                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:10px">
+                                <div class="nl-config-field">
+                                    <label class="nl-config-field-label">Fecha límite entrega</label>
+                                    <input class="nl-config-input" id="ct-plazo-entrega" type="date" onchange="updateCountdown()" />
                                 </div>
-                                <div class="nl-config-field"><label class="nl-config-field-label">Precio total (€)</label><input class="nl-config-input" id="ct-precio-total" type="number" placeholder="0" /></div>
-                                <div class="nl-config-field"><label class="nl-config-field-label">Precio mensual (€)</label><input class="nl-config-input" id="ct-precio-mensual" type="number" placeholder="0" /></div>
+                                <div class="nl-config-field">
+                                    <label class="nl-config-field-label">Estado</label>
+                                    <div id="ct-plazo-countdown" style="padding:8px 14px;border-radius:10px;background:rgba(0,0,0,0.03);font-size:0.82rem;color:var(--text-grey);font-weight:600;border:1px solid var(--border-color)">— días restantes</div>
+                                </div>
+                            </div>
+                            <div class="nl-config-field" style="margin-top:10px">
+                                <label class="nl-config-field-label">Cláusula de protección del plazo</label>
+                                <textarea class="nl-config-input" id="ct-clausula-plazo" rows="2" placeholder="En caso de retraso por parte del cliente en la entrega de materiales..." style="resize:vertical;font-size:0.85rem"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- ═══ 8. PERIODO DE PRUEBA ═══ -->
+                        <div style="margin-bottom:24px;border:2px solid rgba(175,82,222,0.3);border-radius:16px;padding:18px;background:rgba(175,82,222,0.02)">
+                            <div style="font-size:0.82rem;font-weight:700;color:#af52de;margin-bottom:10px">🧪 Periodo de prueba</div>
+                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:10px">
+                                <div class="nl-config-field"><label class="nl-config-field-label">Fecha inicio prueba</label><input class="nl-config-input" id="ct-prueba-inicio" type="date" onchange="updatePruebaStatus()" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Fecha fin prueba</label><input class="nl-config-input" id="ct-prueba-fin" type="date" onchange="updatePruebaStatus()" /></div>
+                            </div>
+                            <div id="ct-prueba-status" style="margin-top:8px;padding:6px 12px;border-radius:8px;font-size:0.75rem;font-weight:700;background:rgba(142,142,147,0.1);color:#8e8e93;text-align:center">Sin periodo de prueba definido</div>
+                        </div>
+
+                        <!-- ═══ 9. DURACIÓN Y PRECIOS ═══ -->
+                        <div style="margin-bottom:24px">
+                            <div style="font-size:0.82rem;font-weight:700;color:#ff453a;margin-bottom:10px">💰 Duración y precios (Cláusula Tercera)</div>
+                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
                                 <div class="nl-config-field"><label class="nl-config-field-label">Duración (meses)</label><input class="nl-config-input" id="ct-duracion" type="number" value="12" /></div>
-                                <div class="nl-config-field"><label class="nl-config-field-label">Lugar</label><input class="nl-config-input" id="ct-lugar" value="Mahón (Menorca)" /></div>
-                                <div class="nl-config-field"><label class="nl-config-field-label">Fecha del contrato</label><input class="nl-config-input" id="ct-fecha-contrato" type="date" /></div>
                                 <div class="nl-config-field"><label class="nl-config-field-label">Fecha inicio</label><input class="nl-config-input" id="ct-fecha-inicio" type="date" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Fecha fin</label><input class="nl-config-input" id="ct-fecha-fin" type="date" /></div>
+                            </div>
+                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+                                <div class="nl-config-field" style="grid-column:1/-1"><label class="nl-config-field-label">Precio total proyecto (€)</label><input class="nl-config-input" id="ct-precio-total" type="number" placeholder="0" style="font-size:1.1rem;font-weight:700" oninput="recalcPago()" /></div>
+                            </div>
+
+                            <!-- Cuota mensual sub-section -->
+                            <div style="border:2px solid rgba(175,82,222,0.3);border-radius:14px;padding:16px;background:rgba(175,82,222,0.02);margin-bottom:14px">
+                                <div style="font-size:0.78rem;font-weight:700;color:#af52de;margin-bottom:8px">🔄 Cuota mensual</div>
+                                <div class="nl-config-grid" style="grid-template-columns:1fr 1fr 1fr;gap:10px">
+                                    <div class="nl-config-field"><label class="nl-config-field-label">Cuota mensual (€)</label><input class="nl-config-input" id="ct-precio-mensual" type="number" placeholder="0" /></div>
+                                    <div class="nl-config-field"><label class="nl-config-field-label">Fecha inicio cuota</label><input class="nl-config-input" id="ct-cuota-fecha-inicio" type="date" /></div>
+                                    <div class="nl-config-field"><label class="nl-config-field-label">Concepto</label><input class="nl-config-input" id="ct-cuota-concepto" placeholder="Mantenimiento mensual" /></div>
+                                </div>
+                            </div>
+
+                            <!-- Client bank details -->
+                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+                                <div class="nl-config-field"><label class="nl-config-field-label">Banco Cliente</label><input class="nl-config-input" id="ct-cli-banco" placeholder="CaixaBank, BBVA..." /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Titular Cuenta</label><input class="nl-config-input" id="ct-cli-titular-cuenta" placeholder="Nombre del titular" /></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">IBAN Cliente</label><input class="nl-config-input" id="ct-cli-cuenta-bancaria" placeholder="ES00 0000 0000 0000 0000 0000" style="font-family:monospace" /></div>
+                            </div>
+
+                            <div class="nl-config-field">
+                                <label class="nl-config-field-label">Texto cláusula de precios</label>
+                                <textarea class="nl-config-input" id="ct-precio-texto" rows="2" placeholder="Condiciones adicionales de precio..." style="resize:vertical;font-size:0.85rem"></textarea>
                             </div>
                         </div>
 
-                        <!-- Firma digital -->
+                        <!-- ═══ 10. OPCIONES DE PAGO A/B/C ═══ -->
                         <div style="margin-bottom:24px">
-                            <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-main);margin-bottom:14px;display:flex;align-items:center;gap:8px">
-                                <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#ff453a,#ff375f);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800">4</span>
-                                Firma Digital del Prestador
-                            </h4>
-                            <div style="background:rgba(0,0,0,0.02);border-radius:14px;border:1px solid var(--border-color);padding:20px">
-                                <p style="font-size:0.78rem;color:var(--text-grey);margin:0 0 12px">Firma en el recuadro con el ratón o el dedo:</p>
-                                <canvas id="firma-canvas" width="500" height="150" style="width:100%;max-width:500px;height:150px;border-radius:12px;border:2px dashed var(--border-color);background:#fff;cursor:crosshair;touch-action:none"></canvas>
-                                <div style="display:flex;gap:8px;margin-top:10px">
-                                    <button class="btn-secondary" style="padding:6px 14px;font-size:0.75rem" onclick="clearFirma()">🗑️ Limpiar</button>
-                                    <div style="flex:1"></div>
-                                    <div id="firma-preview-container" style="display:none">
-                                        <img id="firma-preview-img" style="height:40px;border-radius:6px;border:1px solid var(--border-color)" />
+                            <div style="font-size:0.82rem;font-weight:700;color:#ff453a;margin-bottom:10px">💰 Opciones de pago</div>
+                            <div style="display:flex;flex-direction:column;gap:12px" id="ct-pago-opciones">
+
+                                <!-- Option A: Financing -->
+                                <div style="border:1px solid var(--border-color);border-radius:14px;padding:16px;background:var(--bg-card)" id="ct-pago-opcion-a">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                                        <div style="display:flex;align-items:center;gap:8px">
+                                            <span style="font-weight:800;font-size:0.85rem;color:#0071e3">A</span>
+                                            <span style="font-size:0.82rem;font-weight:600;color:var(--text-main)">Financiación a plazos</span>
+                                        </div>
+                                        <button class="btn-secondary" style="padding:4px 12px;font-size:0.72rem" onclick="selectPagoOpcion('A')">Seleccionar</button>
                                     </div>
+                                    <div class="nl-config-grid" style="grid-template-columns:1fr 1fr 1fr;gap:8px">
+                                        <div class="nl-config-field"><label class="nl-config-field-label">% entrada</label><input class="nl-config-input" id="ct-pago-a-entrada" type="number" value="30" oninput="recalcPago()" /></div>
+                                        <div class="nl-config-field"><label class="nl-config-field-label">Nº plazos</label><input class="nl-config-input" id="ct-pago-a-plazos" type="number" value="3" oninput="recalcPago()" /></div>
+                                        <div class="nl-config-field"><label class="nl-config-field-label">Fecha 1r plazo</label><input class="nl-config-input" id="ct-pago-a-fecha" type="date" /></div>
+                                    </div>
+                                    <div id="ct-pago-a-resumen" style="margin-top:8px;padding:8px 12px;border-radius:8px;background:rgba(0,113,227,0.04);font-size:0.75rem;color:var(--text-grey)"></div>
+                                </div>
+
+                                <!-- Option B: 3 payments -->
+                                <div style="border:1px solid var(--border-color);border-radius:14px;padding:16px;background:var(--bg-card)" id="ct-pago-opcion-b">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                                        <div style="display:flex;align-items:center;gap:8px">
+                                            <span style="font-weight:800;font-size:0.85rem;color:#34c759">B</span>
+                                            <span style="font-size:0.82rem;font-weight:600;color:var(--text-main)">3 pagos con descuento</span>
+                                        </div>
+                                        <button class="btn-secondary" style="padding:4px 12px;font-size:0.72rem" onclick="selectPagoOpcion('B')">Seleccionar</button>
+                                    </div>
+                                    <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:8px">
+                                        <div class="nl-config-field"><label class="nl-config-field-label">% descuento</label><input class="nl-config-input" id="ct-pago-b-descuento" type="number" value="5" oninput="recalcPago()" /></div>
+                                        <div class="nl-config-field"><label class="nl-config-field-label">Fecha 1r pago</label><input class="nl-config-input" id="ct-pago-b-fecha" type="date" /></div>
+                                    </div>
+                                    <div id="ct-pago-b-resumen" style="margin-top:8px;padding:8px 12px;border-radius:8px;background:rgba(52,199,89,0.04);font-size:0.75rem;color:var(--text-grey)"></div>
+                                </div>
+
+                                <!-- Option C: Full upfront -->
+                                <div style="border:1px solid var(--border-color);border-radius:14px;padding:16px;background:var(--bg-card)" id="ct-pago-opcion-c">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                                        <div style="display:flex;align-items:center;gap:8px">
+                                            <span style="font-weight:800;font-size:0.85rem;color:#ff9500">C</span>
+                                            <span style="font-size:0.82rem;font-weight:600;color:var(--text-main)">Pago único adelantado</span>
+                                        </div>
+                                        <button class="btn-secondary" style="padding:4px 12px;font-size:0.72rem" onclick="selectPagoOpcion('C')">Seleccionar</button>
+                                    </div>
+                                    <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:8px">
+                                        <div class="nl-config-field"><label class="nl-config-field-label">% descuento</label><input class="nl-config-input" id="ct-pago-c-descuento" type="number" value="10" oninput="recalcPago()" /></div>
+                                        <div class="nl-config-field"><label class="nl-config-field-label">Fecha pago</label><input class="nl-config-input" id="ct-pago-c-fecha" type="date" /></div>
+                                    </div>
+                                    <div id="ct-pago-c-resumen" style="margin-top:8px;padding:8px 12px;border-radius:8px;background:rgba(255,149,0,0.04);font-size:0.75rem;color:var(--text-grey)"></div>
+                                </div>
+
+                                <!-- Selected indicator -->
+                                <div id="ct-pago-seleccionada" style="padding:10px 14px;border-radius:10px;background:rgba(52,199,89,0.06);border:1px solid rgba(52,199,89,0.15);font-size:0.78rem;font-weight:700;color:#34c759;text-align:center;display:none">Opción seleccionada: —</div>
+                            </div>
+                        </div>
+
+                        <!-- ═══ 11. PRECIO FINAL ═══ -->
+                        <div style="margin-bottom:24px;border:2px solid rgba(52,199,89,0.3);border-radius:16px;padding:18px;background:rgba(52,199,89,0.02)">
+                            <div style="font-size:0.82rem;font-weight:700;color:#34c759;margin-bottom:10px">💰 Precio final</div>
+                            <div class="nl-config-grid" style="grid-template-columns:1fr 1fr;gap:10px">
+                                <div class="nl-config-field">
+                                    <label class="nl-config-field-label">Precio final (€)</label>
+                                    <input class="nl-config-input" id="ct-precio-final" type="number" style="font-size:1.2rem;font-weight:800;color:#34c759" readonly />
+                                </div>
+                                <div class="nl-config-field">
+                                    <label class="nl-config-field-label">Precio en letras <button class="btn-secondary" style="padding:2px 8px;font-size:0.65rem;margin-left:6px" onclick="autoRellenarLetras()">Auto</button></label>
+                                    <input class="nl-config-input" id="ct-precio-total-letras" placeholder="Mil doscientos euros" />
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Notas -->
-                        <div style="margin-bottom:8px">
-                            <h4 style="font-size:0.85rem;font-weight:700;color:var(--text-main);margin-bottom:14px;display:flex;align-items:center;gap:8px">
-                                <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#5856d6,#af52de);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800">5</span>
-                                Notas adicionales
-                            </h4>
-                            <textarea class="nl-config-input" id="ct-notas" rows="3" placeholder="Notas internas sobre este contrato..." style="resize:vertical;font-size:0.85rem"></textarea>
+                        <!-- ═══ 12. FORMAS DE PAGO ═══ -->
+                        <div style="margin-bottom:24px">
+                            <div style="font-size:0.82rem;font-weight:700;color:#5856d6;margin-bottom:10px">💳 Formas de pago</div>
+                            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px" id="ct-formas-pago-checks">
+                                <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-card);font-size:0.78rem;font-weight:600;color:var(--text-main);cursor:pointer"><input type="checkbox" id="ct-fp-giro" onchange="updateFormasPago('giro')"> Giro bancario</label>
+                                <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-card);font-size:0.78rem;font-weight:600;color:var(--text-main);cursor:pointer"><input type="checkbox" id="ct-fp-transferencia" onchange="updateFormasPago('transferencia')"> Transferencia</label>
+                                <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-card);font-size:0.78rem;font-weight:600;color:var(--text-main);cursor:pointer"><input type="checkbox" id="ct-fp-stripe" onchange="updateFormasPago('stripe')"> Stripe</label>
+                                <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-card);font-size:0.78rem;font-weight:600;color:var(--text-main);cursor:pointer"><input type="checkbox" id="ct-fp-bizum" onchange="updateFormasPago('bizum')"> Bizum</label>
+                                <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-card);font-size:0.78rem;font-weight:600;color:var(--text-main);cursor:pointer"><input type="checkbox" id="ct-fp-efectivo" onchange="updateFormasPago('efectivo')"> Efectivo</label>
+                                <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-card);font-size:0.78rem;font-weight:600;color:var(--text-main);cursor:pointer"><input type="checkbox" id="ct-fp-otro" onchange="updateFormasPago('otro')"> Otro</label>
+                            </div>
+                            <div class="nl-config-field">
+                                <label class="nl-config-field-label">IBAN del cliente</label>
+                                <input class="nl-config-input" id="ct-cuenta-bancaria" placeholder="ES00 0000 0000 0000 0000 0000" style="font-family:monospace" />
+                            </div>
+                        </div>
+
+                        <!-- ═══ 13. CLÁUSULAS DEL CONTRATO ═══ -->
+                        <div style="margin-bottom:24px">
+                            <div style="font-size:0.82rem;font-weight:700;color:#5856d6;margin-bottom:10px">📜 Cláusulas del contrato</div>
+                            <div style="display:flex;flex-direction:column;gap:10px">
+                                <div class="nl-config-field"><label class="nl-config-field-label">CUARTA — Obligaciones del prestador</label><textarea class="nl-config-input" id="ct-clausula-cuarta" rows="3" style="resize:vertical;font-size:0.82rem" onchange="updateClausula('cuarta',this.value)"></textarea></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">QUINTA — Obligaciones del cliente</label><textarea class="nl-config-input" id="ct-clausula-quinta" rows="3" style="resize:vertical;font-size:0.82rem" onchange="updateClausula('quinta',this.value)"></textarea></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">SEXTA — Propiedad intelectual</label><textarea class="nl-config-input" id="ct-clausula-sexta" rows="3" style="resize:vertical;font-size:0.82rem" onchange="updateClausula('sexta',this.value)"></textarea></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">SÉPTIMA — Garantía y continuidad</label><textarea class="nl-config-input" id="ct-clausula-septima" rows="3" style="resize:vertical;font-size:0.82rem" onchange="updateClausula('septima',this.value)"></textarea></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">OCTAVA — Comisión por comercialización</label><textarea class="nl-config-input" id="ct-clausula-octava" rows="2" style="resize:vertical;font-size:0.82rem" onchange="updateClausula('octava',this.value)"></textarea></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">NOVENA — Resolución del contrato</label><textarea class="nl-config-input" id="ct-clausula-novena" rows="2" style="resize:vertical;font-size:0.82rem" onchange="updateClausula('novena',this.value)"></textarea></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">DÉCIMA — Confidencialidad</label><textarea class="nl-config-input" id="ct-clausula-decima" rows="2" style="resize:vertical;font-size:0.82rem" onchange="updateClausula('decima',this.value)"></textarea></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">UNDÉCIMA — Protección de datos</label><textarea class="nl-config-input" id="ct-clausula-undecima" rows="2" style="resize:vertical;font-size:0.82rem" onchange="updateClausula('undecima',this.value)"></textarea></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">DUODÉCIMA — Ciberseguridad</label><textarea class="nl-config-input" id="ct-clausula-duodecima" rows="2" style="resize:vertical;font-size:0.82rem" onchange="updateClausula('duodecima',this.value)"></textarea></div>
+                                <div class="nl-config-field"><label class="nl-config-field-label">Cláusulas adicionales</label><textarea class="nl-config-input" id="ct-clausula-adicional" rows="3" style="resize:vertical;font-size:0.82rem" onchange="updateClausula('adicional',this.value)"></textarea></div>
+                            </div>
+                        </div>
+
+                        <!-- ═══ 14. NOTAS INTERNAS ═══ -->
+                        <div style="margin-bottom:24px">
+                            <div style="font-size:0.82rem;font-weight:700;color:#8e8e93;margin-bottom:10px">📝 Notas internas</div>
+                            <textarea class="nl-config-input" id="ct-notas" rows="3" placeholder="Notas internas sobre este contrato (no se incluyen en el PDF)..." style="resize:vertical;font-size:0.85rem"></textarea>
+                        </div>
+
+                        <!-- ═══ 15. ACTION BUTTONS ═══ -->
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:16px;border-top:1px solid var(--border-color)">
+                            <button class="btn-primary" style="padding:10px 22px;font-size:0.82rem" onclick="guardarContrato()" id="btn-guardar-contrato-bottom">💾 Guardar</button>
+                            <button class="btn-secondary" style="padding:10px 18px;font-size:0.82rem" onclick="generarPdfContrato()">📄 Descargar PDF</button>
+                            <button class="btn-secondary" style="padding:10px 18px;font-size:0.82rem" onclick="enviarContratoEmail()">📧 Enviar por Email</button>
+                            <button class="btn-secondary" style="padding:10px 18px;font-size:0.82rem" onclick="enviarContratoWhatsApp()">📱 Enviar por WhatsApp</button>
+                            <button class="btn-secondary" style="padding:10px 18px;font-size:0.82rem" onclick="abrirFirmaPrestador()">✍️ Firma del prestador</button>
+                            <button class="btn-secondary" style="padding:10px 18px;font-size:0.82rem" onclick="generarLinkFirma()">✍️ Link de firma digital</button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ═══ MODAL: Firma del Prestador ═══ -->
+                <div id="firma-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+                    <div style="background:var(--bg-card);border-radius:20px;padding:28px;max-width:560px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                            <h3 style="font-size:1rem;font-weight:700;color:var(--text-main);margin:0">✍️ Firma del Prestador</h3>
+                            <button class="btn-secondary" style="padding:4px 10px;font-size:0.75rem" onclick="cerrarFirmaModal()">✕ Cerrar</button>
+                        </div>
+                        <p style="font-size:0.78rem;color:var(--text-grey);margin:0 0 12px">Firma en el recuadro con el ratón o el dedo:</p>
+                        <canvas id="firma-canvas" width="500" height="150" style="width:100%;max-width:500px;height:150px;border-radius:12px;border:2px dashed var(--border-color);background:#fff;cursor:crosshair;touch-action:none"></canvas>
+                        <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+                            <button class="btn-secondary" style="padding:6px 14px;font-size:0.75rem" onclick="clearFirma()">🗑️ Limpiar</button>
+                            <div style="flex:1"></div>
+                            <div id="firma-preview-container" style="display:none">
+                                <img id="firma-preview-img" style="height:40px;border-radius:6px;border:1px solid var(--border-color)" />
+                            </div>
+                            <button class="btn-primary" style="padding:8px 18px;font-size:0.8rem" onclick="guardarFirmaDesdeModal()">💾 Guardar firma</button>
                         </div>
                     </div>
                 </div>
@@ -3370,6 +3592,6 @@
     </div>
 
     <!-- App Scripts -->
-    <script src="app.js?v=20260604d"></script>
+    <script src="app.js?v=20260604e"></script>
 </body>
 </html>
