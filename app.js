@@ -9612,5 +9612,6 @@ window.initializeSidebarCollapse = function() {
 
 document.addEventListener('DOMContentLoaded', () => {
     window.initializeSidebarCollapse();
+    if (typeof loadBizData === 'function') loadBizData();
 });
 
