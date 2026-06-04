@@ -367,10 +367,18 @@ let contratoEditId = null;
 
 async function loadContratos() {
     try {
+        console.log('[Contratos] Fetching...');
         const res = await fetch('/api/contratos');
         const data = await res.json();
+        console.log('[Contratos] Received:', data.contratos?.length, 'contracts');
         contratosData = data.contratos || [];
-        renderContratos(contratosData);
+        try {
+            renderContratos(contratosData);
+            console.log('[Contratos] Render OK');
+        } catch (renderErr) {
+            console.error('[Contratos] Render error:', renderErr);
+            document.getElementById('contratos-grid').innerHTML = `<div style="text-align:center;padding:40px;color:#ff453a;font-size:0.85rem;grid-column:1/-1">Error render: ${renderErr.message}</div>`;
+        }
     } catch (e) {
         console.error('Error loading contratos:', e);
         document.getElementById('contratos-grid').innerHTML = `<div style="text-align:center;padding:40px;color:#ff453a;font-size:0.85rem;grid-column:1/-1">Error al cargar: ${e.message}</div>`;
