@@ -147,6 +147,8 @@ function switchConfigTab(tabName) {
     });
     // Auto-load users when switching to the usuarios tab
     if (tabName === 'usuarios') loadUsers();
+    // Auto-check sync when switching to the sync tab
+    if (tabName === 'sync') checkSyncStatus();
 }
 
 // ── User Management ──────────────────────────────────────────
@@ -354,6 +356,68 @@ async function toggleUserActive(userId, currentIsActive) {
     } catch (e) {
         showAlert('Error', 'No se pudo cambiar el estado: ' + e.message, '❌');
     }
+}
+
+// ── Sync Status Check ────────────────────────────────────────
+async function checkSyncStatus() {
+    const btn = document.getElementById('btn-check-sync');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span style="animation:spin 1s linear infinite;display:inline-block">🔄</span> Verificando...'; }
+
+    // Reset all cards to loading
+    const services = ['resend', 'hunter', 'gemini', 'supabase', 'google_calendar', 'stripe'];
+    services.forEach(s => {
+        const dot = document.getElementById('sync-dot-' + s);
+        const badge = document.getElementById('sync-badge-' + s);
+        const card = document.getElementById('sync-card-' + s);
+        if (dot) dot.className = 'sync-dot-loading';
+        if (badge) { badge.className = 'sync-badge-loading'; badge.textContent = '⏳ Verificando...'; }
+        if (card) card.classList.remove('connected');
+    });
+
+    try {
+        const res = await fetch('/api/check-sync');
+        const data = await res.json();
+        if (!data.services) throw new Error('Sin datos');
+
+        let okCount = 0, warnCount = 0, errCount = 0;
+
+        Object.entries(data.services).forEach(([key, info]) => {
+            const dot = document.getElementById('sync-dot-' + key);
+            const badge = document.getElementById('sync-badge-' + key);
+            const card = document.getElementById('sync-card-' + key);
+            const bar = document.getElementById('sync-bar-' + key);
+
+            if (info.ok) {
+                okCount++;
+                if (dot) dot.className = 'sync-dot-ok';
+                if (badge) { badge.className = 'sync-badge-ok'; badge.innerHTML = '<div class="sync-dot-ok" style="width:6px;height:6px"></div> Conectado'; }
+                if (card) card.classList.add('connected');
+                if (bar) bar.style.display = 'block';
+            } else if (info.pending) {
+                warnCount++;
+                if (dot) dot.className = 'sync-dot-warn';
+                if (badge) { badge.className = 'sync-badge-warn'; badge.textContent = '⚠️ ' + (info.error || 'Pendiente configurar'); }
+            } else {
+                errCount++;
+                if (dot) dot.className = 'sync-dot-err';
+                if (badge) { badge.className = 'sync-badge-err'; badge.textContent = '❌ ' + (info.error || 'Error de conexión'); }
+            }
+        });
+
+        document.getElementById('sync-ok-count').textContent = okCount + ' Conectados';
+        document.getElementById('sync-warn-count').textContent = warnCount + ' Pendientes';
+        document.getElementById('sync-err-count').textContent = errCount + ' Error';
+        document.getElementById('sync-last-check').textContent = 'Última verificación: ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+    } catch (e) {
+        console.error('Error checking sync:', e);
+        services.forEach(s => {
+            const badge = document.getElementById('sync-badge-' + s);
+            if (badge) { badge.className = 'sync-badge-err'; badge.textContent = '❌ Error de red'; }
+        });
+    }
+
+    if (btn) { btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg> Verificar Conexiones'; }
 }
 
 // Toggle API key visibility

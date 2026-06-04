@@ -2723,34 +2723,138 @@
                     <p style="text-align:center;font-size:0.72rem;color:var(--text-grey);margin-top:8px">Mostrando 5 registros · Último mes</p>
                 </div>
 
-                <!-- ═══ TAB: Sincronización ═══ -->
                 <div class="cfg-panel" id="cfg-sync">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <style>
+                        @keyframes sync-pulse {
+                            0% { box-shadow: 0 0 0 0 rgba(52,199,89,0.5); }
+                            70% { box-shadow: 0 0 0 8px rgba(52,199,89,0); }
+                            100% { box-shadow: 0 0 0 0 rgba(52,199,89,0); }
+                        }
+                        @keyframes sync-pulse-warn {
+                            0% { box-shadow: 0 0 0 0 rgba(255,149,0,0.5); }
+                            70% { box-shadow: 0 0 0 8px rgba(255,149,0,0); }
+                            100% { box-shadow: 0 0 0 0 rgba(255,149,0,0); }
+                        }
+                        @keyframes data-flow {
+                            0% { background-position: -200% 0; }
+                            100% { background-position: 200% 0; }
+                        }
+                        .sync-card { display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card);transition:all 0.3s ease; }
+                        .sync-card:hover { transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,0.06); }
+                        .sync-dot-ok { width:10px;height:10px;border-radius:50%;background:#34c759;animation:sync-pulse 2s infinite;flex-shrink:0; }
+                        .sync-dot-warn { width:10px;height:10px;border-radius:50%;background:#ff9500;animation:sync-pulse-warn 2s infinite;flex-shrink:0; }
+                        .sync-dot-err { width:10px;height:10px;border-radius:50%;background:#ff453a;flex-shrink:0; }
+                        .sync-dot-loading { width:10px;height:10px;border-radius:50%;background:#8e8e93;flex-shrink:0;opacity:0.5; }
+                        .sync-data-bar { height:3px;border-radius:2px;background:linear-gradient(90deg,transparent 0%,rgba(52,199,89,0.4) 40%,#34c759 50%,rgba(52,199,89,0.4) 60%,transparent 100%);background-size:200% 100%;animation:data-flow 2s linear infinite;margin-top:8px;display:none; }
+                        .sync-card.connected .sync-data-bar { display:block; }
+                        .sync-badge-ok { padding:4px 12px;border-radius:8px;background:rgba(52,199,89,0.1);color:#34c759;font-size:0.72rem;font-weight:700;display:flex;align-items:center;gap:6px; }
+                        .sync-badge-warn { padding:4px 12px;border-radius:8px;background:rgba(255,149,0,0.1);color:#ff9500;font-size:0.72rem;font-weight:700;display:flex;align-items:center;gap:6px; }
+                        .sync-badge-err { padding:4px 12px;border-radius:8px;background:rgba(255,69,58,0.1);color:#ff453a;font-size:0.72rem;font-weight:700;display:flex;align-items:center;gap:6px; }
+                        .sync-badge-loading { padding:4px 12px;border-radius:8px;background:rgba(142,142,147,0.1);color:#8e8e93;font-size:0.72rem;font-weight:700; }
+                    </style>
+
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
                         <div>
-                            <h3 style="font-size:0.9rem;font-weight:600;color:var(--text-main)">🔄 Sincronización</h3>
+                            <h3 style="font-size:1rem;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:8px">🔄 Sincronización</h3>
                             <p style="font-size:0.75rem;color:var(--text-grey);margin:4px 0 0">Estado de las integraciones y servicios conectados</p>
                         </div>
+                        <button class="btn-primary" id="btn-check-sync" style="padding:8px 18px;font-size:0.8rem;display:flex;align-items:center;gap:6px" onclick="checkSyncStatus()">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                            Verificar Conexiones
+                        </button>
                     </div>
-                    <div style="display:flex;flex-direction:column;gap:14px">
-                        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card)">
-                            <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">📧</span><div><strong style="font-size:0.88rem">Resend (Email)</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Envío de emails transaccionales y outreach</p></div></div>
-                            <span style="padding:4px 12px;border-radius:8px;background:rgba(52,199,89,0.1);color:#34c759;font-size:0.72rem;font-weight:700">✅ Conectado</span>
+
+                    <!-- Summary bar -->
+                    <div id="sync-summary" style="display:flex;gap:12px;margin-bottom:20px;padding:12px 16px;border-radius:12px;background:var(--bg-secondary);border:1px solid var(--border-color)">
+                        <div style="display:flex;align-items:center;gap:6px"><div class="sync-dot-ok" style="animation:none;width:8px;height:8px"></div><span style="font-size:0.75rem;color:var(--text-grey);font-weight:600" id="sync-ok-count">— Conectados</span></div>
+                        <div style="display:flex;align-items:center;gap:6px"><div class="sync-dot-warn" style="animation:none;width:8px;height:8px"></div><span style="font-size:0.75rem;color:var(--text-grey);font-weight:600" id="sync-warn-count">— Pendientes</span></div>
+                        <div style="display:flex;align-items:center;gap:6px"><div class="sync-dot-err" style="animation:none;width:8px;height:8px"></div><span style="font-size:0.75rem;color:var(--text-grey);font-weight:600" id="sync-err-count">— Error</span></div>
+                        <div style="margin-left:auto;font-size:0.7rem;color:var(--text-grey)" id="sync-last-check">Última verificación: —</div>
+                    </div>
+
+                    <div style="display:flex;flex-direction:column;gap:12px" id="sync-services-list">
+                        <!-- Resend -->
+                        <div class="sync-card" id="sync-card-resend">
+                            <div style="display:flex;align-items:center;gap:14px;flex:1">
+                                <div class="sync-dot-loading" id="sync-dot-resend"></div>
+                                <span style="font-size:1.3rem">📧</span>
+                                <div>
+                                    <strong style="font-size:0.88rem;color:var(--text-main)">Resend (Email)</strong>
+                                    <p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Envío de emails transaccionales y outreach</p>
+                                </div>
+                            </div>
+                            <span class="sync-badge-loading" id="sync-badge-resend">⏳ Verificando...</span>
+                            <div class="sync-data-bar" id="sync-bar-resend"></div>
                         </div>
-                        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card)">
-                            <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🔎</span><div><strong style="font-size:0.88rem">Hunter.io</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Búsqueda de emails profesionales</p></div></div>
-                            <span style="padding:4px 12px;border-radius:8px;background:rgba(52,199,89,0.1);color:#34c759;font-size:0.72rem;font-weight:700">✅ Conectado</span>
+
+                        <!-- Hunter.io -->
+                        <div class="sync-card" id="sync-card-hunter">
+                            <div style="display:flex;align-items:center;gap:14px;flex:1">
+                                <div class="sync-dot-loading" id="sync-dot-hunter"></div>
+                                <span style="font-size:1.3rem">🔎</span>
+                                <div>
+                                    <strong style="font-size:0.88rem;color:var(--text-main)">Hunter.io</strong>
+                                    <p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Búsqueda de emails profesionales</p>
+                                </div>
+                            </div>
+                            <span class="sync-badge-loading" id="sync-badge-hunter">⏳ Verificando...</span>
+                            <div class="sync-data-bar" id="sync-bar-hunter"></div>
                         </div>
-                        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card)">
-                            <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🤖</span><div><strong style="font-size:0.88rem">Google AI Studio (Gemini)</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">IA generativa para emails y contenido</p></div></div>
-                            <span style="padding:4px 12px;border-radius:8px;background:rgba(52,199,89,0.1);color:#34c759;font-size:0.72rem;font-weight:700">✅ Conectado</span>
+
+                        <!-- Gemini -->
+                        <div class="sync-card" id="sync-card-gemini">
+                            <div style="display:flex;align-items:center;gap:14px;flex:1">
+                                <div class="sync-dot-loading" id="sync-dot-gemini"></div>
+                                <span style="font-size:1.3rem">🤖</span>
+                                <div>
+                                    <strong style="font-size:0.88rem;color:var(--text-main)">Google AI Studio (Gemini)</strong>
+                                    <p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">IA generativa para emails y contenido</p>
+                                </div>
+                            </div>
+                            <span class="sync-badge-loading" id="sync-badge-gemini">⏳ Verificando...</span>
+                            <div class="sync-data-bar" id="sync-bar-gemini"></div>
                         </div>
-                        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card)">
-                            <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">📅</span><div><strong style="font-size:0.88rem">Google Calendar</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Gestión de reuniones y citas</p></div></div>
-                            <span style="padding:4px 12px;border-radius:8px;background:rgba(255,149,0,0.1);color:#ff9500;font-size:0.72rem;font-weight:700">⚠️ Pendiente configurar</span>
+
+                        <!-- Supabase -->
+                        <div class="sync-card" id="sync-card-supabase">
+                            <div style="display:flex;align-items:center;gap:14px;flex:1">
+                                <div class="sync-dot-loading" id="sync-dot-supabase"></div>
+                                <span style="font-size:1.3rem">🗄️</span>
+                                <div>
+                                    <strong style="font-size:0.88rem;color:var(--text-main)">Supabase (Base de Datos)</strong>
+                                    <p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Almacenamiento de datos y leads</p>
+                                </div>
+                            </div>
+                            <span class="sync-badge-loading" id="sync-badge-supabase">⏳ Verificando...</span>
+                            <div class="sync-data-bar" id="sync-bar-supabase"></div>
                         </div>
-                        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-radius:14px;border:1px solid var(--border-color);background:var(--bg-card)">
-                            <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">💳</span><div><strong style="font-size:0.88rem">Stripe</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Procesamiento de pagos con tarjeta</p></div></div>
-                            <span style="padding:4px 12px;border-radius:8px;background:rgba(52,199,89,0.1);color:#34c759;font-size:0.72rem;font-weight:700">✅ Conectado</span>
+
+                        <!-- Google Calendar -->
+                        <div class="sync-card" id="sync-card-google_calendar">
+                            <div style="display:flex;align-items:center;gap:14px;flex:1">
+                                <div class="sync-dot-loading" id="sync-dot-google_calendar"></div>
+                                <span style="font-size:1.3rem">📅</span>
+                                <div>
+                                    <strong style="font-size:0.88rem;color:var(--text-main)">Google Calendar</strong>
+                                    <p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Gestión de reuniones y citas</p>
+                                </div>
+                            </div>
+                            <span class="sync-badge-loading" id="sync-badge-google_calendar">⏳ Verificando...</span>
+                            <div class="sync-data-bar" id="sync-bar-google_calendar"></div>
+                        </div>
+
+                        <!-- Stripe -->
+                        <div class="sync-card" id="sync-card-stripe">
+                            <div style="display:flex;align-items:center;gap:14px;flex:1">
+                                <div class="sync-dot-loading" id="sync-dot-stripe"></div>
+                                <span style="font-size:1.3rem">💳</span>
+                                <div>
+                                    <strong style="font-size:0.88rem;color:var(--text-main)">Stripe</strong>
+                                    <p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Procesamiento de pagos con tarjeta</p>
+                                </div>
+                            </div>
+                            <span class="sync-badge-loading" id="sync-badge-stripe">⏳ Verificando...</span>
+                            <div class="sync-data-bar" id="sync-bar-stripe"></div>
                         </div>
                     </div>
                 </div>
