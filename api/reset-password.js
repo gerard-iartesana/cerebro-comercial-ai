@@ -171,7 +171,7 @@ module.exports = async function handler(req, res) {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          from: 'Cerebro Comercial <no-reply@iadebarrio.com>',
+          from: 'Cerebro Comercial <gerard@gerardfanals.online>',
           to: [user.email],
           subject: 'Restablece tu contraseña — CerebroComercial AI',
           html: buildResetEmailHtml(resetLink, user.username)
