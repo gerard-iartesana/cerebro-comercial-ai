@@ -2442,13 +2442,13 @@
                                 <span style="font-size:1.2rem">💳</span>
                                 <div><strong style="font-size:0.9rem;color:var(--text-main)">Stripe (Visa/MasterCard)</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Acepta pagos con tarjeta de crédito y débito</p></div>
                             </div>
-                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" checked style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
+                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" id="cfg-fp-stripe-toggle" checked style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                            <div class="cfg-field"><label class="cfg-label">Titular</label><input class="cfg-input" value="IA de Barrio" /></div>
-                            <div class="cfg-field"><label class="cfg-label">País</label><input class="cfg-input" value="España (ES)" /></div>
-                            <div class="cfg-field"><label class="cfg-label">Business Name</label><input class="cfg-input" value="iadebarrio.com" /></div>
-                            <div class="cfg-field"><label class="cfg-label">Email Stripe</label><input class="cfg-input" value="gerard@iartesana.es" /></div>
+                            <div class="cfg-field"><label class="cfg-label">Titular</label><input class="cfg-input" id="cfg-fp-stripe-titular" value="IA de Barrio" /></div>
+                            <div class="cfg-field"><label class="cfg-label">País</label><input class="cfg-input" id="cfg-fp-stripe-pais" value="España (ES)" /></div>
+                            <div class="cfg-field"><label class="cfg-label">Business Name</label><input class="cfg-input" id="cfg-fp-stripe-business" value="iadebarrio.com" /></div>
+                            <div class="cfg-field"><label class="cfg-label">Email Stripe</label><input class="cfg-input" id="cfg-fp-stripe-email" value="gerard@iartesana.es" /></div>
                         </div>
                     </div>
 
@@ -2459,13 +2459,13 @@
                                 <span style="font-size:1.2rem">🏦</span>
                                 <div><strong style="font-size:0.9rem;color:var(--text-main)">Transferencia Bancaria</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Datos para transferencias directas a tu cuenta</p></div>
                             </div>
-                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" checked style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
+                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" id="cfg-fp-transferencia-toggle" checked style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                            <div class="cfg-field"><label class="cfg-label">Banco</label><input class="cfg-input" value="Banco de Santander" /></div>
-                            <div class="cfg-field"><label class="cfg-label">Titular</label><input class="cfg-input" value="IA de Barrio S.L." /></div>
-                            <div class="cfg-field"><label class="cfg-label">IBAN</label><input class="cfg-input" value="ES49 0049 0012 1234 5678 9012" style="font-family:monospace" /></div>
-                            <div class="cfg-field"><label class="cfg-label">Concepto</label><input class="cfg-input" placeholder="Referencia automática" /></div>
+                            <div class="cfg-field"><label class="cfg-label">Banco</label><input class="cfg-input" id="cfg-fp-transferencia-banco" value="Banco de Santander" /></div>
+                            <div class="cfg-field"><label class="cfg-label">Titular</label><input class="cfg-input" id="cfg-fp-transferencia-titular" value="IA de Barrio S.L." /></div>
+                            <div class="cfg-field"><label class="cfg-label">IBAN</label><input class="cfg-input" id="cfg-fp-transferencia-iban" value="ES49 0049 0012 1234 5678 9012" style="font-family:monospace" /></div>
+                            <div class="cfg-field"><label class="cfg-label">Concepto</label><input class="cfg-input" id="cfg-fp-transferencia-concepto" placeholder="Referencia automática" /></div>
                         </div>
                     </div>
 
@@ -2476,9 +2476,9 @@
                                 <span style="font-size:1.2rem">📱</span>
                                 <div><strong style="font-size:0.9rem;color:var(--text-main)">Bizum</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Pago rápido desde el móvil</p></div>
                             </div>
-                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" checked style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
+                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" id="cfg-fp-bizum-toggle" checked style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
                         </div>
-                        <div class="cfg-field"><label class="cfg-label">Teléfono Bizum</label><input class="cfg-input" value="+34 629 49 41 67" style="max-width:300px" /></div>
+                        <div class="cfg-field"><label class="cfg-label">Teléfono Bizum</label><input class="cfg-input" id="cfg-fp-bizum-telefono" value="+34 629 49 41 67" style="max-width:300px" /></div>
                     </div>
 
                     <!-- Giro Bancario -->
@@ -2488,11 +2488,11 @@
                                 <span style="font-size:1.2rem">🔄</span>
                                 <div><strong style="font-size:0.9rem;color:var(--text-main)">Giro Bancario</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Domiciliación bancaria y giros periódicos</p></div>
                             </div>
-                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
+                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" id="cfg-fp-giro-toggle" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                            <div class="cfg-field"><label class="cfg-label">Banco</label><input class="cfg-input" placeholder="Nombre del banco" /></div>
-                            <div class="cfg-field"><label class="cfg-label">IBAN</label><input class="cfg-input" placeholder="ES00 0000 0000 0000 0000 0000" style="font-family:monospace" /></div>
+                            <div class="cfg-field"><label class="cfg-label">Banco</label><input class="cfg-input" id="cfg-fp-giro-banco" placeholder="Nombre del banco" /></div>
+                            <div class="cfg-field"><label class="cfg-label">IBAN</label><input class="cfg-input" id="cfg-fp-giro-iban" placeholder="ES00 0000 0000 0000 0000 0000" style="font-family:monospace" /></div>
                         </div>
                     </div>
 
@@ -2503,7 +2503,7 @@
                                 <span style="font-size:1.2rem">💵</span>
                                 <div><strong style="font-size:0.9rem;color:var(--text-main)">Efectivo</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Pago en efectivo presencial</p></div>
                             </div>
-                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
+                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" id="cfg-fp-efectivo-toggle" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
                         </div>
                     </div>
 
@@ -2514,7 +2514,7 @@
                                 <span style="font-size:1.2rem">🧾</span>
                                 <div><strong style="font-size:0.9rem;color:var(--text-main)">Sin IVA</strong><p style="font-size:0.72rem;color:var(--text-grey);margin:2px 0 0">Facturación exenta de IVA (intracomunitario, IGIC, etc.)</p></div>
                             </div>
-                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
+                            <label class="toggle-switch" style="position:relative;width:48px;height:26px;display:inline-block"><input type="checkbox" id="cfg-fp-siniva-toggle" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:26px;transition:.3s"></span></label>
                         </div>
                     </div>
 
@@ -3638,6 +3638,6 @@
     </div>
 
     <!-- App Scripts -->
-    <script src="app.js?v=20260604i"></script>
+    <script src="app.js?v=20260604k"></script>
 </body>
 </html>

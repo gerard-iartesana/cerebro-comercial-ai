@@ -627,14 +627,26 @@ function nuevoContrato() {
     if (el('ct-precio-final')) el('ct-precio-final').value = '';
     if (el('ct-precio-total-letras')) el('ct-precio-total-letras').value = '';
     // Formas de pago
+    let bc = null;
+    try {
+        const bcRaw = localStorage.getItem('cc_biz_config');
+        if (bcRaw) bc = JSON.parse(bcRaw);
+    } catch(e) {}
+
     ['giro','transferencia','stripe','bizum','efectivo','otro'].forEach(k => { 
-        if (el('ct-fp-' + k)) el('ct-fp-' + k).checked = false; 
+        if (el('ct-fp-' + k)) {
+            if (bc && bc[k] !== undefined) {
+                el('ct-fp-' + k).checked = bc[k].active;
+            } else {
+                el('ct-fp-' + k).checked = false;
+            }
+        }
         updateFormasPago(k);
     });
-    if (el('ct-cuenta-bancaria')) el('ct-cuenta-bancaria').value = '';
-    if (el('ct-prestador-iban')) el('ct-prestador-iban').value = '';
+    if (el('ct-cuenta-bancaria')) el('ct-cuenta-bancaria').value = (bc && bc.transferencia && bc.transferencia.active) ? bc.transferencia.iban : '';
+    if (el('ct-prestador-iban')) el('ct-prestador-iban').value = (bc && bc.giro && bc.giro.active) ? bc.giro.iban : '';
     if (el('ct-stripe-link')) el('ct-stripe-link').value = '';
-    if (el('ct-bizum-telefono')) el('ct-bizum-telefono').value = '';
+    if (el('ct-bizum-telefono')) el('ct-bizum-telefono').value = (bc && bc.bizum && bc.bizum.active) ? bc.bizum.telefono : '';
     if (el('ct-otro-metodo')) el('ct-otro-metodo').value = '';
     // Cláusulas
     ['cuarta','quinta','sexta','septima','octava','novena','decima','undecima','duodecima','adicional'].forEach(k => {
@@ -1781,8 +1793,80 @@ function toggleApiKey(inputId, realValueLabel) {
     }
 }
 
+// Load business data
+function loadBizData() {
+    try {
+        const bcRaw = localStorage.getItem('cc_biz_config');
+        if (!bcRaw) return;
+        const bc = JSON.parse(bcRaw);
+        
+        if (bc.stripe) {
+            if (el('cfg-fp-stripe-toggle')) el('cfg-fp-stripe-toggle').checked = bc.stripe.active;
+            if (el('cfg-fp-stripe-titular')) el('cfg-fp-stripe-titular').value = bc.stripe.titular || '';
+            if (el('cfg-fp-stripe-pais')) el('cfg-fp-stripe-pais').value = bc.stripe.pais || '';
+            if (el('cfg-fp-stripe-business')) el('cfg-fp-stripe-business').value = bc.stripe.business || '';
+            if (el('cfg-fp-stripe-email')) el('cfg-fp-stripe-email').value = bc.stripe.email || '';
+        }
+        if (bc.transferencia) {
+            if (el('cfg-fp-transferencia-toggle')) el('cfg-fp-transferencia-toggle').checked = bc.transferencia.active;
+            if (el('cfg-fp-transferencia-banco')) el('cfg-fp-transferencia-banco').value = bc.transferencia.banco || '';
+            if (el('cfg-fp-transferencia-titular')) el('cfg-fp-transferencia-titular').value = bc.transferencia.titular || '';
+            if (el('cfg-fp-transferencia-iban')) el('cfg-fp-transferencia-iban').value = bc.transferencia.iban || '';
+            if (el('cfg-fp-transferencia-concepto')) el('cfg-fp-transferencia-concepto').value = bc.transferencia.concepto || '';
+        }
+        if (bc.bizum) {
+            if (el('cfg-fp-bizum-toggle')) el('cfg-fp-bizum-toggle').checked = bc.bizum.active;
+            if (el('cfg-fp-bizum-telefono')) el('cfg-fp-bizum-telefono').value = bc.bizum.telefono || '';
+        }
+        if (bc.giro) {
+            if (el('cfg-fp-giro-toggle')) el('cfg-fp-giro-toggle').checked = bc.giro.active;
+            if (el('cfg-fp-giro-banco')) el('cfg-fp-giro-banco').value = bc.giro.banco || '';
+            if (el('cfg-fp-giro-iban')) el('cfg-fp-giro-iban').value = bc.giro.iban || '';
+        }
+        if (bc.efectivo) {
+            if (el('cfg-fp-efectivo-toggle')) el('cfg-fp-efectivo-toggle').checked = bc.efectivo.active;
+        }
+        if (bc.siniva) {
+            if (el('cfg-fp-siniva-toggle')) el('cfg-fp-siniva-toggle').checked = bc.siniva.active;
+        }
+    } catch (e) { console.error('Error loading biz config', e); }
+}
+
 // Save business data
 function saveBizData() {
+    const config = {
+        stripe: {
+            active: el('cfg-fp-stripe-toggle')?.checked || false,
+            titular: el('cfg-fp-stripe-titular')?.value || '',
+            pais: el('cfg-fp-stripe-pais')?.value || '',
+            business: el('cfg-fp-stripe-business')?.value || '',
+            email: el('cfg-fp-stripe-email')?.value || ''
+        },
+        transferencia: {
+            active: el('cfg-fp-transferencia-toggle')?.checked || false,
+            banco: el('cfg-fp-transferencia-banco')?.value || '',
+            titular: el('cfg-fp-transferencia-titular')?.value || '',
+            iban: el('cfg-fp-transferencia-iban')?.value || '',
+            concepto: el('cfg-fp-transferencia-concepto')?.value || ''
+        },
+        bizum: {
+            active: el('cfg-fp-bizum-toggle')?.checked || false,
+            telefono: el('cfg-fp-bizum-telefono')?.value || ''
+        },
+        giro: {
+            active: el('cfg-fp-giro-toggle')?.checked || false,
+            banco: el('cfg-fp-giro-banco')?.value || '',
+            iban: el('cfg-fp-giro-iban')?.value || ''
+        },
+        efectivo: {
+            active: el('cfg-fp-efectivo-toggle')?.checked || false
+        },
+        siniva: {
+            active: el('cfg-fp-siniva-toggle')?.checked || false
+        }
+    };
+    localStorage.setItem('cc_biz_config', JSON.stringify(config));
+
     const status = document.getElementById('biz-save-status');
     if (status) {
         status.textContent = '✅ Datos guardados';
