@@ -31,7 +31,15 @@ module.exports = async function handler(req, res) {
         return res.status(500).json({ success: false, error: error.message });
       }
 
-      return res.status(200).json({ success: true, contratos: data });
+      // Unpack extra fields for response
+      const mappedData = data.map(row => {
+          if (row.datos_cliente && row.datos_cliente._extra) {
+              return { ...row, ...row.datos_cliente._extra };
+          }
+          return row;
+      });
+
+      return res.status(200).json({ success: true, contratos: mappedData });
     }
 
     // ── POST: Create a new contract ───────────────────────────────────────
@@ -79,6 +87,23 @@ module.exports = async function handler(req, res) {
         clausulas_custom
       } = req.body || {};
 
+      // Hack to save fields that don't exist in Supabase schema into datos_cliente JSONB
+      const extra_fields = {};
+      if (objeto_texto !== undefined) extra_fields.objeto_texto = objeto_texto;
+      if (plazo_entrega !== undefined) extra_fields.plazo_entrega = plazo_entrega;
+      if (prueba_inicio !== undefined) extra_fields.prueba_inicio = prueba_inicio;
+      if (prueba_fin !== undefined) extra_fields.prueba_fin = prueba_fin;
+      if (cuota_fecha_inicio !== undefined) extra_fields.cuota_fecha_inicio = cuota_fecha_inicio;
+      if (cuota_concepto !== undefined) extra_fields.cuota_concepto = cuota_concepto;
+      if (precio_texto !== undefined) extra_fields.precio_texto = precio_texto;
+      if (cuenta_bancaria !== undefined) extra_fields.cuenta_bancaria = cuenta_bancaria;
+      if (clausulas_custom !== undefined) extra_fields.clausulas_custom = clausulas_custom;
+
+      let insert_datos_cliente = datos_cliente || {};
+      if (Object.keys(extra_fields).length > 0) {
+          insert_datos_cliente._extra = { ...(insert_datos_cliente._extra || {}), ...extra_fields };
+      }
+
       const { data, error } = await supabase
         .from('contratos')
         .insert({
@@ -110,18 +135,9 @@ module.exports = async function handler(req, res) {
           firma_prestador,
           firmado_at,
           pdf_url,
-          objeto_texto,
-          plazo_entrega,
-          prueba_inicio,
-          prueba_fin,
-          cuota_fecha_inicio,
-          cuota_concepto,
-          precio_texto,
           precio_total_letras,
-          cuenta_bancaria,
-          datos_cliente,
+          datos_cliente: insert_datos_cliente,
           pago_config,
-          clausulas_custom,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -131,6 +147,11 @@ module.exports = async function handler(req, res) {
       if (error) {
         console.error('Error creating contrato:', error);
         return res.status(500).json({ success: false, error: error.message });
+      }
+
+      // Unpack extra fields for response
+      if (data && data.datos_cliente && data.datos_cliente._extra) {
+          Object.assign(data, data.datos_cliente._extra);
       }
 
       return res.status(201).json({ success: true, contrato: data });
@@ -233,6 +254,23 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ success: false, error: 'No se proporcionaron campos para actualizar' });
       }
 
+      // Hack to save fields that don't exist in Supabase schema into datos_cliente JSONB
+      const extra_fields = {};
+      if (objeto_texto !== undefined) extra_fields.objeto_texto = objeto_texto;
+      if (plazo_entrega !== undefined) extra_fields.plazo_entrega = plazo_entrega;
+      if (prueba_inicio !== undefined) extra_fields.prueba_inicio = prueba_inicio;
+      if (prueba_fin !== undefined) extra_fields.prueba_fin = prueba_fin;
+      if (cuota_fecha_inicio !== undefined) extra_fields.cuota_fecha_inicio = cuota_fecha_inicio;
+      if (cuota_concepto !== undefined) extra_fields.cuota_concepto = cuota_concepto;
+      if (precio_texto !== undefined) extra_fields.precio_texto = precio_texto;
+      if (cuenta_bancaria !== undefined) extra_fields.cuenta_bancaria = cuenta_bancaria;
+      if (clausulas_custom !== undefined) extra_fields.clausulas_custom = clausulas_custom;
+
+      if (Object.keys(extra_fields).length > 0) {
+          updates.datos_cliente = updates.datos_cliente || {};
+          updates.datos_cliente._extra = { ...(updates.datos_cliente._extra || {}), ...extra_fields };
+      }
+
       updates.updated_at = new Date().toISOString();
 
       const { data, error } = await supabase
@@ -245,6 +283,11 @@ module.exports = async function handler(req, res) {
       if (error) {
         console.error('Error updating contrato:', error);
         return res.status(500).json({ success: false, error: error.message });
+      }
+
+      // Unpack extra fields for response
+      if (data && data.datos_cliente && data.datos_cliente._extra) {
+          Object.assign(data, data.datos_cliente._extra);
       }
 
       return res.status(200).json({ success: true, contrato: data });
