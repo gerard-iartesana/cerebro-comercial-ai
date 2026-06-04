@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="style.css">
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Google Identity Services (for Calendar OAuth) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -3047,6 +3048,7 @@
                             </div>
                             <div style="display:flex;gap:8px">
                                 <button class="btn-secondary" style="padding:8px 16px;font-size:0.8rem" onclick="switchContratoTab('lista')">← Volver</button>
+                                <button class="btn-secondary" style="padding:8px 16px;font-size:0.8rem" onclick="generarPdfContrato()">📄 Descargar PDF</button>
                                 <button class="btn-primary" style="padding:8px 20px;font-size:0.8rem" onclick="guardarContrato()" id="btn-guardar-contrato">💾 Guardar</button>
                             </div>
                         </div>

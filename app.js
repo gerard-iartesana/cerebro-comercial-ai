@@ -661,6 +661,331 @@ function clearFirma() {
     if (container) container.style.display = 'none';
 }
 
+// ── PDF Generation ───────────────────────────────────────────
+function generarPdfContrato() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = 210, H = 297, margin = 25, cW = W - margin * 2;
+    let y = 0;
+
+    // Read form values
+    const c = {
+        codigo: document.getElementById('editor-codigo')?.textContent || '',
+        cli_nombre: document.getElementById('ct-cliente-nombre')?.value || '',
+        cli_email: document.getElementById('ct-cliente-email')?.value || '',
+        cli_telefono: document.getElementById('ct-cliente-telefono')?.value || '',
+        cli_nif: document.getElementById('ct-cliente-nif')?.value || '',
+        cli_direccion: document.getElementById('ct-cliente-direccion')?.value || '',
+        cli_profesion: document.getElementById('ct-cliente-profesion')?.value || '',
+        cli_representacion: document.getElementById('ct-cliente-representacion')?.value || 'en su propio nombre y representación',
+        pre_nombre: document.getElementById('ct-prestador-nombre')?.value || 'Gerard Fanals',
+        pre_empresa: document.getElementById('ct-prestador-empresa')?.value || 'Vigila y Actúa S.L.',
+        pre_cif: document.getElementById('ct-prestador-cif')?.value || 'B 57973562',
+        pre_actividad: document.getElementById('ct-prestador-actividad')?.value || '',
+        pre_direccion: document.getElementById('ct-prestador-direccion')?.value || '',
+        servicios: (document.getElementById('ct-servicios')?.value || '').split('\n').filter(Boolean),
+        precio_total: parseFloat(document.getElementById('ct-precio-total')?.value) || 0,
+        precio_mensual: parseFloat(document.getElementById('ct-precio-mensual')?.value) || 0,
+        duracion: parseInt(document.getElementById('ct-duracion')?.value) || 12,
+        lugar: document.getElementById('ct-lugar')?.value || 'Mahón (Menorca)',
+        fecha: document.getElementById('ct-fecha-contrato')?.value || '',
+        fecha_inicio: document.getElementById('ct-fecha-inicio')?.value || '',
+        notas: document.getElementById('ct-notas')?.value || '',
+    };
+
+    const fechaFmt = c.fecha ? new Date(c.fecha + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '___';
+    const fechaFinDate = c.fecha ? new Date(new Date(c.fecha + 'T00:00:00').setMonth(new Date(c.fecha + 'T00:00:00').getMonth() + c.duracion)) : null;
+    const fechaFin = fechaFinDate ? fechaFinDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '___';
+
+    // Helper: add page footer
+    function footer(pageNum) {
+        doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(150);
+        doc.text(`${c.codigo} — Página ${pageNum}`, W / 2, H - 10, { align: 'center' });
+        doc.text(`${c.pre_empresa} · CIF ${c.pre_cif}`, W / 2, H - 6, { align: 'center' });
+        doc.setTextColor(30);
+    }
+
+    // Helper: check page break
+    function checkPage(needed) {
+        if (y + needed > H - 25) { footer(doc.getNumberOfPages()); doc.addPage(); y = 30; return true; }
+        return false;
+    }
+
+    // Helper: wrapped text
+    function addText(text, x, fontSize, style, maxW) {
+        doc.setFontSize(fontSize); doc.setFont('helvetica', style || 'normal');
+        const lines = doc.splitTextToSize(text, maxW || cW);
+        const lineH = fontSize * 0.42;
+        for (const line of lines) { checkPage(lineH + 1); doc.text(line, x, y); y += lineH; }
+        y += 1;
+    }
+
+    // Helper: section title
+    function sectionTitle(text) {
+        checkPage(14);
+        y += 4;
+        doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(30);
+        doc.text(text, margin, y);
+        y += 2;
+        doc.setDrawColor(29, 29, 31); doc.setLineWidth(0.3);
+        doc.line(margin, y, W - margin, y);
+        y += 6;
+        doc.setFont('helvetica', 'normal');
+    }
+
+    // Helper: bullet point
+    function bullet(text) {
+        checkPage(8);
+        doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
+        doc.text('•', margin + 3, y);
+        const lines = doc.splitTextToSize(text, cW - 10);
+        for (const line of lines) { checkPage(4); doc.text(line, margin + 8, y); y += 3.8; }
+        y += 0.5;
+    }
+
+    let pageNum = 1;
+
+    // ═══════════════════════════════════════════════════════════
+    // PAGE 1 - HEADER + PARTES + OBJETO
+    // ═══════════════════════════════════════════════════════════
+    // Dark header bar
+    doc.setFillColor(29, 29, 31); doc.rect(0, 0, W, 22, 'F');
+    doc.setTextColor(255); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+    doc.text('CONTRATO DE PRESTACIÓN DE SERVICIOS', W / 2, 10, { align: 'center' });
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.text(c.pre_actividad || 'Servicios Tecnológicos', W / 2, 16, { align: 'center' });
+    doc.setTextColor(30);
+
+    // Contract code + date
+    y = 30;
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(134);
+    if (c.codigo) doc.text(c.codigo, W - margin, y, { align: 'right' });
+    doc.setTextColor(30);
+    y += 6;
+
+    doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
+    addText(`En ${c.lugar}, a ${fechaFmt}.`, margin, 8.5, 'normal');
+    y += 3;
+
+    // REUNIDOS
+    doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+    doc.text('REUNIDOS', margin, y); y += 6;
+
+    doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
+    addText(`De una parte, ${c.cli_nombre || '___'}, ${c.cli_representacion}, ${c.cli_profesion ? 'de profesión ' + c.cli_profesion + ',' : ''} con NIF/CIF ${c.cli_nif || '___'} y domicilio en ${c.cli_direccion || '___'}, en adelante "El/La Cliente".`, margin, 8.5, 'normal');
+    if (c.cli_email || c.cli_telefono) {
+        addText(`Email: ${c.cli_email || '—'} | Teléfono: ${c.cli_telefono || '—'}`, margin, 7.5, 'normal');
+    }
+    y += 3;
+
+    addText(`De otra parte, ${c.pre_nombre}, en nombre y representación de la compañía ${c.pre_empresa} (CIF ${c.pre_cif}), con domicilio en ${c.pre_direccion || '___'}, dedicada a la prestación de ${c.pre_actividad || 'servicios tecnológicos'}, en adelante "El Prestador".`, margin, 8.5, 'normal');
+    addText(`Email: gerard@iartesana.es | Teléfono: +34 629494167`, margin, 7.5, 'normal');
+    y += 3;
+
+    addText('Ambas partes acuerdan las siguientes:', margin, 8.5, 'normal');
+    y += 2;
+
+    // CLÁUSULAS header
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+    doc.text('CLÁUSULAS', W / 2, y, { align: 'center' }); y += 8;
+
+    // PRIMERA - OBJETO
+    sectionTitle('PRIMERA.- OBJETO:');
+    addText('El objeto del presente contrato es la prestación de los siguientes servicios profesionales por parte del Prestador al Cliente:', margin, 8.5, 'normal');
+    y += 2;
+
+    if (c.servicios.length > 0) {
+        addText('Los servicios a prestar incluirán las siguientes actividades y entregables concretos:', margin, 8.5, 'normal');
+        y += 1;
+        c.servicios.forEach(s => bullet(s));
+    } else {
+        addText('(Servicios a definir)', margin, 8.5, 'italic');
+    }
+
+    footer(1);
+
+    // ═══════════════════════════════════════════════════════════
+    // PAGE 2 - DURACIÓN + PRECIO
+    // ═══════════════════════════════════════════════════════════
+    doc.addPage(); y = 30;
+
+    sectionTitle('SEGUNDA.- DURACIÓN:');
+    addText(`Este contrato tendrá una duración de ${c.duracion} meses, comenzando el ${c.fecha_inicio ? new Date(c.fecha_inicio + 'T00:00:00').toLocaleDateString('es-ES') : fechaFmt} y finalizando el ${fechaFin}, con opción de renovación por acuerdo expreso de ambas partes.`, margin, 8.5, 'normal');
+    y += 4;
+
+    sectionTitle('TERCERA.- PRECIO Y FORMA DE PAGO:');
+    addText('A todos los precios se tiene que añadir el IVA.', margin, 8.5, 'normal');
+    y += 2;
+
+    if (c.precio_total > 0) {
+        doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+        doc.text(`Precio total del proyecto: ${c.precio_total.toLocaleString('es-ES')}€ + IVA`, margin, y); y += 5;
+        doc.setFont('helvetica', 'normal');
+    }
+    if (c.precio_mensual > 0) {
+        doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+        doc.text(`Cuota mensual de mantenimiento: ${c.precio_mensual.toLocaleString('es-ES')}€ + IVA`, margin, y); y += 5;
+        doc.setFont('helvetica', 'normal');
+    }
+
+    y += 2;
+    addText('La forma de pago seleccionada por el/la Cliente será comunicada y acordada por ambas partes.', margin, 8.5, 'normal');
+    y += 2;
+    addText('NOTAS IMPORTANTES:', margin, 8.5, 'bold');
+    bullet('En caso de retraso en el pago, se aplicará un recargo del 5% más los gastos bancarios ocasionados sobre el importe impagado.');
+    bullet('En caso de baja laboral debidamente justificada, se podrán acordar nuevos plazos de pago, sin ningún recargo por ello.');
+
+    y += 4;
+    sectionTitle('CUARTA.- OBLIGACIONES DEL PRESTADOR:');
+    addText('El Prestador se compromete a:', margin, 8.5, 'normal');
+    bullet('Realizar los servicios y entregables con la mayor diligencia y profesionalidad conforme al calendario acordado.');
+    bullet('Se acordará día y hora para cada reunión, pudiendo ser una reunión al mes si el cliente lo desea.');
+    bullet('Realizar las rondas necesarias hasta la fecha de entrega para tener el proyecto 100% aceptado por el cliente.');
+    bullet('A petición del cliente, se entregarán todos los archivos y documentos existentes del proyecto, excepto el código fuente que es propio del prestador.');
+
+    footer(2);
+
+    // ═══════════════════════════════════════════════════════════
+    // PAGE 3 - OBLIGACIONES CLIENTE + IP + GARANTÍA
+    // ═══════════════════════════════════════════════════════════
+    doc.addPage(); y = 30;
+
+    sectionTitle('QUINTA.- OBLIGACIONES DEL CLIENTE:');
+    addText('El/la Cliente se compromete a:', margin, 8.5, 'normal');
+    bullet('Facilitar al Prestador la información y materiales necesarios para el desarrollo de los servicios.');
+    bullet('Respetar los plazos de pago según el desglose de la cláusula tercera.');
+    bullet('Proporcionar acceso a plataformas y herramientas necesarias para la ejecución de los servicios.');
+
+    y += 4;
+    sectionTitle('SEXTA.- PROPIEDAD INTELECTUAL Y ENTREGA DE TRABAJOS:');
+    addText('Una vez abonados íntegramente los servicios entregables, todos los trabajos desarrollados serán propiedad exclusiva del/la Cliente. El Prestador entregará todo el material realizado, incluidos los archivos definitivos y manuales, a la finalización y pago completo de los servicios. NO se entregará el código fuente del proyecto, es propiedad del prestador.', margin, 8.5, 'normal');
+    y += 2;
+    addText('Tus Datos son tuyos: Los datos operativos del cliente son de su exclusiva propiedad y exportables en cualquier momento.', margin, 8.5, 'normal');
+
+    y += 4;
+    sectionTitle('SÉPTIMA.- GARANTÍA Y CONTINUIDAD:');
+    addText('1. Entrega del Código Fuente por Cese de Actividad:', margin, 8.5, 'bold');
+    addText('En caso de que el Prestador cese definitivamente su actividad empresarial, se compromete a entregar al Cliente el código fuente completo del proyecto técnico.', margin, 8.5, 'normal');
+    y += 2;
+    addText('2. Viabilidad de Migración a Terceros:', margin, 8.5, 'bold');
+    addText('El Prestador certifica que la arquitectura general del sistema se construye utilizando tecnologías de mercado estándar, abiertas y ampliamente documentadas. El sistema es técnicamente viable para ser transferido y mantenido por cualquier equipo de desarrollo externo.', margin, 8.5, 'normal');
+    y += 2;
+    addText('3. Exportación de Datos:', margin, 8.5, 'bold');
+    addText('El Prestador garantiza que la funcionalidad de "Exportación Total de Datos" permitirá extraer la base de datos completa en formatos estándar (CSV/Excel).', margin, 8.5, 'normal');
+
+    footer(3);
+
+    // ═══════════════════════════════════════════════════════════
+    // PAGE 4 - COMISIÓN + RESOLUCIÓN + CONFIDENCIALIDAD + RGPD
+    // ═══════════════════════════════════════════════════════════
+    doc.addPage(); y = 30;
+
+    sectionTitle('OCTAVA.- COMISIÓN POR COMERCIALIZACIÓN:');
+    addText('Si el Cliente o el Prestador comercializa o sublicencia la idea, concepto o proyecto desarrollado, se aplicará una comisión del 10% sobre los ingresos netos derivados de dicha comercialización. Esta cláusula será revisada anualmente para la aceptación por ambas partes.', margin, 8.5, 'normal');
+
+    y += 4;
+    sectionTitle('NOVENA.- RESOLUCIÓN DEL CONTRATO:');
+    addText('El presente contrato podrá resolverse por:', margin, 8.5, 'normal');
+    bullet('Mutuo acuerdo de ambas partes.');
+    bullet('Incumplimiento de alguna de las partes, previa notificación por escrito y sin subsanación en 30 días.');
+    bullet('Causas de fuerza mayor que imposibiliten la ejecución del contrato.');
+
+    y += 4;
+    sectionTitle('DÉCIMA.- CONFIDENCIALIDAD:');
+    addText('Ambas partes se comprometen a mantener confidenciales todos los datos, información y documentos intercambiados durante la vigencia del contrato.', margin, 8.5, 'normal');
+
+    y += 4;
+    sectionTitle('UNDÉCIMA.- PROTECCIÓN DE DATOS:');
+    addText('Cumplimiento de la Normativa de Protección de Datos (RGPD y LOPD-GDD):', margin, 8.5, 'bold');
+    addText('En cumplimiento de la Ley Orgánica 3/2018 (LOPD-GDD) y el Reglamento General de Protección de Datos (RGPD UE 2016/679), el Prestador actuará exclusivamente en calidad de Encargado del Tratamiento de los datos personales introducidos por el Cliente, quien ostenta la condición de Responsable del Tratamiento. El Prestador tratará dichos datos únicamente siguiendo las instrucciones del Cliente y para el fin del presente contrato.', margin, 8.5, 'normal');
+    y += 2;
+    addText('Cumplimiento de la Ley de Inteligencia Artificial (AI Act / Reglamento UE 2024/1689):', margin, 8.5, 'bold');
+    addText('Ambas partes reconocen que los módulos de Inteligencia Artificial integrados se diseñan y utilizan de conformidad con el Reglamento Europeo de IA (AI Act). El sistema se categoriza como de "Riesgo Mínimo o Nulo".', margin, 8.5, 'normal');
+
+    footer(4);
+
+    // ═══════════════════════════════════════════════════════════
+    // PAGE 5 - CIBERSEGURIDAD + FIRMAS
+    // ═══════════════════════════════════════════════════════════
+    doc.addPage(); y = 30;
+
+    sectionTitle('CLÁUSULAS ADICIONALES - SEGURIDAD DE LA INFORMACIÓN:');
+    addText('Compromiso de Ciberseguridad y Medidas Técnicas:', margin, 8.5, 'bold');
+    addText('Ambas partes se comprometen a implementar y mantener las medidas de seguridad técnicas y organizativas necesarias para garantizar un nivel de seguridad adecuado al riesgo, protegiendo el ecosistema tecnológico de accesos no autorizados, alteraciones, pérdidas o tratamientos ilícitos.', margin, 8.5, 'normal');
+    y += 2;
+    addText('Protocolo de Gestión de Brechas de Seguridad:', margin, 8.5, 'bold');
+    bullet('Notificación inmediata: La parte que detecte la brecha notificará a la otra parte por escrito en un plazo máximo de 48 horas.');
+    bullet('Mitigación y Colaboración: Ambas partes colaborarán estrechamente para contener el incidente y restaurar la normalidad.');
+    bullet('Exención de Responsabilidad: El Prestador no será responsable de las brechas provocadas por negligencia del Cliente o fallos en infraestructuras de terceros.');
+
+    // NOTAS (if any)
+    if (c.notas) {
+        y += 4;
+        sectionTitle('NOTAS ADICIONALES:');
+        addText(c.notas, margin, 8.5, 'normal');
+    }
+
+    // DUODÉCIMA
+    y += 4;
+    sectionTitle('DUODÉCIMA.- LEY APLICABLE Y JURISDICCIÓN:');
+    addText(`El contrato se regirá por la legislación española. Para cualquier controversia, las partes se someten a los Juzgados y Tribunales de ${c.lugar}.`, margin, 8.5, 'normal');
+
+    // FIRMAS
+    y += 10;
+    checkPage(60);
+    doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+    addText('Y en prueba de conformidad, las partes firman el presente contrato, en el lugar y fecha que se han hecho constar al inicio de este contrato.', margin, 8.5, 'normal');
+    y += 10;
+
+    const colW = cW / 2 - 5;
+    // Client signature box
+    doc.setDrawColor(200); doc.setLineWidth(0.2);
+    doc.rect(margin, y, colW, 40);
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+    doc.text('Firma de El/La Cliente:', margin + 3, y + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(c.cli_nombre || '___', margin + 3, y + 10);
+
+    // Provider signature box
+    doc.rect(margin + colW + 10, y, colW, 40);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Firma de El Prestador:', margin + colW + 13, y + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(c.pre_nombre, margin + colW + 13, y + 10);
+
+    // If there's a firma prestador on canvas, add it
+    const canvas = document.getElementById('firma-canvas');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const hasDrawing = imgData.data.some((v, i) => i % 4 === 3 && v > 0);
+        if (hasDrawing) {
+            const firmaImg = canvas.toDataURL('image/png');
+            try { doc.addImage(firmaImg, 'PNG', margin + colW + 13, y + 13, 50, 20); } catch(e) {}
+            doc.setFontSize(6.5); doc.setTextColor(100);
+            doc.text(`Firmado digitalmente: ${new Date().toLocaleString('es-ES')}`, margin + colW + 13, y + 36);
+            doc.setTextColor(30);
+        }
+    }
+    // Also check existing firma from loaded contract
+    if (contratoEditId) {
+        const existing = contratosData.find(ct => ct.id === contratoEditId);
+        if (existing?.firma_prestador) {
+            try { doc.addImage(existing.firma_prestador, 'PNG', margin + colW + 13, y + 13, 50, 20); } catch(e) {}
+        }
+        if (existing?.firma_cliente) {
+            try { doc.addImage(existing.firma_cliente, 'PNG', margin + 3, y + 13, 50, 20); } catch(e) {}
+        }
+    }
+
+    footer(doc.getNumberOfPages());
+
+    // SAVE
+    const filename = `Contrato_${c.cli_nombre.replace(/\s+/g, '_') || 'borrador'}_${c.codigo || 'nuevo'}.pdf`;
+    doc.save(filename);
+    showAlert('PDF generado', `El contrato "${filename}" se ha descargado.`, '📄');
+}
+
 // ── Storage Data ─────────────────────────────────────────────
 function formatFileSize(bytes) {
     if (!bytes || bytes === 0) return '0 B';
