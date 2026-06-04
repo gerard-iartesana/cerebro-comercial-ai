@@ -67,7 +67,6 @@ module.exports = async function handler(req, res) {
         pdf_url,
         objeto_texto,
         plazo_entrega,
-        clausula_plazo,
         prueba_inicio,
         prueba_fin,
         cuota_fecha_inicio,
@@ -113,7 +112,6 @@ module.exports = async function handler(req, res) {
           pdf_url,
           objeto_texto,
           plazo_entrega,
-          clausula_plazo,
           prueba_inicio,
           prueba_fin,
           cuota_fecha_inicio,
@@ -177,7 +175,6 @@ module.exports = async function handler(req, res) {
         pdf_url,
         objeto_texto,
         plazo_entrega,
-        clausula_plazo,
         prueba_inicio,
         prueba_fin,
         cuota_fecha_inicio,
@@ -221,7 +218,6 @@ module.exports = async function handler(req, res) {
       if (pdf_url !== undefined) updates.pdf_url = pdf_url;
       if (objeto_texto !== undefined) updates.objeto_texto = objeto_texto;
       if (plazo_entrega !== undefined) updates.plazo_entrega = plazo_entrega;
-      if (clausula_plazo !== undefined) updates.clausula_plazo = clausula_plazo;
       if (prueba_inicio !== undefined) updates.prueba_inicio = prueba_inicio;
       if (prueba_fin !== undefined) updates.prueba_fin = prueba_fin;
       if (cuota_fecha_inicio !== undefined) updates.cuota_fecha_inicio = cuota_fecha_inicio;
