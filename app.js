@@ -7351,7 +7351,7 @@ async function savePresupuesto(id, updates) {
 }
 
 // --- 7. High Fidelity Unified Proposal Editor & AI Copilot ---
-let selectedPaymentOption = null; // Global state: 'A', 'B', 'C' or null
+let selectedPaymentOptions = []; // Global state: ['A', 'B', 'C']
 
 // Autocomplete for Leads inside Editor Modal
 function showEditorLeadDropdown() {
@@ -7751,7 +7751,15 @@ window.renderPayMethodsInstructions = function() {
 
 // Option A, B, C selection handler
 function selectPaymentOptionAction(opt) {
-    selectedPaymentOption = opt;
+    if (!opt) {
+        selectedPaymentOptions = [];
+    } else {
+        if (selectedPaymentOptions.includes(opt)) {
+            selectedPaymentOptions = selectedPaymentOptions.filter(x => x !== opt);
+        } else {
+            selectedPaymentOptions.push(opt);
+        }
+    }
     recalcPaymentOptionsInModal();
 }
 
@@ -7798,7 +7806,7 @@ function openCreateTemplateModal(defaultCat = 'consultoria') {
     document.getElementById('edit-pres-pc-dto-c').value = '8';
 
     lineasTempList = [];
-    selectedPaymentOption = null;
+    selectedPaymentOptions = [];
 
     recalcPaymentOptionsInModal();
     renderEditPresLineas();
@@ -7854,7 +7862,9 @@ function openEditPresupuestoModal(id) {
     
     // Deep copy lineas
     lineasTempList = p.lineas ? JSON.parse(JSON.stringify(p.lineas)) : [];
-    selectedPaymentOption = pc.selected_option || null;
+    let arrOpt = pc.selected_options || [];
+    if (pc.selected_option && arrOpt.length === 0) arrOpt = [pc.selected_option];
+    selectedPaymentOptions = arrOpt;
 
     recalcPaymentOptionsInModal();
     renderEditPresLineas();
@@ -7965,42 +7975,28 @@ function recalcPaymentOptionsInModal() {
     const banner = document.getElementById('payment-selected-banner');
     const bannerTxt = document.getElementById('payment-selected-banner-text');
 
-    if (selectedPaymentOption === 'A') {
+    if (selectedPaymentOptions.includes('A')) {
         document.getElementById('pay-opt-card-a').classList.add('selected');
         document.getElementById('pay-opt-chk-a').classList.add('checked');
         const btn = document.getElementById('btn-select-pay-a');
         if (btn) { btn.textContent = 'Seleccionada'; btn.classList.add('active'); }
-        if (banner) {
-            banner.style.display = 'flex';
-            banner.style.background = 'rgba(10, 132, 255, 0.08)';
-            banner.style.borderColor = 'rgba(10, 132, 255, 0.2)';
-            banner.style.color = 'var(--accent)';
-            bannerTxt.textContent = `Opción A seleccionada — Precio final: ${Math.round(totalNet)}€`;
-        }
-    } else if (selectedPaymentOption === 'B') {
+    }
+    if (selectedPaymentOptions.includes('B')) {
         document.getElementById('pay-opt-card-b').classList.add('selected-b');
         document.getElementById('pay-opt-chk-b').classList.add('checked');
         const btn = document.getElementById('btn-select-pay-b');
         if (btn) { btn.textContent = 'Seleccionada'; btn.classList.add('active'); }
-        if (banner) {
-            banner.style.display = 'flex';
-            banner.style.background = 'rgba(52, 199, 89, 0.08)';
-            banner.style.borderColor = 'rgba(52, 199, 89, 0.2)';
-            banner.style.color = '#34c759';
-            bannerTxt.textContent = `Opción B seleccionada — Precio final: ${totB}€`;
-        }
-    } else if (selectedPaymentOption === 'C') {
+    }
+    if (selectedPaymentOptions.includes('C')) {
         document.getElementById('pay-opt-card-c').classList.add('selected-c');
         document.getElementById('pay-opt-chk-c').classList.add('checked');
         const btn = document.getElementById('btn-select-pay-c');
         if (btn) { btn.textContent = 'Seleccionada'; btn.classList.add('active'); }
-        if (banner) {
-            banner.style.display = 'flex';
-            banner.style.background = 'rgba(255, 159, 10, 0.08)';
-            banner.style.borderColor = 'rgba(255, 159, 10, 0.2)';
-            banner.style.color = '#ff9f0a';
-            bannerTxt.textContent = `Opción C seleccionada — Precio final: ${totC}€`;
-        }
+    }
+    
+    // Hide banner since we can select multiple options now
+    if (banner) {
+        banner.style.display = 'none';
     } else {
         if (banner) banner.style.display = 'none';
     }
@@ -8468,7 +8464,7 @@ async function savePresupuestoAction() {
         num_cuotas: Number(document.getElementById('edit-pres-pc-cuotas').value || 24),
         descuento_b_pct: Number(document.getElementById('edit-pres-pc-dto-b').value || 4),
         descuento_c_pct: Number(document.getElementById('edit-pres-pc-dto-c').value || 8),
-        selected_option: selectedPaymentOption
+        selected_options: selectedPaymentOptions
     };
 
     // Calculate totals to save as pricing values

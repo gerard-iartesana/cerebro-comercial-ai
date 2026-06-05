@@ -1750,13 +1750,15 @@ body.role-guest td button {
     border-radius: 20px;
     width: 90%; max-width: 560px;
     max-height: 90vh;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
     box-shadow: 0 20px 60px rgba(0,0,0,0.15);
     animation: modalSlideIn 0.25s ease;
 }
 .task-modal-box { max-width: 600px; }
 @keyframes modalSlideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 .modal-header {
+    flex-shrink: 0;
     display: flex; justify-content: space-between; align-items: center;
     padding: 20px 24px; border-bottom: 1px solid var(--border-color);
 }
@@ -1769,9 +1771,14 @@ body.role-guest td button {
     transition: all 0.2s;
 }
 .modal-close:hover { background: #ff3b30; color: white; }
-.modal-body { padding: 20px 24px; }
+.modal-body { 
+    padding: 20px 24px; 
+    flex: 1; 
+    overflow-y: auto; 
+}
 .task-modal-body { display: flex; flex-direction: column; gap: 16px; }
 .modal-footer {
+    flex-shrink: 0;
     padding: 16px 24px; border-top: 1px solid var(--border-color);
     display: flex; justify-content: flex-end; gap: 10px;
 }
