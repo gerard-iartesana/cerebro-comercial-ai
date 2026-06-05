@@ -2364,13 +2364,19 @@ function abrirModalLead(id = null) {
     
     // Reset all fields
     const fields = [
-        'lead-nombre', 'lead-apellidos', 'lead-nif', 'lead-fecha-nacimiento',
+        'lead-nombre', 'lead-apellidos', 'lead-nif', 'lead-fecha-nacimiento', 'lead-cargo',
         'lead-negocio-nombre', 'lead-negocio-comercial', 'lead-negocio-cif', 'lead-negocio-actividad',
-        'lead-negocio-direccion', 'lead-negocio-cp', 'lead-negocio-localidad', 'lead-negocio-provincia',
+        'lead-negocio-direccion', 'lead-negocio-cp', 'lead-negocio-localidad', 'lead-negocio-provincia', 'lead-negocio-pais',
         'lead-email', 'lead-telefono', 'lead-web',
-        'lead-rs-instagram', 'lead-rs-facebook', 'lead-rs-linkedin', 'lead-rs-tiktok'
+        'lead-rs-instagram', 'lead-rs-facebook', 'lead-rs-linkedin', 'lead-rs-tiktok', 'lead-rs-twitter', 'lead-rs-pinterest',
+        'lead-iban', 'lead-iban-titular'
     ];
-    fields.forEach(f => document.getElementById(f).value = '');
+    fields.forEach(f => {
+        if(document.getElementById(f)) document.getElementById(f).value = '';
+    });
+    
+    // default
+    document.getElementById('lead-negocio-pais').value = 'España';
 
     if (id) {
         const lead = _allLeadsGridData.find(l => l.id === id);
@@ -2380,12 +2386,12 @@ function abrirModalLead(id = null) {
             document.getElementById('lead-email').value = lead.email || '';
             document.getElementById('lead-telefono').value = lead.phone || '';
             document.getElementById('lead-negocio-nombre').value = lead.company_name || '';
-            document.getElementById('lead-web').value = lead.domain || '';
             
             if (lead.scraped_data) {
                 const s = lead.scraped_data;
                 if (s.nif) document.getElementById('lead-nif').value = s.nif;
                 if (s.fecha_nacimiento) document.getElementById('lead-fecha-nacimiento').value = s.fecha_nacimiento;
+                if (s.position) document.getElementById('lead-cargo').value = s.position;
                 if (s.nombre_comercial) document.getElementById('lead-negocio-comercial').value = s.nombre_comercial;
                 if (s.cif) document.getElementById('lead-negocio-cif').value = s.cif;
                 if (s.actividad) document.getElementById('lead-negocio-actividad').value = s.actividad;
@@ -2393,10 +2399,18 @@ function abrirModalLead(id = null) {
                 if (s.cp) document.getElementById('lead-negocio-cp').value = s.cp;
                 if (s.localidad) document.getElementById('lead-negocio-localidad').value = s.localidad;
                 if (s.provincia) document.getElementById('lead-negocio-provincia').value = s.provincia;
+                if (s.pais) document.getElementById('lead-negocio-pais').value = s.pais;
+                if (s.web) document.getElementById('lead-web').value = s.web;
+                
                 if (s.instagram) document.getElementById('lead-rs-instagram').value = s.instagram;
                 if (s.facebook) document.getElementById('lead-rs-facebook').value = s.facebook;
                 if (s.linkedin) document.getElementById('lead-rs-linkedin').value = s.linkedin;
                 if (s.tiktok) document.getElementById('lead-rs-tiktok').value = s.tiktok;
+                if (s.twitter) document.getElementById('lead-rs-twitter').value = s.twitter;
+                if (s.pinterest) document.getElementById('lead-rs-pinterest').value = s.pinterest;
+                
+                if (s.iban) document.getElementById('lead-iban').value = s.iban;
+                if (s.iban_titular) document.getElementById('lead-iban-titular').value = s.iban_titular;
             }
         }
     }
@@ -2411,10 +2425,9 @@ function closeModalLead() {
 async function guardarLead() {
     const nombre = document.getElementById('lead-nombre').value.trim();
     const email = document.getElementById('lead-email').value.trim();
-    const negocio = document.getElementById('lead-negocio-nombre').value.trim();
 
-    if (!nombre || !email || !negocio) {
-        return showAlert('Campos requeridos', 'Por favor, rellena el nombre, email y nombre del negocio.');
+    if (!nombre || !email) {
+        return showAlert('Campos requeridos', 'Por favor, rellena el nombre y el email.');
     }
 
     const leadData = {
@@ -2422,12 +2435,12 @@ async function guardarLead() {
         last_name: document.getElementById('lead-apellidos').value.trim(),
         email: email,
         phone: document.getElementById('lead-telefono').value.trim(),
-        company_name: negocio,
-        domain: document.getElementById('lead-web').value.trim(),
+        company_name: document.getElementById('lead-negocio-nombre').value.trim(),
         status: 'lead',
         scraped_data: {
             nif: document.getElementById('lead-nif').value.trim(),
             fecha_nacimiento: document.getElementById('lead-fecha-nacimiento').value,
+            position: document.getElementById('lead-cargo').value.trim(),
             nombre_comercial: document.getElementById('lead-negocio-comercial').value.trim(),
             cif: document.getElementById('lead-negocio-cif').value.trim(),
             actividad: document.getElementById('lead-negocio-actividad').value.trim(),
@@ -2435,10 +2448,16 @@ async function guardarLead() {
             cp: document.getElementById('lead-negocio-cp').value.trim(),
             localidad: document.getElementById('lead-negocio-localidad').value.trim(),
             provincia: document.getElementById('lead-negocio-provincia').value.trim(),
+            pais: document.getElementById('lead-negocio-pais').value.trim(),
+            web: document.getElementById('lead-web').value.trim(),
             instagram: document.getElementById('lead-rs-instagram').value.trim(),
             facebook: document.getElementById('lead-rs-facebook').value.trim(),
             linkedin: document.getElementById('lead-rs-linkedin').value.trim(),
-            tiktok: document.getElementById('lead-rs-tiktok').value.trim()
+            tiktok: document.getElementById('lead-rs-tiktok').value.trim(),
+            twitter: document.getElementById('lead-rs-twitter').value.trim(),
+            pinterest: document.getElementById('lead-rs-pinterest').value.trim(),
+            iban: document.getElementById('lead-iban').value.trim(),
+            iban_titular: document.getElementById('lead-iban-titular').value.trim()
         }
     };
 
