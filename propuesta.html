@@ -682,7 +682,7 @@
                 <div class="price-row">
                     <div style="font-weight: 500;">
                         ${l.nombre}
-                        ${l.mantenimiento ? \`<div style="font-size: 0.7rem; color: var(--accent-blue);">Mantenimiento: ${l.mantenimiento_precio}€/mes</div>\` : ''}
+                        ${l.mantenimiento ? '<div style="font-size: 0.7rem; color: var(--accent-blue);">Mantenimiento: ' + l.mantenimiento_precio + '€/mes</div>' : ''}
                     </div>
                     <div style="display: flex; gap: 20px; width: 140px; color: var(--text-grey);">
                         <span style="width: 50px;">${p}€</span>

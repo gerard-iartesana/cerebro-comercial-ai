@@ -8553,8 +8553,8 @@ async function savePresupuestoAction() {
 // AI Content generation for proposal benefits
 async function generateAIContentForProposal() {
     const titulo = document.getElementById('edit-pres-titulo').value.trim();
-    const sub = document.getElementById('edit-pres-sub').value.trim();
-    const desc = document.getElementById('edit-pres-desc').value.trim();
+    const sub = document.getElementById('edit-pres-subtitulo').value.trim();
+    const desc = document.getElementById('edit-pres-descripcion').value.trim();
     const textArea = document.getElementById('edit-pres-contenido-ia');
 
     if (!titulo) {
@@ -8725,8 +8725,11 @@ function openSendPropuestaModal(id) {
     currentSelectedLeadForSend = null;
 
     // Pre-select lead if available
-    if (p.lead_id) {
-        const lead = leadsList.find(l => l.id === p.lead_id);
+    if (p.lead_nombre) {
+        const lead = leadsList.find(l => 
+            (l.first_name && l.first_name.toLowerCase() === p.lead_nombre.toLowerCase()) || 
+            (l.email && l.email.toLowerCase() === p.lead_nombre.toLowerCase())
+        );
         if (lead) {
             currentSelectedLeadForSend = lead;
             document.getElementById('send-pres-lead-search').value = `${lead.first_name || 'Prospecto'} (${lead.email})`;

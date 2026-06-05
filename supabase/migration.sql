@@ -140,6 +140,9 @@ CREATE POLICY "Admin full access for budgets" ON presupuestos
 CREATE POLICY "Admin full access for sent proposals" ON propuestas_enviadas
     FOR ALL USING (auth.role() = 'authenticated');
 
+CREATE POLICY "Anon can view sent proposals" ON propuestas_enviadas
+    FOR SELECT USING (true);
+
 CREATE POLICY "Admin full access for tracking" ON propuesta_seguimiento
     FOR ALL USING (auth.role() = 'authenticated');
 
