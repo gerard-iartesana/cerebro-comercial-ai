@@ -7058,24 +7058,24 @@ function showToast(msg, isError = false) {
     if (!container) {
         container = document.createElement('div');
         container.id = 'toast-container';
-        container.style.cssText = 'position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 100000; pointer-events: none;';
+        container.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; gap: 12px; z-index: 100000; pointer-events: none; align-items: center; justify-content: center; width: 100%;';
         document.body.appendChild(container);
     }
 
     const toast = document.createElement('div');
     toast.style.cssText = `
         background: ${isError ? 'rgba(255, 59, 48, 0.95)' : 'rgba(28, 28, 30, 0.92)'};
-        backdrop-filter: blur(12px);
+        backdrop-filter: blur(16px);
         color: #ffffff;
-        padding: 12px 20px;
-        border-radius: 12px;
-        font-size: 0.82rem;
+        padding: 16px 32px;
+        border-radius: 16px;
+        font-size: 0.95rem;
         font-weight: 600;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.18);
-        border: 1px solid ${isError ? 'rgba(255, 59, 48, 0.3)' : 'rgba(255,255,255,0.08)'};
-        transform: translateY(20px);
+        box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+        border: 1px solid ${isError ? 'rgba(255, 59, 48, 0.3)' : 'rgba(255,255,255,0.1)'};
+        transform: scale(0.9);
         opacity: 0;
-        transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         display: flex;
         align-items: center;
         gap: 8px;
@@ -7086,13 +7086,13 @@ function showToast(msg, isError = false) {
 
     // Trigger animation
     setTimeout(() => {
-        toast.style.transform = 'translateY(0)';
+        toast.style.transform = 'scale(1)';
         toast.style.opacity = '1';
     }, 10);
 
     // Kill toast after 3.5 seconds
     setTimeout(() => {
-        toast.style.transform = 'translateY(15px)';
+        toast.style.transform = 'scale(0.9)';
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 400);
     }, 3500);
@@ -7152,6 +7152,15 @@ function renderPresupuestos() {
             tplNumMap.set(p.id, globalTplNum);
         });
     });
+
+    let globalLeadNum = 0;
+    const leadNumMap = new Map();
+    presupuestos.filter(p => p.es_plantilla === false)
+        .sort((a,b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
+        .forEach(p => {
+            globalLeadNum++;
+            leadNumMap.set(p.id, globalLeadNum);
+        });
 
     visibleCategories.forEach(catKey => {
         const meta = ALL_CATEGORIES_METADATA[catKey];
@@ -7226,7 +7235,7 @@ function renderPresupuestos() {
                         <!-- Top Header bar -->
                         <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px 0; position:relative; z-index:2;">
                             ${isClient 
-                                ? `<span class="pres-cat-badge" style="background:var(--accent); color:#fff;">👤 Propuesta Lead</span>`
+                                ? `<span class="pres-cat-badge" style="background:var(--accent); color:#fff;">👤 Propuesta #${leadNumMap.get(p.id) || '?'}</span>`
                                 : `<span class="pres-cat-badge" style="background:${meta.accent}18; color:${meta.accent}; border: 1px solid ${meta.accent}30;">Plantilla #${tplNumMap.get(p.id) || '?'}</span>`
                             }
                             <div style="display:flex; align-items:center; gap:8px;">
@@ -8825,7 +8834,7 @@ async function executeSendPropuestaAction() {
         outreachLogged += ' y WhatsApp abierto';
     }
 
-    // B. Email dispatch Mailto Fallback
+    // B. Email dispatch via API
     if (emailChannel) {
         const linkPDF = `https://cerebrocomercial-ai.iadebarrio.com/api/download?id=${p.id}`;
         const emailSubject = `Tu propuesta personalizada para ${p.titulo}`;
@@ -8834,10 +8843,25 @@ async function executeSendPropuestaAction() {
         if (ccNotes) emailBody += `Notas adicionales:\n${ccNotes}\n\n`;
         emailBody += `Revísala y quedo a tu entera disposición para resolver cualquier duda.\n\nUn saludo,\nGerard Fanals\nCerebroComercial AI`;
 
-        const ccQuery = ccEmails.length > 0 ? `&cc=${encodeURIComponent(ccEmails.join(','))}` : '';
-        const mailtoUrl = `mailto:${currentSelectedLeadForSend.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}${ccQuery}`;
-        window.open(mailtoUrl, '_blank');
-        outreachLogged += ' y Correo local levantado';
+        showToast('Enviando email...', false);
+        try {
+            const res = await fetch('/api/send-manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: currentSelectedLeadForSend.email,
+                    subject: emailSubject,
+                    body: emailBody,
+                    isTest: false
+                })
+            });
+            if (!res.ok) throw new Error('Error en API');
+            outreachLogged += ' y Correo enviado automáticamente';
+        } catch (e) {
+            console.error(e);
+            outreachLogged += ' (Error al enviar correo)';
+            showToast('Error al enviar el email automáticamente', true);
+        }
     }
 
     logToSystemSupport(`Propuesta "${p.titulo}" emitida a ${currentSelectedLeadForSend.first_name} (${currentSelectedLeadForSend.email})${outreachLogged}`);
@@ -8847,6 +8871,9 @@ async function executeSendPropuestaAction() {
     
     // Switch to Enviadas to check
     switchPresTab('enviadas');
+    
+    // Update tab badges
+    updateCounters();
 }
 
 // --- 10. Sent Proposals Spreadsheet Rendering ---
