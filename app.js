@@ -2382,41 +2382,38 @@ function abrirModalLead(id = null) {
         const lead = _allLeadsGridData.find(l => l.id === id);
         if (lead) {
             document.getElementById('lead-nombre').value = lead.first_name || '';
+            document.getElementById('lead-apellidos').value = lead.last_name || '';
             document.getElementById('lead-email').value = lead.email || '';
             document.getElementById('lead-telefono').value = lead.phone || '';
             document.getElementById('lead-negocio-nombre').value = lead.company_name || '';
             
-            if (lead.scraped_data) {
-                const s = lead.scraped_data;
-                if (s.last_name) document.getElementById('lead-apellidos').value = s.last_name;
-                if (s.nif) document.getElementById('lead-nif').value = s.nif;
-                if (s.fecha_nacimiento) document.getElementById('lead-fecha-nacimiento').value = s.fecha_nacimiento;
-                if (s.position) document.getElementById('lead-cargo').value = s.position;
-                if (s.nombre_comercial) document.getElementById('lead-negocio-comercial').value = s.nombre_comercial;
-                if (s.cif) document.getElementById('lead-negocio-cif').value = s.cif;
-                if (s.actividad) document.getElementById('lead-negocio-actividad').value = s.actividad;
-                if (s.direccion) document.getElementById('lead-negocio-direccion').value = s.direccion;
-                if (s.cp) document.getElementById('lead-negocio-cp').value = s.cp;
-                if (s.localidad) document.getElementById('lead-negocio-localidad').value = s.localidad;
-                if (s.provincia) document.getElementById('lead-negocio-provincia').value = s.provincia;
-                if (s.pais) document.getElementById('lead-negocio-pais').value = s.pais;
-                
-                if (s.email_negocio) document.getElementById('lead-negocio-email').value = s.email_negocio;
-                if (s.telefono_negocio) document.getElementById('lead-negocio-telefono').value = s.telefono_negocio;
-                if (s.web) document.getElementById('lead-web').value = s.web;
-                
-                if (s.instagram) document.getElementById('lead-rs-instagram').value = s.instagram;
-                if (s.facebook) document.getElementById('lead-rs-facebook').value = s.facebook;
-                if (s.linkedin) document.getElementById('lead-rs-linkedin').value = s.linkedin;
-                if (s.tiktok) document.getElementById('lead-rs-tiktok').value = s.tiktok;
-                if (s.twitter) document.getElementById('lead-rs-twitter').value = s.twitter;
-                if (s.pinterest) document.getElementById('lead-rs-pinterest').value = s.pinterest;
-                if (s.youtube) document.getElementById('lead-rs-youtube').value = s.youtube;
-                if (s.otra_red) document.getElementById('lead-rs-otra').value = s.otra_red;
-                
-                if (s.iban) document.getElementById('lead-iban').value = s.iban;
-                if (s.iban_titular) document.getElementById('lead-iban-titular').value = s.iban_titular;
-            }
+            document.getElementById('lead-nif').value = lead.nif || '';
+            document.getElementById('lead-fecha-nacimiento').value = lead.fecha_nacimiento || '';
+            document.getElementById('lead-cargo').value = lead.position || '';
+            document.getElementById('lead-negocio-comercial').value = lead.nombre_comercial || '';
+            document.getElementById('lead-negocio-cif').value = lead.cif || '';
+            document.getElementById('lead-negocio-actividad').value = lead.actividad || '';
+            document.getElementById('lead-negocio-direccion').value = lead.direccion || '';
+            document.getElementById('lead-negocio-cp').value = lead.cp || '';
+            document.getElementById('lead-negocio-localidad').value = lead.localidad || '';
+            document.getElementById('lead-negocio-provincia').value = lead.provincia || '';
+            document.getElementById('lead-negocio-pais').value = lead.pais || 'España';
+            
+            document.getElementById('lead-negocio-email').value = lead.email_negocio || '';
+            document.getElementById('lead-negocio-telefono').value = lead.telefono_negocio || '';
+            document.getElementById('lead-web').value = lead.web || '';
+            
+            document.getElementById('lead-rs-instagram').value = lead.instagram || '';
+            document.getElementById('lead-rs-facebook').value = lead.facebook || '';
+            document.getElementById('lead-rs-linkedin').value = lead.linkedin || '';
+            document.getElementById('lead-rs-tiktok').value = lead.tiktok || '';
+            document.getElementById('lead-rs-twitter').value = lead.twitter || '';
+            document.getElementById('lead-rs-pinterest').value = lead.pinterest || '';
+            document.getElementById('lead-rs-youtube').value = lead.youtube || '';
+            document.getElementById('lead-rs-otra').value = lead.otra_red || '';
+            
+            document.getElementById('lead-iban').value = lead.iban || '';
+            document.getElementById('lead-iban-titular').value = lead.iban_titular || '';
         }
     }
 
@@ -2437,37 +2434,35 @@ async function guardarLead() {
 
     const leadData = {
         first_name: nombre,
+        last_name: document.getElementById('lead-apellidos').value.trim(),
         email: email,
         phone: document.getElementById('lead-telefono').value.trim(),
         company_name: document.getElementById('lead-negocio-nombre').value.trim(),
         status: 'lead',
-        scraped_data: {
-            last_name: document.getElementById('lead-apellidos').value.trim(),
-            nif: document.getElementById('lead-nif').value.trim(),
-            fecha_nacimiento: document.getElementById('lead-fecha-nacimiento').value,
-            position: document.getElementById('lead-cargo').value.trim(),
-            nombre_comercial: document.getElementById('lead-negocio-comercial').value.trim(),
-            cif: document.getElementById('lead-negocio-cif').value.trim(),
-            actividad: document.getElementById('lead-negocio-actividad').value.trim(),
-            direccion: document.getElementById('lead-negocio-direccion').value.trim(),
-            cp: document.getElementById('lead-negocio-cp').value.trim(),
-            localidad: document.getElementById('lead-negocio-localidad').value.trim(),
-            provincia: document.getElementById('lead-negocio-provincia').value.trim(),
-            pais: document.getElementById('lead-negocio-pais').value.trim(),
-            email_negocio: document.getElementById('lead-negocio-email').value.trim(),
-            telefono_negocio: document.getElementById('lead-negocio-telefono').value.trim(),
-            web: document.getElementById('lead-web').value.trim(),
-            instagram: document.getElementById('lead-rs-instagram').value.trim(),
-            facebook: document.getElementById('lead-rs-facebook').value.trim(),
-            linkedin: document.getElementById('lead-rs-linkedin').value.trim(),
-            tiktok: document.getElementById('lead-rs-tiktok').value.trim(),
-            twitter: document.getElementById('lead-rs-twitter').value.trim(),
-            pinterest: document.getElementById('lead-rs-pinterest').value.trim(),
-            youtube: document.getElementById('lead-rs-youtube').value.trim(),
-            otra_red: document.getElementById('lead-rs-otra').value.trim(),
-            iban: document.getElementById('lead-iban').value.trim(),
-            iban_titular: document.getElementById('lead-iban-titular').value.trim()
-        }
+        nif: document.getElementById('lead-nif').value.trim(),
+        fecha_nacimiento: document.getElementById('lead-fecha-nacimiento').value,
+        position: document.getElementById('lead-cargo').value.trim(),
+        nombre_comercial: document.getElementById('lead-negocio-comercial').value.trim(),
+        cif: document.getElementById('lead-negocio-cif').value.trim(),
+        actividad: document.getElementById('lead-negocio-actividad').value.trim(),
+        direccion: document.getElementById('lead-negocio-direccion').value.trim(),
+        cp: document.getElementById('lead-negocio-cp').value.trim(),
+        localidad: document.getElementById('lead-negocio-localidad').value.trim(),
+        provincia: document.getElementById('lead-negocio-provincia').value.trim(),
+        pais: document.getElementById('lead-negocio-pais').value.trim(),
+        email_negocio: document.getElementById('lead-negocio-email').value.trim(),
+        telefono_negocio: document.getElementById('lead-negocio-telefono').value.trim(),
+        web: document.getElementById('lead-web').value.trim(),
+        instagram: document.getElementById('lead-rs-instagram').value.trim(),
+        facebook: document.getElementById('lead-rs-facebook').value.trim(),
+        linkedin: document.getElementById('lead-rs-linkedin').value.trim(),
+        tiktok: document.getElementById('lead-rs-tiktok').value.trim(),
+        twitter: document.getElementById('lead-rs-twitter').value.trim(),
+        pinterest: document.getElementById('lead-rs-pinterest').value.trim(),
+        youtube: document.getElementById('lead-rs-youtube').value.trim(),
+        otra_red: document.getElementById('lead-rs-otra').value.trim(),
+        iban: document.getElementById('lead-iban').value.trim(),
+        iban_titular: document.getElementById('lead-iban-titular').value.trim()
     };
 
     try {
