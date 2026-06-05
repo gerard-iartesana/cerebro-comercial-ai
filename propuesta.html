@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Propuesta Comercial - Gerard Fanals</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-color: #f5f5f7;
+            --card-bg: #ffffff;
+            --text-main: #1d1d1f;
+            --text-grey: #86868b;
+            --border-color: #d2d2d7;
+            --accent-green: #34c759;
+            --accent-blue: #0071e3;
+            --danger-red: #ff3b30;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px 10px 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 680px;
+        }
+
+        .propuesta-header {
+            background: #111;
+            color: #fff;
+            padding: 20px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .propuesta-header h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .propuesta-header .subtitle {
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        .propuesta-header .date-info {
+            text-align: right;
+            font-size: 0.75rem;
+            color: #bbb;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        
+        .card.top-card {
+            border-radius: 0 0 12px 12px;
+        }
+
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            margin-bottom: 8px;
+        }
+
+        .section-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-grey);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        .price-row.total {
+            font-weight: 700;
+            font-size: 1.1rem;
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-top: 10px;
+        }
+
+        .includes-list {
+            list-style: none;
+            margin: 20px 0;
+        }
+
+        .includes-list li {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+            color: var(--text-main);
+        }
+
+        .includes-list li::before {
+            content: "✓";
+            color: var(--accent-green);
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+
+        .btn-green {
+            display: block;
+            width: 100%;
+            background: var(--accent-green);
+            color: #fff;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-green:hover { background: #30d158; transform: translateY(-1px); }
+        .btn-green:active { transform: translateY(1px); }
+
+        .btn-green:disabled {
+            background: #a1a1a6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .form-block {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            background: #fff;
+        }
+
+        .form-block-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: var(--accent-blue);
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+        }
+
+        .input-group {
+            margin-bottom: 12px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-grey);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1);
+        }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        .pay-option {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pay-option:hover { background: #fbfbfd; }
+        .pay-option.selected {
+            border-color: var(--accent-blue);
+            background: rgba(0, 113, 227, 0.05);
+        }
+
+        .pay-option input[type="radio"] { margin-right: 12px; accent-color: var(--accent-blue); width: 16px; height: 16px;}
+        .pay-option-content { flex: 1; }
+        .pay-option-title { font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; }
+        .pay-option-desc { font-size: 0.75rem; color: var(--text-grey); margin-top: 2px; }
+
+        .extra-pay-info {
+            background: rgba(0, 113, 227, 0.05);
+            border: 1px solid rgba(0, 113, 227, 0.2);
+            border-radius: 10px;
+            padding: 16px;
+            margin-top: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .signature-pad {
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            width: 100%;
+            height: 150px;
+            background: #fafafa;
+            cursor: crosshair;
+            margin-top: 8px;
+        }
+
+        .gdpr-check {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 0.75rem;
+            color: var(--text-grey);
+            margin: 20px 0;
+            line-height: 1.4;
+        }
+
+        .gdpr-check input { margin-top: 2px; }
+
+        .loading-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid rgba(0,0,0,0.1);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Hidden by default */
+        #acceptance-form-container { display: none; }
+        #error-screen { display: none; text-align: center; padding: 40px; }
+    </style>
+</head>
+<body>
+
+    <div id="loading" class="loading-screen">
+        <div class="spinner"></div>
+        <p style="font-size: 0.9rem; color: var(--text-grey); font-weight: 500;">Cargando propuesta segura...</p>
+    </div>
+
+    <div id="error-screen">
+        <h2 style="color: var(--danger-red);">Propuesta no encontrada</h2>
+        <p style="color: var(--text-grey); font-size: 0.9rem;">El enlace puede haber caducado o no es válido.</p>
+    </div>
+
+    <div class="container" id="main-content" style="display: none;">
+        
+        <!-- Header -->
+        <div class="propuesta-header">
+            <div>
+                <h1>GerardFanals</h1>
+                <div class="subtitle">Senior Software IA Architect • Automatización • IA Generativa</div>
+            </div>
+            <div class="date-info">
+                <div id="prop-lead-name" style="font-weight: 600;">Cliente</div>
+                <div id="prop-date">--</div>
+            </div>
+        </div>
+
+        <!-- Propuesta Details -->
+        <div class="card top-card">
+            <div class="section-title">AGENTE IA</div>
+            <h2 id="prop-title">Análisis de Imagen</h2>
+            <p style="font-size: 0.85rem; color: var(--text-grey); margin-bottom: 20px;" id="prop-subtitle">Interacción con Imágenes o Vídeo</p>
+            
+            <div class="section-title">DESCRIPCIÓN DEL SERVICIO</div>
+            <p style="font-size: 0.85rem; line-height: 1.5; margin-bottom: 24px;" id="prop-desc">Agentes con capacidad de analizar y procesar contenido visual.</p>
+            
+            <div class="section-title">DESGLOSE DE SERVICIOS</div>
+            <div style="font-size: 0.7rem; color: var(--text-grey); display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 8px;">
+                <span>CONCEPTO</span>
+                <span style="display: flex; gap: 20px; width: 140px;">
+                    <span style="width: 50px;">PRECIO</span>
+                    <span style="width: 30px;">DTO.</span>
+                    <span style="text-align: right; flex: 1;">IMPORTE</span>
+                </span>
+            </div>
+            
+            <div id="prop-lines-container">
+                <!-- Lines injected here -->
+            </div>
+
+            <div class="price-row total" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                <span>Total</span>
+                <span style="font-size: 1.2rem;"><span id="prop-total">3000€</span> <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-grey);">+ IVA</span></span>
+            </div>
+            <div id="prop-mantenimiento" style="font-size: 0.8rem; font-weight: 600; color: var(--accent-blue); margin-top: 4px;"></div>
+
+            <div class="section-title" style="margin-top: 24px;">¿QUÉ INCLUYE?</div>
+            <ul class="includes-list" id="prop-includes">
+                <!-- Includes injected here -->
+            </ul>
+
+            <div style="background: rgba(0, 113, 227, 0.05); padding: 12px; border-radius: 8px; margin-top: 20px; font-size: 0.8rem; color: var(--text-main);">
+                <strong>VALIDEZ:</strong> <span id="prop-validez">30 días</span>
+            </div>
+        </div>
+
+        <!-- Botón para mostrar el formulario si no está mostrado -->
+        <div id="btn-show-form-container" style="text-align: center; margin-bottom: 40px;">
+            <p style="font-size: 0.8rem; color: var(--accent-blue); font-weight: 600; margin-bottom: 10px; cursor: pointer;" onclick="showAcceptanceForm()">👉 CONFIRMA TU PROPUESTA</p>
+        </div>
+
+        <!-- FORMULARIO DE ACEPTACIÓN -->
+        <div id="acceptance-form-container">
+            <form id="acceptance-form" onsubmit="submitAcceptance(event)">
+                
+                <!-- Formas de pago -->
+                <div class="form-block">
+                    <div class="form-block-header">💳 Forma de pago</div>
+                    <div id="payment-methods-container">
+                        <!-- Opciones de pago inyectadas aquí -->
+                    </div>
+
+                    <!-- Cuadro dinámico IBAN (Giro o Transferencia si requiere) -->
+                    <div class="extra-pay-info" id="iban-info-box">
+                        <div style="font-size: 0.85rem; font-weight: 600; color: var(--accent-blue); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                            🏦 Datos bancarios para el mantenimiento mensual (Giro bancario)
+                        </div>
+                        <div class="grid-2">
+                            <div class="input-group" style="margin-bottom:0">
+                                <label>IBAN *</label>
+                                <input type="text" id="lead_iban" placeholder="ESXX XXXX XXXX ...">
+                            </div>
+                            <div class="input-group" style="margin-bottom:0">
+                                <label>TITULAR</label>
+                                <input type="text" id="lead_iban_titular" placeholder="Nombre del titular">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Datos personales -->
+                <div class="form-block">
+                    <div class="form-block-header">👤 Tus datos personales</div>
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label>Nombre *</label>
+                            <input type="text" id="lead_nombre" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Apellidos *</label>
+                            <input type="text" id="lead_apellidos" required>
+                        </div>
+                        <div class="input-group">
+                            <label>NIF / DNI *</label>
+                            <input type="text" id="lead_nif" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Fecha Nacimiento</label>
+                            <input type="date" id="lead_fecha_nac">
+                        </div>
+                        <div class="input-group" style="grid-column: 1 / -1;">
+                            <label>Profesión / Cargo</label>
+                            <input type="text" id="lead_profesion">
+                        </div>
+                        <div class="input-group">
+                            <label>Email</label>
+                            <input type="email" id="lead_email">
+                        </div>
+                        <div class="input-group">
+                            <label>Teléfono</label>
+                            <input type="tel" id="lead_telefono">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Datos del negocio -->
+                <div class="form-block">
+                    <div class="form-block-header">🏢 Datos del negocio</div>
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label>Empresa</label>
+                            <input type="text" id="neg_empresa">
+                        </div>
+                        <div class="input-group">
+                            <label>Nombre Comercial</label>
+                            <input type="text" id="neg_comercial">
+                        </div>
+                        <div class="input-group">
+                            <label>CIF</label>
+                            <input type="text" id="neg_cif">
+                        </div>
+                        <div class="input-group">
+                            <label>Actividad</label>
+                            <input type="text" id="neg_actividad">
+                        </div>
+                        <div class="input-group" style="grid-column: 1 / -1;">
+                            <label>Dirección</label>
+                            <input type="text" id="neg_direccion">
+                        </div>
+                        <div class="input-group" style="grid-column: 1 / span 1;">
+                            <label>CP</label>
+                            <input type="text" id="neg_cp">
+                        </div>
+                        <div class="input-group" style="grid-column: 2 / span 1;">
+                            <label>Localidad</label>
+                            <input type="text" id="neg_localidad">
+                        </div>
+                        <div class="input-group" style="grid-column: 1 / span 1;">
+                            <label>Provincia</label>
+                            <input type="text" id="neg_provincia">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contacto negocio -->
+                <div class="form-block">
+                    <div class="form-block-header">📱 Contacto negocio</div>
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label>Email Negocio</label>
+                            <input type="email" id="neg_email">
+                        </div>
+                        <div class="input-group">
+                            <label>Teléfono Negocio</label>
+                            <input type="tel" id="neg_telefono">
+                        </div>
+                        <div class="input-group" style="grid-column: 1 / -1;">
+                            <label>Web</label>
+                            <input type="url" id="neg_web" placeholder="https://...">
+                        </div>
+                        <div class="input-group">
+                            <label>Instagram</label>
+                            <input type="text" id="neg_instagram" placeholder="@cuenta">
+                        </div>
+                        <div class="input-group">
+                            <label>Facebook</label>
+                            <input type="text" id="neg_facebook" placeholder="/pagina">
+                        </div>
+                        <div class="input-group">
+                            <label>LinkedIn</label>
+                            <input type="text" id="neg_linkedin" placeholder="/empresa">
+                        </div>
+                        <div class="input-group">
+                            <label>TikTok</label>
+                            <input type="text" id="neg_tiktok" placeholder="@cuenta">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Firma -->
+                <div class="form-block" style="background: rgba(255, 149, 0, 0.02); border-color: rgba(255, 149, 0, 0.2);">
+                    <div class="form-block-header" style="color: #ff9f0a;">✍️ Firma digital de aceptación</div>
+                    
+                    <div style="background: rgba(0, 113, 227, 0.05); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                        <strong style="font-size: 0.75rem; color: var(--accent-blue);">ℹ️ Nota aclaratoria</strong>
+                        <p style="font-size: 0.75rem; color: var(--text-grey); margin-top: 4px; line-height: 1.4;">La firma de esta propuesta no compromete a nada a ti como cliente ni a IArtesana hasta haber firmado el contrato final con todas las condiciones. Esto sirve únicamente como confirmación de los datos y aceptación de la propuesta.</p>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Nombre Completo (Firmante) *</label>
+                        <input type="text" id="firma_nombre" required>
+                    </div>
+
+                    <div class="input-group" style="margin-top: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <label>Firma Aquí *</label>
+                            <span style="font-size: 0.7rem; color: var(--danger-red); cursor: pointer;" onclick="clearSignature()">🗑️ Borrar</span>
+                        </div>
+                        <canvas id="signature-pad" class="signature-pad"></canvas>
+                        <div style="text-align: center; font-size: 0.65rem; color: var(--text-grey); margin-top: 4px;">Firma con el ratón o el dedo</div>
+                    </div>
+
+                    <div class="gdpr-check">
+                        <input type="checkbox" id="gdpr-check" required>
+                        <label for="gdpr-check">Confirmo que los datos son correctos y estoy de acuerdo en solicitar el contrato de servicios correspondiente a esta propuesta. Tus datos se utilizarán de acuerdo al RGPD.</label>
+                    </div>
+
+                    <button type="submit" class="btn-green" id="submit-btn">✅ Confirmar propuesta, firmar y enviar datos</button>
+                </div>
+
+            </form>
+        </div>
+
+        <div style="text-align: center; font-size: 0.7rem; color: #ccc; margin-top: 20px;">
+            Gerard Fanals<br>
+            Propuesta confidencial · Proyecto IARTESANA
+        </div>
+
+    </div>
+
+    <script>
+        // Supabase Init
+        const SUPABASE_URL = 'https://lmozoetpehmdxxremtqn.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxtb3pvZXRwZWhtZHh4cmVtdHFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNTA2NDUsImV4cCI6MjA5NTgyNjY0NX0.1xkCCw7q9CDvVbqGswCeFwXpgYfMtb0wcl7lHWlKQ8U';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentPropuesta = null;
+        let selectedPayMethod = null;
+
+        // Formas de pago metadata
+        const payMethodsMeta = {
+            'transferencia': { title: '🏦 Transferencia bancaria', desc: 'Pago por transferencia' },
+            'giro': { title: '🏦 Giro bancario (domiciliación)', desc: 'Cargo directo en cuenta' },
+            'bizum': { title: '📱 Bizum', desc: 'Pago rápido por móvil' },
+            'stripe': { title: '💳 Tarjeta de crédito/débito', desc: 'Pago con tarjeta' },
+            'efectivo': { title: '💵 Efectivo', desc: 'Pago en efectivo' }
+        };
+
+        // Signature Pad logic
+        const canvas = document.getElementById('signature-pad');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let hasSigned = false;
+
+        function resizeCanvas() {
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
+            ctx.scale(ratio, ratio);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#000';
+        }
+        window.addEventListener('resize', resizeCanvas);
+        // Delay resize slightly to ensure layout is done
+        setTimeout(resizeCanvas, 100);
+
+        function startPosition(e) {
+            isDrawing = true;
+            hasSigned = true;
+            draw(e);
+        }
+        function endPosition() {
+            isDrawing = false;
+            ctx.beginPath();
+        }
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            let x, y;
+            if (e.touches && e.touches.length > 0) {
+                x = e.touches[0].clientX - rect.left;
+                y = e.touches[0].clientY - rect.top;
+            } else {
+                x = e.clientX - rect.left;
+                y = e.clientY - rect.top;
+            }
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        canvas.addEventListener('mousedown', startPosition);
+        canvas.addEventListener('mouseup', endPosition);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('touchstart', startPosition, {passive: false});
+        canvas.addEventListener('touchend', endPosition);
+        canvas.addEventListener('touchmove', draw, {passive: false});
+
+        window.clearSignature = function() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hasSigned = false;
+        };
+
+        // Main init
+        async function init() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+
+            if (!id) {
+                showError();
+                return;
+            }
+
+            try {
+                // Fetch propuesta from Supabase
+                const { data, error } = await supabase.from('propuestas_enviadas').select('*').eq('presupuesto_id', id).single();
+                
+                if (error || !data) {
+                    showError();
+                    return;
+                }
+
+                if (data.estado === 'aceptada') {
+                    // Redirect to confirmation page if already accepted
+                    window.location.href = `/api/propuestas/confirmar?id=${id}`;
+                    return;
+                }
+
+                currentPropuesta = data;
+                renderPropuesta(data);
+
+            } catch (err) {
+                console.error(err);
+                showError();
+            }
+        }
+
+        function showError() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error-screen').style.display = 'block';
+        }
+
+        function renderPropuesta(data) {
+            document.getElementById('prop-lead-name').textContent = data.lead_nombre || 'Cliente';
+            
+            const fechaObj = data.created_at ? new Date(data.created_at) : new Date();
+            document.getElementById('prop-date').textContent = fechaObj.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+            
+            document.getElementById('prop-title').textContent = data.titulo || 'Proyecto a medida';
+            document.getElementById('prop-subtitle').textContent = data.subtitulo || '';
+            document.getElementById('prop-desc').textContent = data.descripcion || '';
+
+            // Render lines
+            const linesContainer = document.getElementById('prop-lines-container');
+            linesContainer.innerHTML = '';
+            
+            let totalNeto = 0;
+            let totalMant = 0;
+
+            const lines = (data.content && data.content.lineas) ? data.content.lineas : [];
+            lines.forEach(l => {
+                if (l.activo === false || l.recomendado === true) return;
+                
+                const p = l.precio || 0;
+                const d = l.descuento || 0;
+                const imp = p * (1 - d/100);
+                totalNeto += imp;
+
+                if (l.mantenimiento) {
+                    totalMant += (l.mantenimiento_precio || 0);
+                }
+
+                const lineHtml = `
+                <div class="price-row">
+                    <div style="font-weight: 500;">
+                        ${l.nombre}
+                        ${l.mantenimiento ? \`<div style="font-size: 0.7rem; color: var(--accent-blue);">Mantenimiento: ${l.mantenimiento_precio}€/mes</div>\` : ''}
+                    </div>
+                    <div style="display: flex; gap: 20px; width: 140px; color: var(--text-grey);">
+                        <span style="width: 50px;">${p}€</span>
+                        <span style="width: 30px;">${d>0 ? d+'%' : '—'}</span>
+                        <span style="text-align: right; flex: 1; color: var(--text-main); font-weight: 500;">${Math.round(imp)}€</span>
+                    </div>
+                </div>`;
+                linesContainer.innerHTML += lineHtml;
+            });
+
+            document.getElementById('prop-total').textContent = `${Math.round(totalNeto)}€`;
+            
+            if (totalMant > 0) {
+                document.getElementById('prop-mantenimiento').textContent = `Mantenimiento mensual total: ${Math.round(totalMant)}€/mes`;
+            } else {
+                document.getElementById('prop-mantenimiento').style.display = 'none';
+            }
+
+            // Includes
+            const contHtml = (data.content && data.content.contenido_ia) ? data.content.contenido_ia : '';
+            const incList = document.getElementById('prop-includes');
+            
+            // Si el contenido ya viene formateado con HTML desde el agente (ej. <ul><li>), lo pegamos directo
+            if (contHtml.includes('<li')) {
+                incList.innerHTML = contHtml;
+            } else {
+                // Sino, hacemos un split por saltos de línea rudimentario
+                const parts = contHtml.split('\\n').filter(p => p.trim() !== '');
+                parts.forEach(p => {
+                    const li = document.createElement('li');
+                    li.textContent = p.replace(/^[-*✓]\s*/, '');
+                    incList.appendChild(li);
+                });
+            }
+
+            // Formas de pago ofrecidas
+            const ofrecidas = (data.content && data.content.formas_pago_ofrecidas) ? data.content.formas_pago_ofrecidas : [];
+            const pmContainer = document.getElementById('payment-methods-container');
+            pmContainer.innerHTML = '';
+            
+            if (ofrecidas.length === 0) {
+                pmContainer.innerHTML = '<p style="font-size:0.8rem;color:var(--text-grey);">No se han configurado métodos de pago específicos. Se definirán en el contrato.</p>';
+            } else {
+                ofrecidas.forEach((key, idx) => {
+                    const meta = payMethodsMeta[key] || { title: key, desc: '' };
+                    const div = document.createElement('div');
+                    div.className = 'pay-option';
+                    div.innerHTML = `
+                        <input type="radio" name="pay_method" id="pm_${key}" value="${key}">
+                        <div class="pay-option-content">
+                            <div class="pay-option-title">${meta.title}</div>
+                            <div class="pay-option-desc">${meta.desc}</div>
+                        </div>
+                    `;
+                    div.onclick = () => selectPaymentMethod(key);
+                    pmContainer.appendChild(div);
+                });
+            }
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('main-content').style.display = 'block';
+        }
+
+        window.showAcceptanceForm = function() {
+            document.getElementById('btn-show-form-container').style.display = 'none';
+            document.getElementById('acceptance-form-container').style.display = 'block';
+            resizeCanvas(); // Ensure canvas is sized properly once unhidden
+            setTimeout(() => {
+                document.getElementById('acceptance-form-container').scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        };
+
+        window.selectPaymentMethod = function(key) {
+            selectedPayMethod = key;
+            // Update UI
+            document.querySelectorAll('.pay-option').forEach(el => el.classList.remove('selected'));
+            document.getElementById(`pm_${key}`).checked = true;
+            document.getElementById(`pm_${key}`).closest('.pay-option').classList.add('selected');
+
+            // Show IBAN box if needed
+            const ibanBox = document.getElementById('iban-info-box');
+            if (key === 'giro') {
+                ibanBox.style.display = 'block';
+                ibanBox.querySelector('div').innerHTML = '🏦 Datos bancarios para la domiciliación (Giro bancario)';
+            } else if (key === 'transferencia') {
+                // If they pay by transfer, we don't necessarily NEED their IBAN to charge them, 
+                // but sometimes businesses request it for refunds or tracking. For now we follow the screenshot (only giro asked for it explicitly).
+                // Actually, let's just ask it if they choose giro.
+                ibanBox.style.display = 'none';
+            } else {
+                ibanBox.style.display = 'none';
+            }
+        };
+
+        window.submitAcceptance = async function(e) {
+            e.preventDefault();
+            
+            if (!hasSigned) {
+                alert('Por favor, dibuja tu firma en el recuadro indicado.');
+                return;
+            }
+
+            const ofrecidas = (currentPropuesta.content && currentPropuesta.content.formas_pago_ofrecidas) ? currentPropuesta.content.formas_pago_ofrecidas : [];
+            if (ofrecidas.length > 0 && !selectedPayMethod) {
+                alert('Por favor, selecciona una forma de pago.');
+                return;
+            }
+
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.textContent = 'Procesando...';
+
+            const signatureBase64 = canvas.toDataURL('image/png');
+
+            const payload = {
+                propuesta_id: currentPropuesta.presupuesto_id,
+                forma_pago_elegida: selectedPayMethod,
+                firma: signatureBase64,
+                datos: {
+                    lead: {
+                        nombre: document.getElementById('lead_nombre').value,
+                        apellidos: document.getElementById('lead_apellidos').value,
+                        nif: document.getElementById('lead_nif').value,
+                        fecha_nacimiento: document.getElementById('lead_fecha_nac').value,
+                        profesion: document.getElementById('lead_profesion').value,
+                        email: document.getElementById('lead_email').value,
+                        telefono: document.getElementById('lead_telefono').value,
+                        iban: document.getElementById('lead_iban').value,
+                        iban_titular: document.getElementById('lead_iban_titular').value
+                    },
+                    negocio: {
+                        empresa: document.getElementById('neg_empresa').value,
+                        comercial: document.getElementById('neg_comercial').value,
+                        cif: document.getElementById('neg_cif').value,
+                        actividad: document.getElementById('neg_actividad').value,
+                        direccion: document.getElementById('neg_direccion').value,
+                        cp: document.getElementById('neg_cp').value,
+                        localidad: document.getElementById('neg_localidad').value,
+                        provincia: document.getElementById('neg_provincia').value,
+                        email: document.getElementById('neg_email').value,
+                        telefono: document.getElementById('neg_telefono').value,
+                        web: document.getElementById('neg_web').value,
+                        instagram: document.getElementById('neg_instagram').value,
+                        facebook: document.getElementById('neg_facebook').value,
+                        linkedin: document.getElementById('neg_linkedin').value,
+                        tiktok: document.getElementById('neg_tiktok').value
+                    }
+                }
+            };
+
+            try {
+                const response = await fetch('/api/public/accept-propuesta', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error en el servidor');
+                }
+
+                // Redirect to success page
+                window.location.href = `/api/propuestas/confirmar?id=${currentPropuesta.presupuesto_id}`;
+            } catch (err) {
+                console.error(err);
+                alert('Ha ocurrido un error al procesar tu aceptación. Inténtalo de nuevo.');
+                btn.disabled = false;
+                btn.textContent = '✅ Confirmar propuesta, firmar y enviar datos';
+            }
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

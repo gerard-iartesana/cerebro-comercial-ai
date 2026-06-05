@@ -1959,13 +1959,13 @@
                                 <div class="editor-card-block-title" style="margin-top: 2px; font-size: 0.75rem;">💳 FORMAS DE PAGO OFRECIDAS AL CLIENTE</div>
                                 <p style="font-size: 0.72rem; color: var(--text-grey); margin: 0 0 6px;">Selecciona las que quieres ofrecer. El cliente solo verá estas opciones en el PDF.</p>
                                 
-                                <div class="pay-methods-grid">
-                                    <button type="button" class="pay-method-btn" data-value="transferencia" onclick="togglePayMethodBtn(this)">🏧 Transferencia</button>
-                                    <button type="button" class="pay-method-btn" data-value="giro" onclick="togglePayMethodBtn(this)">🏦 Giro bancario</button>
-                                    <button type="button" class="pay-method-btn" data-value="bizum" onclick="togglePayMethodBtn(this)">📱 Bizum</button>
-                                    <button type="button" class="pay-method-btn" data-value="stripe" onclick="togglePayMethodBtn(this)">💳 Stripe</button>
-                                    <button type="button" class="pay-method-btn" data-value="efectivo" onclick="togglePayMethodBtn(this)">💵 Efectivo</button>
-                                    <button type="button" class="pay-method-btn" data-value="sin_iva" onclick="togglePayMethodBtn(this)">🇺🇸 Sin IVA</button>
+                                <div class="pay-methods-grid" id="edit-pres-formas-pago-container" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                    <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-card);font-size:0.78rem;font-weight:600;color:var(--text-main);cursor:pointer"><input type="checkbox" class="pay-method-check" data-value="transferencia" onchange="togglePayMethodCheck()"> 🏧 Transferencia</label>
+                                    <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-card);font-size:0.78rem;font-weight:600;color:var(--text-main);cursor:pointer"><input type="checkbox" class="pay-method-check" data-value="giro" onchange="togglePayMethodCheck()"> 🏦 Giro bancario</label>
+                                    <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-card);font-size:0.78rem;font-weight:600;color:var(--text-main);cursor:pointer"><input type="checkbox" class="pay-method-check" data-value="bizum" onchange="togglePayMethodCheck()"> 📱 Bizum</label>
+                                    <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-card);font-size:0.78rem;font-weight:600;color:var(--text-main);cursor:pointer"><input type="checkbox" class="pay-method-check" data-value="stripe" onchange="togglePayMethodCheck()"> 💳 Stripe</label>
+                                    <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-card);font-size:0.78rem;font-weight:600;color:var(--text-main);cursor:pointer"><input type="checkbox" class="pay-method-check" data-value="efectivo" onchange="togglePayMethodCheck()"> 💵 Efectivo</label>
+                                    <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-card);font-size:0.78rem;font-weight:600;color:var(--text-main);cursor:pointer"><input type="checkbox" class="pay-method-check" data-value="sin_iva" onchange="togglePayMethodCheck()"> 🇺🇸 Sin IVA</label>
                                 </div>
                                 
                                 <!-- Contenedor dinámico de instrucciones visuales de pago -->
@@ -3638,6 +3638,6 @@
     </div>
 
     <!-- App Scripts -->
-    <script src="app.js?v=20260604p"></script>
+    <script src="app.js?v=20260605a"></script>
 </body>
 </html>

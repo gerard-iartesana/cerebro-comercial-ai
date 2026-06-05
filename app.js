@@ -7266,9 +7266,8 @@ window.addEventListener('click', function(e) {
     }
 });
 
-// Pay methods toggle buttons handler
-function togglePayMethodBtn(btn) {
-    btn.classList.toggle('selected');
+// Pay methods toggle handler
+window.togglePayMethodCheck = function() {
     renderPayMethodsInstructions();
 }
 
@@ -7499,7 +7498,7 @@ window.renderPayMethodsInstructions = function() {
     
     container.innerHTML = '';
     
-    const selectedButtons = document.querySelectorAll('.pay-method-btn.selected');
+    const selectedButtons = document.querySelectorAll('.pay-method-check:checked');
     if (selectedButtons.length === 0) {
         container.innerHTML = `
             <div style="font-size:0.75rem; color:var(--text-grey); padding:10px; border:1px dashed var(--card-border); border-radius:10px; text-align:center; background:rgba(255,255,255,0.01);">
@@ -7698,14 +7697,10 @@ function openEditPresupuestoModal(id) {
 
     // Payment methods toggles
     const offered = p.formas_pago_ofrecidas || [];
-    document.querySelectorAll('.pay-method-btn').forEach(btn => {
-        const val = btn.dataset.value;
+    document.querySelectorAll('.pay-method-check').forEach(chk => {
+        const val = chk.dataset.value;
         const isOffered = offered.length > 0 ? offered.includes(val) : (p.forma_pago === val || ['giro', 'transferencia', 'bizum'].includes(val));
-        if (isOffered) {
-            btn.classList.add('selected');
-        } else {
-            btn.classList.remove('selected');
-        }
+        chk.checked = !!isOffered;
     });
 
     // Finance config
@@ -8321,8 +8316,8 @@ async function savePresupuestoAction() {
 
     // Get Horizontal forms_pago_ofrecidas selected
     const offeredPayMethods = [];
-    document.querySelectorAll('.pay-method-btn.selected').forEach(btn => {
-        offeredPayMethods.push(btn.dataset.value);
+    document.querySelectorAll('.pay-method-check:checked').forEach(chk => {
+        offeredPayMethods.push(chk.dataset.value);
     });
 
     // Compile Pago Config including selected_option
