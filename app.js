@@ -2481,7 +2481,7 @@ async function guardarLead() {
 
         closeModalLead();
         loadLeadsGrid();
-        showToast('Lead guardado correctamente');
+        showAlert('Éxito', 'Lead guardado correctamente');
     } catch (e) {
         console.error(e);
         showAlert('Error', `No se pudo guardar el lead: ${e.message}`);
