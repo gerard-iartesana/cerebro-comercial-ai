@@ -8550,6 +8550,64 @@ async function savePresupuestoAction() {
     renderPresupuestos();
 }
 
+// AI Content generation for proposal benefits
+async function generateAIContentForProposal() {
+    const titulo = document.getElementById('edit-pres-titulo').value.trim();
+    const sub = document.getElementById('edit-pres-sub').value.trim();
+    const desc = document.getElementById('edit-pres-desc').value.trim();
+    const textArea = document.getElementById('edit-pres-contenido-ia');
+
+    if (!titulo) {
+        showToast('El título de la propuesta es necesario para generar contenido', true);
+        return;
+    }
+
+    const btn = document.querySelector('button[onclick="generateAIContentForProposal()"]');
+    if (btn) { btn.innerHTML = '⏳ Generando...'; btn.style.pointerEvents = 'none'; }
+    showToast('Generando beneficios de la propuesta con IA...', false);
+
+    const prompt = `Actúa como un experto en redacción persuasiva y ventas B2B.
+Tengo la siguiente propuesta comercial para un lead:
+Título: ${titulo}
+Subtítulo: ${sub}
+Descripción del servicio: ${desc}
+
+Necesito que redactes un texto corto y directo (máximo 4-5 frases o una breve lista de viñetas) destacando los beneficios principales que obtendrá el cliente al contratar esta propuesta. Usa un tono elegante, persuasivo y muy profesional. Dirígete directamente al cliente de tú o usted de forma consistente. Resalta el ROI y la automatización. 
+Responde ÚNICAMENTE con el texto generado, sin introducciones ni comentarios adicionales.`;
+
+    try {
+        const res = await fetch('/api/brain-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: [{ role: 'user', content: prompt }],
+                systemPrompt: 'Eres CerebroComercial AI, un asistente de ventas experto en copywriting de propuestas.',
+                temperature: 0.7
+            })
+        });
+
+        if (!res.ok) throw new Error('Error al conectar con IA');
+        const data = await res.json();
+        
+        let result = data.reply || '';
+        result = result.replace(/\\n/g, '\n').trim();
+
+        // Append to existing text if any, or replace
+        if (textArea.value.trim() !== '') {
+            textArea.value += '\n\n' + result;
+        } else {
+            textArea.value = result;
+        }
+
+        showToast('Contenido generado y añadido con éxito');
+    } catch (e) {
+        console.error(e);
+        showToast('Error generando contenido IA', true);
+    } finally {
+        if (btn) { btn.innerHTML = '✨ Generar con IA'; btn.style.pointerEvents = 'auto'; }
+    }
+}
+
 // Delete action
 async function deletePresupuestoAction(id) {
     const pres = presupuestos.find(p => p.id === id);
@@ -8665,6 +8723,15 @@ function openSendPropuestaModal(id) {
     document.getElementById('send-pres-notes').value = '';
     
     currentSelectedLeadForSend = null;
+
+    // Pre-select lead if available
+    if (p.lead_id) {
+        const lead = leadsList.find(l => l.id === p.lead_id);
+        if (lead) {
+            currentSelectedLeadForSend = lead;
+            document.getElementById('send-pres-lead-search').value = `${lead.first_name || 'Prospecto'} (${lead.email})`;
+        }
+    }
 
     document.getElementById('modal-send-propuesta').classList.add('active');
     document.getElementById('modal-send-propuesta').style.display = 'flex';
@@ -8837,10 +8904,13 @@ async function executeSendPropuestaAction() {
     // B. Email dispatch via API
     if (emailChannel) {
         const linkPDF = `https://cerebrocomercial-ai.iadebarrio.com/api/download?id=${p.id}`;
+        const linkOnline = `https://cerebrocomercial-ai.iadebarrio.com/propuesta.html?id=${p.id}`;
         const emailSubject = `Tu propuesta personalizada para ${p.titulo}`;
         
-        let emailBody = `Hola ${currentSelectedLeadForSend.first_name || 'prospecto'},\n\nEspero que estés muy bien.\n\nTe adjunto el enlace para ver y descargar la propuesta comercial de ${p.titulo} que hemos diseñado para optimizar tu negocio.\n\nEnlace PDF: ${linkPDF}\n\n`;
+        let emailBody = `Hola ${currentSelectedLeadForSend.first_name || 'prospecto'},\n\nEspero que estés muy bien.\n\nTe adjunto el enlace para ver y aceptar la propuesta comercial de ${p.titulo} que hemos diseñado para optimizar tu negocio.\n\n`;
         if (ccNotes) emailBody += `Notas adicionales:\n${ccNotes}\n\n`;
+        emailBody += `<div style="text-align: center; margin: 30px 0;"><a href="${linkOnline}" style="background-color: #111111; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block;">Ver y Confirmar Propuesta</a></div>\n\n`;
+        emailBody += `Puedes descargar el desglose en PDF directamente aquí: ${linkPDF}\n\n`;
         emailBody += `Revísala y quedo a tu entera disposición para resolver cualquier duda.\n\nUn saludo,\nGerard Fanals\nCerebroComercial AI`;
 
         showToast('Enviando email...', false);

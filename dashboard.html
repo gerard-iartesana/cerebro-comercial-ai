@@ -2199,8 +2199,11 @@
                                 </div>
                             </div>
 
-                            <div>
-                                <label class="mtg-label">Detalle técnico / Contenido adicional IA</label>
+                            <div style="position: relative;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                    <label class="mtg-label" style="margin-bottom: 0;">Detalle técnico / Contenido adicional IA</label>
+                                    <button type="button" onclick="generateAIContentForProposal()" style="background: rgba(191,90,242,0.1); color: #bf5af2; border: 1px solid rgba(191,90,242,0.3); border-radius: 6px; padding: 2px 8px; font-size: 0.7rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">✨ Generar con IA</button>
+                                </div>
                                 <textarea id="edit-pres-contenido-ia" class="modal-input" rows="3" placeholder="Detalles estratégicos o explicaciones adicionales que aparecerán en el PDF..." style="resize: vertical; font-size: 0.8rem;"></textarea>
                             </div>
 
