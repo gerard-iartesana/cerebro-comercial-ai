@@ -64,6 +64,7 @@ export default async function handler(req, res) {
             scraped_data: {
                 nif: datos.lead.nif,
                 fecha_nacimiento: datos.lead.fecha_nacimiento,
+                position: datos.lead.cargo,
                 nombre_comercial: datos.negocio.comercial,
                 cif: datos.negocio.cif,
                 actividad: datos.negocio.actividad,
@@ -71,10 +72,20 @@ export default async function handler(req, res) {
                 cp: datos.negocio.cp,
                 localidad: datos.negocio.localidad,
                 provincia: datos.negocio.provincia,
+                pais: datos.negocio.pais || 'España',
+                email_negocio: datos.negocio.email,
+                telefono_negocio: datos.negocio.telefono,
+                web: datos.negocio.web,
                 instagram: datos.negocio.instagram,
                 facebook: datos.negocio.facebook,
                 linkedin: datos.negocio.linkedin,
-                tiktok: datos.negocio.tiktok
+                tiktok: datos.negocio.tiktok,
+                twitter: datos.negocio.twitter,
+                pinterest: datos.negocio.pinterest,
+                youtube: datos.negocio.youtube,
+                otra_red: datos.negocio.otra_red,
+                iban: datos.lead.iban,
+                iban_titular: datos.lead.iban_titular
             }
         };
 

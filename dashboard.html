@@ -1347,9 +1347,21 @@
                                         <input type="date" id="lead-fecha-nacimiento" class="modal-input">
                                     </div>
                                 </div>
-                                <div>
-                                    <label class="mtg-label">Profesión / Cargo</label>
-                                    <input type="text" id="lead-cargo" class="modal-input" placeholder="Ej: Abogada y Mediadora">
+                                <div style="display: flex; gap: 10px;">
+                                    <div style="flex:1">
+                                        <label class="mtg-label">Profesión / Cargo</label>
+                                        <input type="text" id="lead-cargo" class="modal-input" placeholder="Ej: Abogada y Mediadora">
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <div style="flex:1">
+                                        <label class="mtg-label">Email Personal *</label>
+                                        <input type="email" id="lead-email" class="modal-input" placeholder="email@personal.com">
+                                    </div>
+                                    <div style="flex:1">
+                                        <label class="mtg-label">Teléfono Personal</label>
+                                        <input type="tel" id="lead-telefono" class="modal-input" placeholder="+34 600 000 000">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1403,16 +1415,16 @@
                         </div>
 
                         <div class="editor-card-block">
-                            <div class="editor-card-block-title">📞 DATOS DE CONTACTO</div>
+                            <div class="editor-card-block-title">📞 CONTACTO DEL NEGOCIO</div>
                             <div style="display: flex; flex-direction: column; gap: 10px;">
                                 <div style="display: flex; gap: 10px;">
                                     <div style="flex:1">
-                                        <label class="mtg-label">Email Personal / Negocio *</label>
-                                        <input type="email" id="lead-email" class="modal-input" placeholder="email@ejemplo.com">
+                                        <label class="mtg-label">Email del Negocio</label>
+                                        <input type="email" id="lead-negocio-email" class="modal-input" placeholder="info@empresa.com">
                                     </div>
                                     <div style="flex:1">
-                                        <label class="mtg-label">Teléfono / Móvil *</label>
-                                        <input type="tel" id="lead-telefono" class="modal-input" placeholder="+34 600 000 000">
+                                        <label class="mtg-label">Teléfono del Negocio</label>
+                                        <input type="tel" id="lead-negocio-telefono" class="modal-input" placeholder="+34 971 000 000">
                                     </div>
                                 </div>
                                 <div>
@@ -1448,6 +1460,14 @@
                                 <div>
                                     <label class="mtg-label">Pinterest</label>
                                     <input type="text" id="lead-rs-pinterest" class="modal-input" placeholder="Link perfil">
+                                </div>
+                                <div>
+                                    <label class="mtg-label">YouTube</label>
+                                    <input type="text" id="lead-rs-youtube" class="modal-input" placeholder="Link canal">
+                                </div>
+                                <div>
+                                    <label class="mtg-label">Otra Red Social</label>
+                                    <input type="text" id="lead-rs-otra" class="modal-input" placeholder="Link / Info">
                                 </div>
                             </div>
                         </div>

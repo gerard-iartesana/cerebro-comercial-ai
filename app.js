@@ -2367,8 +2367,8 @@ function abrirModalLead(id = null) {
         'lead-nombre', 'lead-apellidos', 'lead-nif', 'lead-fecha-nacimiento', 'lead-cargo',
         'lead-negocio-nombre', 'lead-negocio-comercial', 'lead-negocio-cif', 'lead-negocio-actividad',
         'lead-negocio-direccion', 'lead-negocio-cp', 'lead-negocio-localidad', 'lead-negocio-provincia', 'lead-negocio-pais',
-        'lead-email', 'lead-telefono', 'lead-web',
-        'lead-rs-instagram', 'lead-rs-facebook', 'lead-rs-linkedin', 'lead-rs-tiktok', 'lead-rs-twitter', 'lead-rs-pinterest',
+        'lead-email', 'lead-telefono', 'lead-negocio-email', 'lead-negocio-telefono', 'lead-web',
+        'lead-rs-instagram', 'lead-rs-facebook', 'lead-rs-linkedin', 'lead-rs-tiktok', 'lead-rs-twitter', 'lead-rs-pinterest', 'lead-rs-youtube', 'lead-rs-otra',
         'lead-iban', 'lead-iban-titular'
     ];
     fields.forEach(f => {
@@ -2400,6 +2400,9 @@ function abrirModalLead(id = null) {
                 if (s.localidad) document.getElementById('lead-negocio-localidad').value = s.localidad;
                 if (s.provincia) document.getElementById('lead-negocio-provincia').value = s.provincia;
                 if (s.pais) document.getElementById('lead-negocio-pais').value = s.pais;
+                
+                if (s.email_negocio) document.getElementById('lead-negocio-email').value = s.email_negocio;
+                if (s.telefono_negocio) document.getElementById('lead-negocio-telefono').value = s.telefono_negocio;
                 if (s.web) document.getElementById('lead-web').value = s.web;
                 
                 if (s.instagram) document.getElementById('lead-rs-instagram').value = s.instagram;
@@ -2408,6 +2411,8 @@ function abrirModalLead(id = null) {
                 if (s.tiktok) document.getElementById('lead-rs-tiktok').value = s.tiktok;
                 if (s.twitter) document.getElementById('lead-rs-twitter').value = s.twitter;
                 if (s.pinterest) document.getElementById('lead-rs-pinterest').value = s.pinterest;
+                if (s.youtube) document.getElementById('lead-rs-youtube').value = s.youtube;
+                if (s.otra_red) document.getElementById('lead-rs-otra').value = s.otra_red;
                 
                 if (s.iban) document.getElementById('lead-iban').value = s.iban;
                 if (s.iban_titular) document.getElementById('lead-iban-titular').value = s.iban_titular;
@@ -2427,7 +2432,7 @@ async function guardarLead() {
     const email = document.getElementById('lead-email').value.trim();
 
     if (!nombre || !email) {
-        return showAlert('Campos requeridos', 'Por favor, rellena el nombre y el email.');
+        return showAlert('Campos requeridos', 'Por favor, rellena el nombre y el email personal.');
     }
 
     const leadData = {
@@ -2449,6 +2454,8 @@ async function guardarLead() {
             localidad: document.getElementById('lead-negocio-localidad').value.trim(),
             provincia: document.getElementById('lead-negocio-provincia').value.trim(),
             pais: document.getElementById('lead-negocio-pais').value.trim(),
+            email_negocio: document.getElementById('lead-negocio-email').value.trim(),
+            telefono_negocio: document.getElementById('lead-negocio-telefono').value.trim(),
             web: document.getElementById('lead-web').value.trim(),
             instagram: document.getElementById('lead-rs-instagram').value.trim(),
             facebook: document.getElementById('lead-rs-facebook').value.trim(),
@@ -2456,6 +2463,8 @@ async function guardarLead() {
             tiktok: document.getElementById('lead-rs-tiktok').value.trim(),
             twitter: document.getElementById('lead-rs-twitter').value.trim(),
             pinterest: document.getElementById('lead-rs-pinterest').value.trim(),
+            youtube: document.getElementById('lead-rs-youtube').value.trim(),
+            otra_red: document.getElementById('lead-rs-otra').value.trim(),
             iban: document.getElementById('lead-iban').value.trim(),
             iban_titular: document.getElementById('lead-iban-titular').value.trim()
         }
