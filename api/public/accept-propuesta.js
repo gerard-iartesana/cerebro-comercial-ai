@@ -52,6 +52,55 @@ export default async function handler(req, res) {
             throw updateErr;
         }
 
+        // 2.5 Sync data with outreach_leads
+        let finalLeadId = prop.lead_id;
+        
+        const leadPayload = {
+            first_name: datos.lead.nombre,
+            last_name: datos.lead.apellidos,
+            phone: datos.lead.telefono,
+            company_name: datos.negocio.empresa,
+            status: 'cliente', // Because they accepted the proposal
+            scraped_data: {
+                nif: datos.lead.nif,
+                fecha_nacimiento: datos.lead.fecha_nacimiento,
+                nombre_comercial: datos.negocio.comercial,
+                cif: datos.negocio.cif,
+                actividad: datos.negocio.actividad,
+                direccion: datos.negocio.direccion,
+                cp: datos.negocio.cp,
+                localidad: datos.negocio.localidad,
+                provincia: datos.negocio.provincia,
+                instagram: datos.negocio.instagram,
+                facebook: datos.negocio.facebook,
+                linkedin: datos.negocio.linkedin,
+                tiktok: datos.negocio.tiktok
+            }
+        };
+
+        if (finalLeadId) {
+            // Update existing lead linked to proposal
+            await supabase.from('outreach_leads').update(leadPayload).eq('id', finalLeadId);
+        } else {
+            // Search by email to avoid duplicates
+            const { data: existingLeads } = await supabase
+                .from('outreach_leads')
+                .select('id')
+                .eq('email', datos.lead.email);
+            
+            if (existingLeads && existingLeads.length > 0) {
+                finalLeadId = existingLeads[0].id;
+                await supabase.from('outreach_leads').update(leadPayload).eq('id', finalLeadId);
+            } else {
+                // Create new lead
+                leadPayload.email = datos.lead.email;
+                const { data: newLead } = await supabase.from('outreach_leads').insert([leadPayload]).select('id').single();
+                if (newLead) {
+                    finalLeadId = newLead.id;
+                }
+            }
+        }
+
         // 3. Create Contract Draft
         const contratoId = 'cont_' + Math.random().toString(36).substr(2, 9);
         

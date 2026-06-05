@@ -562,10 +562,16 @@
 
             <!-- SECTION: Lead Registry (Spreadsheet view) -->
             <div class="dashboard-section" id="sec-leads">
-                <div class="section-header">
-                    <h1>Registro de Leads</h1>
-                    <span class="leads-counter" id="leads-total-count" style="font-size:0.82rem;color:var(--text-grey);font-weight:700;">0 leads</span>
-                    <button class="btn-primary" onclick="loadLeadsGrid()">🔄 Recargar</button>
+                <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <h1>Registro de Leads</h1>
+                        <span class="leads-counter" id="leads-total-count" style="font-size:0.82rem;color:var(--text-grey);font-weight:700;">0 leads</span>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn-primary" onclick="abrirModalLead()">➕ Crear Lead</button>
+                        <button class="btn-secondary" onclick="importarLeads()">📥 Importar</button>
+                        <button class="btn-secondary" onclick="loadLeadsGrid()" title="Recargar">🔄</button>
+                    </div>
                 </div>
 
                 <!-- Search bar -->
@@ -1309,6 +1315,135 @@
             </div>
 
             <!-- ========== MODAL: NUEVA REUNIÓN ========== -->
+            <!-- MODAL: Crear/Editar Lead -->
+            <div class="modal-overlay" id="modal-lead" style="display:none" onclick="if(event.target===this)closeModalLead()">
+                <div class="modal" style="width: 600px; max-width: 95%;">
+                    <div class="modal-header">
+                        <h2 id="modal-lead-title">Crear Nuevo Lead</h2>
+                        <button class="modal-close" onclick="closeModalLead()">×</button>
+                    </div>
+                    <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px; max-height: 75vh; overflow-y: auto; padding-right: 10px;">
+                        
+                        <div class="editor-card-block">
+                            <div class="editor-card-block-title">👤 DATOS PERSONALES</div>
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <div style="display: flex; gap: 10px;">
+                                    <div style="flex:1">
+                                        <label class="mtg-label">Nombre *</label>
+                                        <input type="text" id="lead-nombre" class="modal-input" placeholder="Nombre">
+                                    </div>
+                                    <div style="flex:1">
+                                        <label class="mtg-label">Apellidos</label>
+                                        <input type="text" id="lead-apellidos" class="modal-input" placeholder="Apellidos">
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <div style="flex:1">
+                                        <label class="mtg-label">NIF / DNI</label>
+                                        <input type="text" id="lead-nif" class="modal-input" placeholder="12345678A">
+                                    </div>
+                                    <div style="flex:1">
+                                        <label class="mtg-label">Fecha de Nacimiento</label>
+                                        <input type="date" id="lead-fecha-nacimiento" class="modal-input">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="editor-card-block">
+                            <div class="editor-card-block-title">🏢 DATOS DEL NEGOCIO</div>
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <div style="display: flex; gap: 10px;">
+                                    <div style="flex:1">
+                                        <label class="mtg-label">Nombre del Negocio *</label>
+                                        <input type="text" id="lead-negocio-nombre" class="modal-input" placeholder="Ej: iArtesana">
+                                    </div>
+                                    <div style="flex:1">
+                                        <label class="mtg-label">Nombre Comercial</label>
+                                        <input type="text" id="lead-negocio-comercial" class="modal-input" placeholder="Nombre comercial">
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <div style="flex:1">
+                                        <label class="mtg-label">CIF</label>
+                                        <input type="text" id="lead-negocio-cif" class="modal-input" placeholder="B-12345678">
+                                    </div>
+                                    <div style="flex:1">
+                                        <label class="mtg-label">Actividad principal</label>
+                                        <input type="text" id="lead-negocio-actividad" class="modal-input" placeholder="Ej: Venta online">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="mtg-label">Dirección Fiscal / Social</label>
+                                    <input type="text" id="lead-negocio-direccion" class="modal-input" placeholder="Calle, Número, Piso...">
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <div style="flex: 1;">
+                                        <label class="mtg-label">Código Postal</label>
+                                        <input type="text" id="lead-negocio-cp" class="modal-input" placeholder="07701">
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <label class="mtg-label">Localidad</label>
+                                        <input type="text" id="lead-negocio-localidad" class="modal-input" placeholder="Mahón">
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <label class="mtg-label">Provincia</label>
+                                        <input type="text" id="lead-negocio-provincia" class="modal-input" placeholder="Menorca">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="editor-card-block">
+                            <div class="editor-card-block-title">📞 DATOS DE CONTACTO</div>
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <div style="display: flex; gap: 10px;">
+                                    <div style="flex:1">
+                                        <label class="mtg-label">Email Personal / Negocio *</label>
+                                        <input type="email" id="lead-email" class="modal-input" placeholder="email@ejemplo.com">
+                                    </div>
+                                    <div style="flex:1">
+                                        <label class="mtg-label">Teléfono / Móvil *</label>
+                                        <input type="tel" id="lead-telefono" class="modal-input" placeholder="+34 600 000 000">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="mtg-label">Página Web</label>
+                                    <input type="url" id="lead-web" class="modal-input" placeholder="https://www.ejemplo.com">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="editor-card-block">
+                            <div class="editor-card-block-title">🌍 REDES SOCIALES (Opcional)</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <label class="mtg-label">Instagram</label>
+                                    <input type="text" id="lead-rs-instagram" class="modal-input" placeholder="@usuario">
+                                </div>
+                                <div>
+                                    <label class="mtg-label">Facebook</label>
+                                    <input type="text" id="lead-rs-facebook" class="modal-input" placeholder="Link perfil">
+                                </div>
+                                <div>
+                                    <label class="mtg-label">LinkedIn</label>
+                                    <input type="text" id="lead-rs-linkedin" class="modal-input" placeholder="Link perfil">
+                                </div>
+                                <div>
+                                    <label class="mtg-label">TikTok</label>
+                                    <input type="text" id="lead-rs-tiktok" class="modal-input" placeholder="@usuario">
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                        <button class="btn-secondary" onclick="closeModalLead()">Cancelar</button>
+                        <button class="btn-primary" onclick="guardarLead()">💾 Guardar Lead</button>
+                    </div>
+                </div>
+            </div>
+
             <div class="modal-overlay" id="modal-new-meeting" style="display:none" onclick="if(event.target===this)closeNewMeetingModal()">
                 <div class="modal-box" style="max-width:520px">
                     <div class="modal-header">
