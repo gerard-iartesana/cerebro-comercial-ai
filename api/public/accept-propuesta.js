@@ -57,11 +57,11 @@ export default async function handler(req, res) {
         
         const leadPayload = {
             first_name: datos.lead.nombre,
-            last_name: datos.lead.apellidos,
             phone: datos.lead.telefono,
             company_name: datos.negocio.empresa,
             status: 'cliente', // Because they accepted the proposal
             scraped_data: {
+                last_name: datos.lead.apellidos,
                 nif: datos.lead.nif,
                 fecha_nacimiento: datos.lead.fecha_nacimiento,
                 position: datos.lead.cargo,

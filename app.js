@@ -2382,13 +2382,13 @@ function abrirModalLead(id = null) {
         const lead = _allLeadsGridData.find(l => l.id === id);
         if (lead) {
             document.getElementById('lead-nombre').value = lead.first_name || '';
-            document.getElementById('lead-apellidos').value = lead.last_name || '';
             document.getElementById('lead-email').value = lead.email || '';
             document.getElementById('lead-telefono').value = lead.phone || '';
             document.getElementById('lead-negocio-nombre').value = lead.company_name || '';
             
             if (lead.scraped_data) {
                 const s = lead.scraped_data;
+                if (s.last_name) document.getElementById('lead-apellidos').value = s.last_name;
                 if (s.nif) document.getElementById('lead-nif').value = s.nif;
                 if (s.fecha_nacimiento) document.getElementById('lead-fecha-nacimiento').value = s.fecha_nacimiento;
                 if (s.position) document.getElementById('lead-cargo').value = s.position;
@@ -2437,12 +2437,12 @@ async function guardarLead() {
 
     const leadData = {
         first_name: nombre,
-        last_name: document.getElementById('lead-apellidos').value.trim(),
         email: email,
         phone: document.getElementById('lead-telefono').value.trim(),
         company_name: document.getElementById('lead-negocio-nombre').value.trim(),
         status: 'lead',
         scraped_data: {
+            last_name: document.getElementById('lead-apellidos').value.trim(),
             nif: document.getElementById('lead-nif').value.trim(),
             fecha_nacimiento: document.getElementById('lead-fecha-nacimiento').value,
             position: document.getElementById('lead-cargo').value.trim(),
