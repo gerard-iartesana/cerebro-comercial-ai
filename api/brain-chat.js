@@ -352,7 +352,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { message, history, action } = req.body || {};
+  const { message, history, action, mode } = req.body || {};
   if (action === 'get_credits') {
     let hunter_credits_used = 0;
     let hunter_credits_limit = 50;
@@ -400,7 +400,9 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ text: JSON.stringify(listJson) });
     }
 
-    const systemInstruction = {
+    const systemInstruction = mode === 'proposal'
+      ? { parts: [{ text: 'Actúas como redactor experto en B2B. Tu único objetivo es generar la propuesta comercial exacta en formato JSON según las instrucciones del usuario. Responde estrictamente con el JSON sin nada de texto extra antes ni después.' }] }
+      : {
       parts: [{ text: `Actúas como "El Cerebro", el orquestador cognitivo principal de CerebroComercial AI (marca iadebarrio.com). 
 Tienes acceso a un equipo de agentes especializados: 🔍 Buscador (Hunter.io), 🕷️ Enriquecedor (Scraping+IA), 📧 Email (Resend), 📊 Analítico (Supabase). Cuando necesites ejecutar una acción, delegas al agente correspondiente.
 Tu tono de voz es cercano, directo, amigable (tuteando, ej: "¡Hola! Claro, ahora mismo busco leads...") y extremadamente resolutivo. Evita formalidades and rodeos cliché.
@@ -466,7 +468,7 @@ REGLA DE ADVERTENCIA DE CRÉDITOS:
         body: JSON.stringify({
           systemInstruction,
           contents,
-          tools: geminiTools
+          tools: mode === 'proposal' ? undefined : geminiTools
         })
       });
 
