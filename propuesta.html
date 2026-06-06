@@ -638,7 +638,7 @@
             }
 
             try {
-                // Fetch propuesta from Supabase
+                // Fetch propuesta status
                 const { data, error } = await supabase.from('propuestas_enviadas').select('*').eq('presupuesto_id', id).order('created_at', { ascending: false }).limit(1).single();
                 
                 if (error || !data) {
@@ -650,6 +650,12 @@
                     // Redirect to confirmation page if already accepted
                     window.location.href = `/api/propuestas/confirmar?id=${id}`;
                     return;
+                }
+
+                // Fetch original proposal content because propuestas_enviadas doesn't store the full JSON
+                const { data: realProp, error: realErr } = await supabase.from('presupuestos').select('*').eq('id', id).single();
+                if (!realErr && realProp) {
+                    data.content = realProp;
                 }
 
                 currentPropuesta = data;
@@ -699,7 +705,7 @@
                 const lineHtml = `
                 <div class="price-row">
                     <div style="font-weight: 500;">
-                        ${l.nombre}
+                        ${l.concepto || ''}
                         ${l.mantenimiento ? '<div style="font-size: 0.7rem; color: var(--accent-blue);">Mantenimiento: ' + l.mantenimiento_precio + '€/mes</div>' : ''}
                     </div>
                     <div style="display: flex; gap: 20px; width: 140px; color: var(--text-grey);">
