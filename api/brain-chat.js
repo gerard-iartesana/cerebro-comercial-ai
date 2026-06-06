@@ -393,6 +393,13 @@ module.exports = async function handler(req, res) {
       });
     }
 
+    if (message === 'DEBUG_MODELS') {
+      const listUrl = 'https://generativelanguage.googleapis.com/v1beta/models?key=' + GEMINI_API_KEY;
+      const listRes = await fetch(listUrl);
+      const listJson = await listRes.json();
+      return res.status(200).json({ text: JSON.stringify(listJson) });
+    }
+
     const systemInstruction = {
       parts: [{ text: `Actúas como "El Cerebro", el orquestador cognitivo principal de CerebroComercial AI (marca iadebarrio.com). 
 Tienes acceso a un equipo de agentes especializados: 🔍 Buscador (Hunter.io), 🕷️ Enriquecedor (Scraping+IA), 📧 Email (Resend), 📊 Analítico (Supabase). Cuando necesites ejecutar una acción, delegas al agente correspondiente.
