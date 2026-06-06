@@ -8726,10 +8726,13 @@ function openSendPropuestaModal(id) {
 
     // Pre-select lead if available
     if (p.lead_nombre) {
-        const lead = leadsList.find(l => 
-            (l.first_name && l.first_name.toLowerCase() === p.lead_nombre.toLowerCase()) || 
-            (l.email && l.email.toLowerCase() === p.lead_nombre.toLowerCase())
-        );
+        const leadName = p.lead_nombre.toLowerCase().trim();
+        const lead = leadsList.find(l => {
+            const fname = (l.first_name || '').toLowerCase().trim();
+            const email = (l.email || '').toLowerCase().trim();
+            return (fname && (leadName.includes(fname) || fname.includes(leadName))) || 
+                   (email && (leadName === email));
+        });
         if (lead) {
             currentSelectedLeadForSend = lead;
             document.getElementById('send-pres-lead-search').value = `${lead.first_name || 'Prospecto'} (${lead.email})`;
