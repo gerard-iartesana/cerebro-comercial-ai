@@ -639,7 +639,7 @@
 
             try {
                 // Fetch propuesta from Supabase
-                const { data, error } = await supabase.from('propuestas_enviadas').select('*').eq('presupuesto_id', id).single();
+                const { data, error } = await supabase.from('propuestas_enviadas').select('*').eq('presupuesto_id', id).order('created_at', { ascending: false }).limit(1).single();
                 
                 if (error || !data) {
                     showError();

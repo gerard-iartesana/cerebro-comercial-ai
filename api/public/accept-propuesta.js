@@ -27,6 +27,8 @@ export default async function handler(req, res) {
             .from('propuestas_enviadas')
             .select('*')
             .eq('presupuesto_id', propuesta_id)
+            .order('created_at', { ascending: false })
+            .limit(1)
             .single();
 
         if (propErr || !prop) {
