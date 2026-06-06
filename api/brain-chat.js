@@ -311,7 +311,7 @@ const implementations = {
     let icebreaker = `Hola ${lead.first_name || 'allí'}, estuve revisando vuestra web de ${lead.company_name} y veo que hacéis un trabajo excelente.`;
 
     if (scrapedText) {
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
       const prompt = `Analiza el contenido del sitio web de "${lead.company_name}":\n---\n${scrapedText}\n---\nRedacta un icebreaker comercial en ESPAÑOL, ultra-personalizado, directo y cercano (tuteando). Responde en JSON: {"icebreaker": "...", "company_value_prop": "...", "pain_points": "..."}`;
       try {
         const gRes = await fetch(geminiUrl, {
@@ -381,7 +381,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_API_KEY;
+    const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=' + GEMINI_API_KEY;
 
     const contents = [];
     if (history && history.length > 0) {
