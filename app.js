@@ -8563,9 +8563,20 @@ async function generateAIContentForProposal() {
         return;
     }
 
+    // Ask the user for their prompt via the Apple-style modal
+    const userInstruction = await showPrompt(
+        'Generar con IA',
+        'Escribe qué quieres que genere la IA para esta propuesta (ej: "5 beneficios clave", "texto persuasivo de cierre", etc.)',
+        '✨',
+        '',
+        'Ej: Dame 5 beneficios clave para el cliente...'
+    );
+
+    if (!userInstruction || !userInstruction.trim()) return; // User cancelled
+
     const btn = document.querySelector('button[onclick="generateAIContentForProposal()"]');
     if (btn) { btn.innerHTML = '⏳ Generando...'; btn.style.pointerEvents = 'none'; }
-    showToast('Generando beneficios de la propuesta con IA...', false);
+    showToast('Generando contenido con IA...', false);
 
     const prompt = `Actúa como un experto en redacción persuasiva y ventas B2B.
 Tengo la siguiente propuesta comercial para un lead:
@@ -8573,16 +8584,16 @@ Título: ${titulo}
 Subtítulo: ${sub}
 Descripción del servicio: ${desc}
 
-Redacta entre 4 y 6 beneficios clave que obtendrá el cliente al contratar esta propuesta.
+Instrucción del usuario: "${userInstruction.trim()}"
 
 FORMATO OBLIGATORIO:
-- Cada beneficio en una línea separada
-- Empieza cada línea con un emoji relevante seguido del beneficio (ej: ✅ Beneficio aquí)
-- Cada beneficio debe ser una frase corta, directa y persuasiva (máximo 15 palabras)
+- Cada punto en una línea separada
+- Empieza cada línea con un emoji relevante seguido del texto (ej: ✅ Beneficio aquí)
+- Cada punto debe ser una frase corta, directa y persuasiva (máximo 15 palabras)
 - Usa un tono elegante, profesional y cercano (de usted)
 - Resalta el ROI, el ahorro de tiempo y la automatización cuando aplique
 
-Responde ÚNICAMENTE con la lista de beneficios, sin título, sin introducción, sin comentarios extra.`;
+Responde ÚNICAMENTE con el contenido generado, sin título, sin introducción, sin comentarios extra.`;
 
     try {
         const res = await fetch('/api/proposal-ai', {
@@ -8590,7 +8601,7 @@ Responde ÚNICAMENTE con la lista de beneficios, sin título, sin introducción,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 message: prompt,
-                systemInstruction: 'Eres CerebroComercial AI, un asistente de ventas experto en copywriting de propuestas. Responde SOLO con la lista de beneficios formateada, nada más.'
+                systemInstruction: 'Eres CerebroComercial AI, un asistente de ventas experto en copywriting de propuestas. Responde SOLO con el contenido solicitado formateado, nada más.'
             })
         });
 
@@ -8603,14 +8614,10 @@ Responde ÚNICAMENTE con la lista de beneficios, sin título, sin introducción,
         // Remove any markdown bold markers for cleaner plain text
         result = result.replace(/\*\*/g, '');
 
-        // Append to existing text if any, or replace
-        if (textArea.value.trim() !== '') {
-            textArea.value += '\n\n' + result;
-        } else {
-            textArea.value = result;
-        }
+        // Always replace the full content — the prompt was captured separately
+        textArea.value = result;
 
-        showToast('Contenido generado y añadido con éxito');
+        showToast('Contenido generado con éxito ✨');
     } catch (e) {
         console.error(e);
         showToast('Error generando contenido IA', true);

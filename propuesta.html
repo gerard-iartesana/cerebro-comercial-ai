@@ -1117,13 +1117,28 @@
                 // Parse line by line for nice formatting
                 const rawLines = contHtml.split('\n').filter(p => p.trim() !== '');
                 
-                if (rawLines.length <= 1 && !contHtml.includes('\n')) {
+                // Filter out lines that look like user prompts (no emoji at start, short, imperative)
+                const emojiRegex = /^[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u;
+                const contentLines = rawLines.filter(line => {
+                    const trimmed = line.trim();
+                    // Keep lines that start with emoji or common bullet chars
+                    if (emojiRegex.test(trimmed)) return true;
+                    if (/^[-*✓•›]/.test(trimmed)) return true;
+                    // Filter out short imperative lines that look like prompts (e.g. "dame 5 beneficios")
+                    if (trimmed.length < 60 && /^(dame|genera|escribe|haz|crea|pon|redacta|lista|dime)/i.test(trimmed)) return false;
+                    // Keep everything else
+                    return true;
+                });
+
+                if (contentLines.length === 0) {
+                    incContainer.innerHTML = '<div class="empty-placeholder">Contenido en preparación</div>';
+                } else if (contentLines.length === 1 && !contentLines[0].includes('\n')) {
                     // Single block — render as paragraph
-                    incContainer.innerHTML = `<p style="font-size: 0.85rem; line-height: 1.55; color: var(--text-main);">${escapeHtml(contHtml)}</p>`;
+                    incContainer.innerHTML = `<p style="font-size: 0.85rem; line-height: 1.55; color: var(--text-main);">${escapeHtml(contentLines[0])}</p>`;
                 } else {
                     // Multi-line: use styled list
                     let html = '<ul class="ai-content-block">';
-                    rawLines.forEach(line => {
+                    contentLines.forEach(line => {
                         const cleaned = line.replace(/^[-*✓•]\s*/, '').trim();
                         if (cleaned) {
                             html += `<li>${escapeHtml(cleaned)}</li>`;
