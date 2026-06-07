@@ -93,14 +93,35 @@
         }
 
         .price-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 0;
+            padding: 14px 0;
             border-bottom: 1px solid var(--border-color);
             font-size: 0.9rem;
         }
 
+        .price-row .line-concept {
+            font-weight: 500;
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+
+        .price-row .line-pricing {
+            display: flex;
+            gap: 16px;
+            font-size: 0.78rem;
+            color: var(--text-grey);
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .price-row .line-pricing .line-importe {
+            color: var(--text-main);
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
         .price-row.total {
+            display: flex;
+            justify-content: space-between;
             font-weight: 700;
             font-size: 1.1rem;
             border-bottom: none;
@@ -336,87 +357,114 @@
         /* Payment calculator */
         .calc-card {
             background: var(--card-bg);
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.06);
             margin-bottom: 20px;
         }
 
         .calc-options {
-            display: grid;
-            gap: 12px;
-        }
-        @media (min-width: 520px) {
-            .calc-options { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
         }
 
         .calc-option {
             border: 1.5px solid var(--border-color);
-            border-radius: 12px;
-            padding: 16px;
+            border-radius: 14px;
+            padding: 20px 22px;
             cursor: pointer;
             transition: all 0.25s ease;
             position: relative;
-            overflow: hidden;
+            display: flex;
+            align-items: center;
+            gap: 18px;
         }
-        .calc-option::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(0,113,227,0.04), rgba(88,86,214,0.04));
-            opacity: 0;
-            transition: opacity 0.25s ease;
-        }
-        .calc-option:hover::before { opacity: 1; }
-        .calc-option:hover { border-color: var(--accent-blue); transform: translateY(-1px); }
+        .calc-option:hover { border-color: var(--accent-blue); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,113,227,0.08); }
         .calc-option.selected {
             border-color: var(--accent-blue);
-            background: rgba(0,113,227,0.04);
+            background: linear-gradient(135deg, rgba(0,113,227,0.03), rgba(88,86,214,0.03));
             box-shadow: 0 0 0 3px rgba(0,113,227,0.1);
         }
 
-        .calc-option-label {
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--accent-blue);
+        .calc-option-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+        .calc-option-icon.opt-a { background: rgba(0,113,227,0.1); }
+        .calc-option-icon.opt-b { background: rgba(255,159,10,0.1); }
+        .calc-option-icon.opt-c { background: rgba(52,199,89,0.1); }
+
+        .calc-option-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .calc-option-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             margin-bottom: 4px;
         }
+
+        .calc-option-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 2px 7px;
+            border-radius: 4px;
+            color: #fff;
+        }
+        .calc-option-label.opt-a { background: var(--accent-blue); }
+        .calc-option-label.opt-b { background: #ff9f0a; }
+        .calc-option-label.opt-c { background: #34c759; }
+
         .calc-option-title {
             font-family: 'Outfit', sans-serif;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 700;
-            margin-bottom: 8px;
         }
         .calc-option-detail {
             font-size: 0.78rem;
             color: var(--text-grey);
             line-height: 1.5;
         }
+
+        .calc-option-right {
+            text-align: right;
+            flex-shrink: 0;
+        }
         .calc-option-price {
             font-family: 'Outfit', sans-serif;
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: 800;
             color: var(--text-main);
-            margin-top: 10px;
+            white-space: nowrap;
         }
         .calc-option-price .old-price {
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             font-weight: 500;
             color: var(--text-grey);
             text-decoration: line-through;
-            margin-right: 6px;
+            display: block;
+            margin-bottom: 2px;
         }
         .calc-option-savings {
             display: inline-block;
             background: rgba(52,199,89,0.12);
             color: #1d8348;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             font-weight: 700;
             padding: 2px 8px;
             border-radius: 4px;
-            margin-top: 6px;
+            margin-top: 4px;
         }
 
         /* Bonus card */
@@ -527,17 +575,12 @@
 
         /* Responsive tweaks */
         @media (max-width: 500px) {
-            .price-row {
-                flex-direction: column;
-                gap: 4px;
-            }
-            .price-row > div:last-child {
-                align-self: flex-end;
-            }
             .grid-2 { grid-template-columns: 1fr; }
             .propuesta-header { flex-direction: column; gap: 10px; }
             .propuesta-header .date-info { text-align: left; }
-            .calc-options { grid-template-columns: 1fr; }
+            .calc-option { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .calc-option-right { text-align: left; width: 100%; display: flex; align-items: center; gap: 10px; }
+            .card, .calc-card { padding: 18px; }
         }
     </style>
 </head>
@@ -578,15 +621,6 @@
             <p style="font-size: 0.85rem; line-height: 1.5; margin-bottom: 24px;" id="prop-desc">Agentes con capacidad de analizar y procesar contenido visual.</p>
             
             <div class="section-title">DESGLOSE DE SERVICIOS</div>
-            <div style="font-size: 0.7rem; color: var(--text-grey); display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 8px;">
-                <span>CONCEPTO</span>
-                <span style="display: flex; gap: 20px; width: 140px;">
-                    <span style="width: 50px;">PRECIO</span>
-                    <span style="width: 30px;">DTO.</span>
-                    <span style="text-align: right; flex: 1;">IMPORTE</span>
-                </span>
-            </div>
-            
             <div id="prop-lines-container">
                 <!-- Lines injected here -->
             </div>
@@ -1048,16 +1082,16 @@
 
                 const lineHtml = `
                 <div class="price-row">
-                    <div style="font-weight: 500; flex: 1; min-width: 0;">
+                    <div class="line-concept">
                         ${escapeHtml(l.concepto || '')}${plazoTag}
-                        ${l.mantenimiento ? '<div style="font-size: 0.7rem; color: var(--accent-blue);">Mantenimiento: ' + l.mantenimiento_precio + '€/mes</div>' : ''}
-                        ${sublinesHtml}
                     </div>
-                    <div style="display: flex; gap: 20px; width: 140px; color: var(--text-grey); flex-shrink: 0;">
-                        <span style="width: 50px;">${p}€</span>
-                        <span style="width: 30px;">${d>0 ? d+'%' : '—'}</span>
-                        <span style="text-align: right; flex: 1; color: var(--text-main); font-weight: 500;">${Math.round(imp)}€</span>
+                    <div class="line-pricing">
+                        <span>Precio: <strong>${p}€</strong></span>
+                        ${d > 0 ? `<span>Dto: <strong>${d}%</strong></span>` : ''}
+                        <span class="line-importe">Importe: ${Math.round(imp)}€ + IVA</span>
+                        ${l.mantenimiento ? `<span style="color: var(--accent-blue);">+ ${l.mantenimiento_precio}€/mes mantenimiento</span>` : ''}
                     </div>
+                    ${sublinesHtml}
                 </div>`;
                 linesContainer.innerHTML += lineHtml;
             });
@@ -1148,7 +1182,6 @@
             const pc = c.pago_config;
 
             if (!pc || !pc.selected_options || pc.selected_options.length === 0) {
-                // Show empty state
                 calcContainer.innerHTML = `
                     <div class="calc-card">
                         <div class="section-title">💰 OPCIONES DE PAGO</div>
@@ -1161,10 +1194,9 @@
             let html = `
                 <div class="calc-card fade-in">
                     <div class="section-title">💰 OPCIONES DE PAGO</div>
-                    <p style="font-size: 0.82rem; color: var(--text-grey); margin-bottom: 16px;">Selecciona la opción que mejor se adapte a tu negocio</p>
+                    <p style="font-size: 0.82rem; color: var(--text-grey); margin-bottom: 16px;">Elige la modalidad que mejor se adapte a tu negocio</p>
                     <div class="calc-options">`;
 
-            // Option A: Financiación
             if (opts.includes('A')) {
                 const invPct = pc.inv_min_pct || 15;
                 const numCuotas = pc.num_cuotas || 24;
@@ -1174,18 +1206,20 @@
 
                 html += `
                     <div class="calc-option" onclick="selectCalcOption(this, 'A')">
-                        <div class="calc-option-label">Opción A</div>
-                        <div class="calc-option-title">Financiación</div>
-                        <div class="calc-option-detail">
-                            Inversión inicial del ${invPct}%<br>
-                            <strong>${fmt(invInicial)}</strong> ahora<br>
-                            + ${numCuotas} cuotas de <strong>${fmt(cuotaMensual)}/mes</strong>
+                        <div class="calc-option-icon opt-a">📊</div>
+                        <div class="calc-option-body">
+                            <div class="calc-option-header">
+                                <span class="calc-option-label opt-a">Opción A</span>
+                                <span class="calc-option-title">Financiación</span>
+                            </div>
+                            <div class="calc-option-detail">Entrada del ${invPct}% (${fmt(invInicial)}) + ${numCuotas} cuotas de ${fmt(cuotaMensual)}/mes</div>
                         </div>
-                        <div class="calc-option-price">${fmt(totalNeto)}</div>
+                        <div class="calc-option-right">
+                            <div class="calc-option-price">${fmt(totalNeto)}</div>
+                        </div>
                     </div>`;
             }
 
-            // Option B: Parcial (3 pagos)
             if (opts.includes('B')) {
                 const descB = pc.descuento_b_pct || 4;
                 const totalB = totalNeto * (1 - descB / 100);
@@ -1194,19 +1228,21 @@
 
                 html += `
                     <div class="calc-option" onclick="selectCalcOption(this, 'B')">
-                        <div class="calc-option-label">Opción B</div>
-                        <div class="calc-option-title">Pago parcial</div>
-                        <div class="calc-option-detail">
-                            3 pagos iguales de<br>
-                            <strong>${fmt(pagoB)}</strong> cada uno<br>
-                            con ${descB}% de descuento
+                        <div class="calc-option-icon opt-b">📋</div>
+                        <div class="calc-option-body">
+                            <div class="calc-option-header">
+                                <span class="calc-option-label opt-b">Opción B</span>
+                                <span class="calc-option-title">Pago parcial · -${descB}%</span>
+                            </div>
+                            <div class="calc-option-detail">3 pagos de ${fmt(pagoB)} cada uno</div>
                         </div>
-                        <div class="calc-option-price"><span class="old-price">${fmt(totalNeto)}</span>${fmt(totalB)}</div>
-                        <div class="calc-option-savings">Ahorras ${fmt(ahorro)}</div>
+                        <div class="calc-option-right">
+                            <div class="calc-option-price"><span class="old-price">${fmt(totalNeto)}</span>${fmt(totalB)}</div>
+                            <div class="calc-option-savings">Ahorras ${fmt(ahorro)}</div>
+                        </div>
                     </div>`;
             }
 
-            // Option C: Anticipado
             if (opts.includes('C')) {
                 const descC = pc.descuento_c_pct || 8;
                 const totalC = totalNeto * (1 - descC / 100);
@@ -1214,23 +1250,25 @@
 
                 html += `
                     <div class="calc-option" onclick="selectCalcOption(this, 'C')">
-                        <div class="calc-option-label">Opción C</div>
-                        <div class="calc-option-title">Pago anticipado</div>
-                        <div class="calc-option-detail">
-                            Pago único al contado<br>
-                            con ${descC}% de descuento<br>
-                            <strong>Máximo ahorro</strong>
+                        <div class="calc-option-icon opt-c">⚡</div>
+                        <div class="calc-option-body">
+                            <div class="calc-option-header">
+                                <span class="calc-option-label opt-c">Opción C</span>
+                                <span class="calc-option-title">Pago anticipado · -${descC}%</span>
+                            </div>
+                            <div class="calc-option-detail">Pago único al contado — máximo ahorro</div>
                         </div>
-                        <div class="calc-option-price"><span class="old-price">${fmt(totalNeto)}</span>${fmt(totalC)}</div>
-                        <div class="calc-option-savings">Ahorras ${fmt(ahorro)}</div>
+                        <div class="calc-option-right">
+                            <div class="calc-option-price"><span class="old-price">${fmt(totalNeto)}</span>${fmt(totalC)}</div>
+                            <div class="calc-option-savings">Ahorras ${fmt(ahorro)}</div>
+                        </div>
                     </div>`;
             }
 
             html += `</div>`;
 
-            // Maintenance note
             if (totalMant > 0) {
-                html += `<p style="font-size: 0.75rem; color: var(--text-grey); margin-top: 14px; text-align: center;">* Estos precios son de alta/implantación. El mantenimiento mensual (${fmt(totalMant)}/mes) se cobra aparte.</p>`;
+                html += `<p style="font-size: 0.75rem; color: var(--text-grey); margin-top: 14px; text-align: center;">* Precios de alta/implantación. Mantenimiento (${fmt(totalMant)}/mes) se factura aparte.</p>`;
             }
 
             html += `<p style="font-size: 0.7rem; color: var(--text-grey); margin-top: 8px; text-align: center;">Todos los precios son + IVA (21%)</p>`;
