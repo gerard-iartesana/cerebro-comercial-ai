@@ -8588,7 +8588,7 @@ Instrucción del usuario: "${userInstruction.trim()}"
 
 FORMATO OBLIGATORIO:
 - Cada punto en una línea separada
-- Empieza cada línea con un emoji relevante seguido del texto (ej: ✅ Beneficio aquí)
+- NO uses emojis ni iconos, solo texto limpio
 - Cada punto debe ser una frase corta, directa y persuasiva (máximo 15 palabras)
 - Usa un tono elegante, profesional y cercano (de usted)
 - Resalta el ROI, el ahorro de tiempo y la automatización cuando aplique
