@@ -8573,8 +8573,16 @@ Título: ${titulo}
 Subtítulo: ${sub}
 Descripción del servicio: ${desc}
 
-Necesito que redactes un texto corto y directo (máximo 4-5 frases o una breve lista de viñetas) destacando los beneficios principales que obtendrá el cliente al contratar esta propuesta. Usa un tono elegante, persuasivo y muy profesional. Dirígete directamente al cliente de tú o usted de forma consistente. Resalta el ROI y la automatización. 
-Responde ÚNICAMENTE con el texto generado, sin introducciones ni comentarios adicionales.`;
+Redacta entre 4 y 6 beneficios clave que obtendrá el cliente al contratar esta propuesta.
+
+FORMATO OBLIGATORIO:
+- Cada beneficio en una línea separada
+- Empieza cada línea con un emoji relevante seguido del beneficio (ej: ✅ Beneficio aquí)
+- Cada beneficio debe ser una frase corta, directa y persuasiva (máximo 15 palabras)
+- Usa un tono elegante, profesional y cercano (de usted)
+- Resalta el ROI, el ahorro de tiempo y la automatización cuando aplique
+
+Responde ÚNICAMENTE con la lista de beneficios, sin título, sin introducción, sin comentarios extra.`;
 
     try {
         const res = await fetch('/api/proposal-ai', {
@@ -8582,7 +8590,7 @@ Responde ÚNICAMENTE con el texto generado, sin introducciones ni comentarios ad
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 message: prompt,
-                systemInstruction: 'Eres CerebroComercial AI, un asistente de ventas experto en copywriting de propuestas. Redacta beneficios de forma persuasiva sin texto extra.'
+                systemInstruction: 'Eres CerebroComercial AI, un asistente de ventas experto en copywriting de propuestas. Responde SOLO con la lista de beneficios formateada, nada más.'
             })
         });
 
@@ -8590,7 +8598,10 @@ Responde ÚNICAMENTE con el texto generado, sin introducciones ni comentarios ad
         const data = await res.json();
         
         let result = data.reply || '';
+        // Normalize escaped newlines and trim
         result = result.replace(/\\n/g, '\n').trim();
+        // Remove any markdown bold markers for cleaner plain text
+        result = result.replace(/\*\*/g, '');
 
         // Append to existing text if any, or replace
         if (textArea.value.trim() !== '') {
