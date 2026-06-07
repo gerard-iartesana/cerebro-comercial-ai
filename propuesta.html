@@ -492,18 +492,38 @@
             list-style: none;
         }
         .ai-content-block li {
-            padding: 10px 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 12px 14px;
             margin-bottom: 8px;
-            background: rgba(0,113,227,0.03);
-            border-radius: 8px;
+            background: rgba(0,113,227,0.02);
+            border-radius: 12px;
             font-size: 0.85rem;
             line-height: 1.55;
             color: var(--text-main);
-            border-left: 3px solid var(--accent-blue);
             transition: background 0.2s;
         }
         .ai-content-block li:hover {
-            background: rgba(0,113,227,0.06);
+            background: rgba(0,113,227,0.05);
+        }
+        .ai-icon-pill {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: rgba(120,120,128,0.06);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.05rem;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .ai-content-text {
+            flex: 1;
+            padding-top: 6px;
         }
 
         /* Payment instructions box */
@@ -1136,12 +1156,20 @@
                     // Single block — render as paragraph
                     incContainer.innerHTML = `<p style="font-size: 0.85rem; line-height: 1.55; color: var(--text-main);">${escapeHtml(contentLines[0])}</p>`;
                 } else {
-                    // Multi-line: use styled list
+                    // Multi-line: use styled list with icon pills
+                    const emojiExtract = /^([\p{Emoji_Presentation}\p{Extended_Pictographic}][\uFE0F\u200D]*)\s*/u;
                     let html = '<ul class="ai-content-block">';
                     contentLines.forEach(line => {
                         const cleaned = line.replace(/^[-*✓•]\s*/, '').trim();
                         if (cleaned) {
-                            html += `<li>${escapeHtml(cleaned)}</li>`;
+                            const emojiMatch = cleaned.match(emojiExtract);
+                            if (emojiMatch) {
+                                const emoji = emojiMatch[1];
+                                const text = cleaned.slice(emojiMatch[0].length).trim();
+                                html += `<li><span class="ai-icon-pill">${emoji}</span><span class="ai-content-text">${escapeHtml(text)}</span></li>`;
+                            } else {
+                                html += `<li><span class="ai-icon-pill">✦</span><span class="ai-content-text">${escapeHtml(cleaned)}</span></li>`;
+                            }
                         }
                     });
                     html += '</ul>';
