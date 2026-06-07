@@ -8614,8 +8614,12 @@ Responde ÚNICAMENTE con el contenido generado, sin título, sin introducción, 
         // Remove any markdown bold markers for cleaner plain text
         result = result.replace(/\*\*/g, '');
 
-        // Always replace the full content — the prompt was captured separately
-        textArea.value = result;
+        // Append to existing content (never overwrite)
+        if (textArea.value.trim() !== '') {
+            textArea.value = textArea.value.trimEnd() + '\n\n' + result;
+        } else {
+            textArea.value = result;
+        }
 
         showToast('Contenido generado con éxito ✨');
     } catch (e) {
