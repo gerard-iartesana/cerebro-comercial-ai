@@ -23,6 +23,13 @@ export default async function handler(req, res) {
 
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyDy3zdb67ICMuhrU0qmaAMnztDPFT09Z24';
 
+  if (message === 'DEBUG_MODELS') {
+    const listUrl = 'https://generativelanguage.googleapis.com/v1beta/models?key=' + GEMINI_API_KEY;
+    const listRes = await fetch(listUrl);
+    const listJson = await listRes.json();
+    return res.status(200).json({ reply: 'debug', text: JSON.stringify(listJson) });
+  }
+
   try {
     const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_API_KEY;
 
