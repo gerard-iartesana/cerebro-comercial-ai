@@ -673,14 +673,15 @@
         }
 
         function renderPropuesta(data) {
+            const c = data.content || {};
             document.getElementById('prop-lead-name').textContent = data.lead_nombre || 'Cliente';
             
             const fechaObj = data.created_at ? new Date(data.created_at) : new Date();
             document.getElementById('prop-date').textContent = fechaObj.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
             
-            document.getElementById('prop-title').textContent = data.titulo || 'Proyecto a medida';
-            document.getElementById('prop-subtitle').textContent = data.subtitulo || '';
-            document.getElementById('prop-desc').textContent = data.descripcion || '';
+            document.getElementById('prop-title').textContent = c.titulo || data.titulo || 'Proyecto a medida';
+            document.getElementById('prop-subtitle').textContent = c.subtitulo || '';
+            document.getElementById('prop-desc').textContent = c.descripcion || '';
 
             // Render lines
             const linesContainer = document.getElementById('prop-lines-container');
@@ -689,7 +690,7 @@
             let totalNeto = 0;
             let totalMant = 0;
 
-            const lines = (data.content && data.content.lineas) ? data.content.lineas : [];
+            const lines = c.lineas || [];
             lines.forEach(l => {
                 if (l.activo === false || l.recomendado === true) return;
                 
@@ -726,7 +727,7 @@
             }
 
             // Includes
-            const contHtml = (data.content && data.content.contenido_ia) ? data.content.contenido_ia : '';
+            const contHtml = c.contenido_ia || '';
             const incList = document.getElementById('prop-includes');
             
             // Si el contenido ya viene formateado con HTML desde el agente (ej. <ul><li>), lo pegamos directo
@@ -743,7 +744,7 @@
             }
 
             // Formas de pago ofrecidas
-            const ofrecidas = (data.content && data.content.formas_pago_ofrecidas) ? data.content.formas_pago_ofrecidas : [];
+            const ofrecidas = c.formas_pago_ofrecidas || [];
             const pmContainer = document.getElementById('payment-methods-container');
             pmContainer.innerHTML = '';
             

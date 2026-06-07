@@ -36,6 +36,18 @@ export default async function handler(req, res) {
             return res.status(404).json({ error: 'Propuesta no encontrada' });
         }
 
+        // 1.5 Fetch original presupuesto for full content (lineas, formas_pago, etc.)
+        const { data: presupuesto } = await supabase
+            .from('presupuestos')
+            .select('*')
+            .eq('id', propuesta_id)
+            .single();
+
+        // Merge presupuesto content into prop for easy access
+        if (presupuesto) {
+            prop.content = presupuesto;
+        }
+
         // 2. Mark proposal as accepted
         const { error: updateErr } = await supabase
             .from('propuestas_enviadas')
