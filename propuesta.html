@@ -542,6 +542,15 @@
             if (errScreen) errScreen.style.display = 'block';
         };
 
+        // Catch unhandled promise rejections too
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error("Unhandled promise rejection:", event.reason);
+            const loading = document.getElementById('loading');
+            if (loading) loading.style.display = 'none';
+            const errScreen = document.getElementById('error-screen');
+            if (errScreen) errScreen.style.display = 'block';
+        });
+
         // Supabase Init
         const SUPABASE_URL = 'https://lmozoetpehmdxxremtqn.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxtb3pvZXRwZWhtZHh4cmVtdHFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNTA2NDUsImV4cCI6MjA5NTgyNjY0NX0.1xkCCw7q9CDvVbqGswCeFwXpgYfMtb0wcl7lHWlKQ8U';
@@ -633,15 +642,17 @@
             const id = urlParams.get('id');
 
             if (!id || !supabase) {
+                console.error('No id or supabase not loaded. id:', id, 'supabase:', !!supabase);
                 showError();
                 return;
             }
 
             try {
-                // Fetch propuesta status
-                const { data, error } = await supabase.from('propuestas_enviadas').select('*').eq('presupuesto_id', id).order('created_at', { ascending: false }).limit(1).single();
+                // Fetch propuesta status — use maybeSingle() to avoid errors on 0 results
+                const { data, error } = await supabase.from('propuestas_enviadas').select('*').eq('presupuesto_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle();
                 
                 if (error || !data) {
+                    console.error('propuestas_enviadas query error or no data:', error);
                     showError();
                     return;
                 }
@@ -653,7 +664,7 @@
                 }
 
                 // Fetch original proposal content because propuestas_enviadas doesn't store the full JSON
-                const { data: realProp, error: realErr } = await supabase.from('presupuestos').select('*').eq('id', id).single();
+                const { data: realProp, error: realErr } = await supabase.from('presupuestos').select('*').eq('id', id).maybeSingle();
                 if (!realErr && realProp) {
                     data.content = realProp;
                 }
@@ -662,7 +673,7 @@
                 renderPropuesta(data);
 
             } catch (err) {
-                console.error(err);
+                console.error('init() error:', err);
                 showError();
             }
         }
