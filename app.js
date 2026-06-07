@@ -8394,12 +8394,12 @@ Estructura exacta del JSON a retornar:
 }`;
 
     try {
-        const res = await fetch('/api/brain-chat', {
+        const res = await fetch('/api/proposal-ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 message: systemPrompt,
-                mode: 'proposal'
+                systemInstruction: 'Actúas como redactor experto en B2B. Tu único objetivo es generar la propuesta comercial exacta en formato JSON según las instrucciones del usuario. Responde estrictamente con el JSON sin nada de texto extra antes ni después.'
             })
         });
 
@@ -8577,13 +8577,12 @@ Necesito que redactes un texto corto y directo (máximo 4-5 frases o una breve l
 Responde ÚNICAMENTE con el texto generado, sin introducciones ni comentarios adicionales.`;
 
     try {
-        const res = await fetch('/api/brain-chat', {
+        const res = await fetch('/api/proposal-ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                messages: [{ role: 'user', content: prompt }],
-                systemPrompt: 'Eres CerebroComercial AI, un asistente de ventas experto en copywriting de propuestas.',
-                temperature: 0.7
+                message: prompt,
+                systemInstruction: 'Eres CerebroComercial AI, un asistente de ventas experto en copywriting de propuestas. Redacta beneficios de forma persuasiva sin texto extra.'
             })
         });
 
