@@ -281,6 +281,264 @@
         /* Hidden by default */
         #acceptance-form-container { display: none; }
         #error-screen { display: none; text-align: center; padding: 40px; }
+
+        /* ==================== NEW STYLES ==================== */
+
+        /* Badge */
+        .badge-ribbon {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--accent-blue), #5856d6);
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 4px 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+
+        /* Sublines */
+        .sublines-list {
+            margin: 6px 0 2px 16px;
+            list-style: none;
+            padding: 0;
+        }
+        .sublines-list li {
+            font-size: 0.75rem;
+            color: var(--text-grey);
+            padding: 3px 0 3px 18px;
+            position: relative;
+            line-height: 1.4;
+        }
+        .sublines-list li::before {
+            content: "›";
+            position: absolute;
+            left: 4px;
+            color: var(--accent-blue);
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        /* Line item plazo tag */
+        .line-plazo {
+            display: inline-block;
+            background: rgba(0,113,227,0.08);
+            color: var(--accent-blue);
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        /* Payment calculator */
+        .calc-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        .calc-options {
+            display: grid;
+            gap: 12px;
+        }
+        @media (min-width: 520px) {
+            .calc-options { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+        }
+
+        .calc-option {
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .calc-option::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(0,113,227,0.04), rgba(88,86,214,0.04));
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+        .calc-option:hover::before { opacity: 1; }
+        .calc-option:hover { border-color: var(--accent-blue); transform: translateY(-1px); }
+        .calc-option.selected {
+            border-color: var(--accent-blue);
+            background: rgba(0,113,227,0.04);
+            box-shadow: 0 0 0 3px rgba(0,113,227,0.1);
+        }
+
+        .calc-option-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--accent-blue);
+            margin-bottom: 4px;
+        }
+        .calc-option-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .calc-option-detail {
+            font-size: 0.78rem;
+            color: var(--text-grey);
+            line-height: 1.5;
+        }
+        .calc-option-price {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-top: 10px;
+        }
+        .calc-option-price .old-price {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-grey);
+            text-decoration: line-through;
+            margin-right: 6px;
+        }
+        .calc-option-savings {
+            display: inline-block;
+            background: rgba(52,199,89,0.12);
+            color: #1d8348;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-top: 6px;
+        }
+
+        /* Bonus card */
+        .bonus-card {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+            border-radius: 12px;
+            padding: 24px 28px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(52,199,89,0.25);
+        }
+        .bonus-card .section-title {
+            color: #2e7d32;
+        }
+        .bonus-content {
+            font-size: 0.88rem;
+            line-height: 1.7;
+            color: #1b5e20;
+            white-space: pre-line;
+        }
+
+        /* AI content - formatted */
+        .ai-content-block {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+        .ai-content-block li {
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            background: rgba(0,113,227,0.03);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            line-height: 1.55;
+            color: var(--text-main);
+            border-left: 3px solid var(--accent-blue);
+            transition: background 0.2s;
+        }
+        .ai-content-block li:hover {
+            background: rgba(0,113,227,0.06);
+        }
+
+        /* Payment instructions box */
+        .pay-instructions {
+            background: #fafbfc;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px 18px;
+            margin-top: 12px;
+            font-size: 0.82rem;
+            line-height: 1.6;
+            color: var(--text-main);
+            animation: fadeSlideIn 0.3s ease;
+        }
+        .pay-instructions strong {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            color: var(--accent-blue);
+        }
+        .pay-instructions .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+        }
+        .pay-instructions .detail-row:last-child { border-bottom: none; }
+        .pay-instructions .detail-label {
+            color: var(--text-grey);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .pay-instructions .detail-value {
+            font-weight: 600;
+            font-size: 0.82rem;
+            user-select: all;
+        }
+        .pay-instructions .pay-note {
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: rgba(255,149,0,0.08);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: #c77600;
+        }
+
+        /* Empty section placeholder */
+        .empty-placeholder {
+            padding: 16px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-grey);
+            font-style: italic;
+            background: rgba(0,0,0,0.015);
+            border-radius: 8px;
+            border: 1px dashed var(--border-color);
+        }
+
+        /* Fade-in animation */
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeSlideIn 0.4s ease;
+        }
+
+        /* Responsive tweaks */
+        @media (max-width: 500px) {
+            .price-row {
+                flex-direction: column;
+                gap: 4px;
+            }
+            .price-row > div:last-child {
+                align-self: flex-end;
+            }
+            .grid-2 { grid-template-columns: 1fr; }
+            .propuesta-header { flex-direction: column; gap: 10px; }
+            .propuesta-header .date-info { text-align: left; }
+            .calc-options { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -311,6 +569,7 @@
 
         <!-- Propuesta Details -->
         <div class="card top-card">
+            <div id="prop-badge-container"></div>
             <div class="section-title">AGENTE IA</div>
             <h2 id="prop-title">Análisis de Imagen</h2>
             <p style="font-size: 0.85rem; color: var(--text-grey); margin-bottom: 20px;" id="prop-subtitle">Interacción con Imágenes o Vídeo</p>
@@ -339,14 +598,20 @@
             <div id="prop-mantenimiento" style="font-size: 0.8rem; font-weight: 600; color: var(--accent-blue); margin-top: 4px;"></div>
 
             <div class="section-title" style="margin-top: 24px;">¿QUÉ INCLUYE?</div>
-            <ul class="includes-list" id="prop-includes">
-                <!-- Includes injected here -->
-            </ul>
+            <div id="prop-includes-container">
+                <!-- AI content injected here -->
+            </div>
 
             <div style="background: rgba(0, 113, 227, 0.05); padding: 12px; border-radius: 8px; margin-top: 20px; font-size: 0.8rem; color: var(--text-main);">
                 <strong>VALIDEZ:</strong> <span id="prop-validez">30 días</span>
             </div>
         </div>
+
+        <!-- Payment Calculator Card (injected dynamically) -->
+        <div id="prop-calculator-container"></div>
+
+        <!-- Bonus Card (injected dynamically) -->
+        <div id="prop-bonus-container"></div>
 
         <!-- Botón para mostrar el formulario si no está mostrado -->
         <div id="btn-show-form-container" style="text-align: center; margin-bottom: 40px;">
@@ -363,6 +628,9 @@
                     <div id="payment-methods-container">
                         <!-- Opciones de pago inyectadas aquí -->
                     </div>
+
+                    <!-- Payment instructions (dynamic) -->
+                    <div id="pay-instructions-box"></div>
 
                     <!-- Cuadro dinámico IBAN (Giro o Transferencia si requiere) -->
                     <div class="extra-pay-info" id="iban-info-box">
@@ -567,11 +835,44 @@
 
         // Formas de pago metadata
         const payMethodsMeta = {
-            'transferencia': { title: '🏦 Transferencia bancaria', desc: 'Pago por transferencia' },
-            'giro': { title: '🏦 Giro bancario (domiciliación)', desc: 'Cargo directo en cuenta' },
-            'bizum': { title: '📱 Bizum', desc: 'Pago rápido por móvil' },
-            'stripe': { title: '💳 Tarjeta de crédito/débito', desc: 'Pago con tarjeta' },
-            'efectivo': { title: '💵 Efectivo', desc: 'Pago en efectivo' }
+            'transferencia': { title: '🏦 Transferencia bancaria', desc: 'Pago por transferencia', icon: '🏦' },
+            'giro': { title: '🏦 Giro bancario (domiciliación)', desc: 'Cargo directo en cuenta', icon: '🏦' },
+            'bizum': { title: '📱 Bizum', desc: 'Pago rápido por móvil', icon: '📱' },
+            'stripe': { title: '💳 Tarjeta de crédito/débito', desc: 'Pago con tarjeta', icon: '💳' },
+            'efectivo': { title: '💵 Efectivo', desc: 'Pago en efectivo', icon: '💵' }
+        };
+
+        // Payment instructions per method
+        const payInstructions = {
+            'transferencia': `
+                <strong>🏦 Datos para transferencia bancaria</strong>
+                <div class="detail-row"><span class="detail-label">Banco</span><span class="detail-value">Banco Sabadell</span></div>
+                <div class="detail-row"><span class="detail-label">IBAN</span><span class="detail-value">ES21 0081 1029 3847 5610 2938</span></div>
+                <div class="detail-row"><span class="detail-label">BIC / SWIFT</span><span class="detail-value">BSABESBBXXX</span></div>
+                <div class="detail-row"><span class="detail-label">Titular</span><span class="detail-value">iArtesana B2B Solutions S.L.</span></div>
+                <div class="pay-note">📌 Indica tu nombre o NIF en el concepto de la transferencia para identificar el pago correctamente.</div>
+            `,
+            'giro': `
+                <strong>🏦 Domiciliación bancaria (SEPA)</strong>
+                <p style="margin-bottom:8px;">El cobro se realizará mediante domiciliación bancaria SEPA. Es necesario firmar una autorización de mandato SEPA que te enviaremos una vez confirmada la propuesta.</p>
+                <div class="pay-note">📌 Necesitarás proporcionar tu IBAN y datos del titular de la cuenta en el formulario de aceptación.</div>
+            `,
+            'bizum': `
+                <strong>📱 Pago por Bizum</strong>
+                <div class="detail-row"><span class="detail-label">Teléfono</span><span class="detail-value">+34 612 345 678</span></div>
+                <div class="detail-row"><span class="detail-label">Concepto</span><span class="detail-value">Propuesta + tu nombre</span></div>
+                <div class="pay-note">📌 El importe máximo por Bizum es de 1.000€. Si el total supera este límite, se fraccionará en varias transferencias o se combinará con otro método.</div>
+            `,
+            'stripe': `
+                <strong>💳 Pago con tarjeta (Stripe)</strong>
+                <p style="margin-bottom:8px;">Una vez confirmada la propuesta, recibirás un enlace de pago seguro generado automáticamente. Podrás pagar con tarjeta de crédito o débito (Visa, Mastercard, AMEX).</p>
+                <div class="pay-note">🔒 Todos los pagos con tarjeta se procesan de forma segura a través de Stripe. No almacenamos datos de tu tarjeta.</div>
+            `,
+            'efectivo': `
+                <strong>💵 Pago en efectivo</strong>
+                <p style="margin-bottom:8px;">El pago en efectivo se realizará en mano en la fecha y lugar acordados. Se emitirá recibo firmado como justificante.</p>
+                <div class="pay-note">⚠️ De acuerdo con la normativa vigente (Ley 11/2021), los pagos en efectivo entre profesionales no pueden superar los 1.000€. Para importes superiores se requerirá otro método de pago.</div>
+            `
         };
 
         // Signature Pad logic
@@ -636,6 +937,9 @@
             hasSigned = false;
         };
 
+        // Helper: format currency
+        function fmt(n) { return Math.round(n).toLocaleString('es-ES') + '€'; }
+
         // Main init
         async function init() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -694,7 +998,17 @@
             document.getElementById('prop-subtitle').textContent = c.subtitulo || '';
             document.getElementById('prop-desc').textContent = c.descripcion || '';
 
-            // Render lines
+            // Badge
+            if (c.badge) {
+                document.getElementById('prop-badge-container').innerHTML = `<span class="badge-ribbon">${escapeHtml(c.badge)}</span>`;
+            }
+
+            // Description empty state
+            if (!c.descripcion) {
+                document.getElementById('prop-desc').innerHTML = '<span class="empty-placeholder">Descripción pendiente de definir</span>';
+            }
+
+            // ========== RENDER LINES WITH SUBLINES ==========
             const linesContainer = document.getElementById('prop-lines-container');
             linesContainer.innerHTML = '';
             
@@ -702,6 +1016,11 @@
             let totalMant = 0;
 
             const lines = c.lineas || [];
+            
+            if (lines.length === 0) {
+                linesContainer.innerHTML = '<div class="empty-placeholder">No hay servicios definidos todavía</div>';
+            }
+
             lines.forEach(l => {
                 if (l.activo === false || l.recomendado === true) return;
                 
@@ -714,13 +1033,27 @@
                     totalMant += (l.mantenimiento_precio || 0);
                 }
 
+                // Build sublines HTML
+                let sublinesHtml = '';
+                if (l.sublineas && l.sublineas.length > 0) {
+                    sublinesHtml = '<ul class="sublines-list">';
+                    l.sublineas.forEach(sl => {
+                        sublinesHtml += `<li>${escapeHtml(sl.concepto || sl)}</li>`;
+                    });
+                    sublinesHtml += '</ul>';
+                }
+
+                // Plazo tag
+                const plazoTag = l.plazo ? `<span class="line-plazo">⏱ ${escapeHtml(l.plazo)}</span>` : '';
+
                 const lineHtml = `
                 <div class="price-row">
-                    <div style="font-weight: 500;">
-                        ${l.concepto || ''}
+                    <div style="font-weight: 500; flex: 1; min-width: 0;">
+                        ${escapeHtml(l.concepto || '')}${plazoTag}
                         ${l.mantenimiento ? '<div style="font-size: 0.7rem; color: var(--accent-blue);">Mantenimiento: ' + l.mantenimiento_precio + '€/mes</div>' : ''}
+                        ${sublinesHtml}
                     </div>
-                    <div style="display: flex; gap: 20px; width: 140px; color: var(--text-grey);">
+                    <div style="display: flex; gap: 20px; width: 140px; color: var(--text-grey); flex-shrink: 0;">
                         <span style="width: 50px;">${p}€</span>
                         <span style="width: 30px;">${d>0 ? d+'%' : '—'}</span>
                         <span style="text-align: right; flex: 1; color: var(--text-main); font-weight: 500;">${Math.round(imp)}€</span>
@@ -729,7 +1062,7 @@
                 linesContainer.innerHTML += lineHtml;
             });
 
-            document.getElementById('prop-total').textContent = `${Math.round(totalNeto)}€`;
+            document.getElementById('prop-total').textContent = `${fmt(totalNeto)}`;
             
             if (totalMant > 0) {
                 document.getElementById('prop-mantenimiento').textContent = `Mantenimiento mensual total: ${Math.round(totalMant)}€/mes`;
@@ -737,30 +1070,49 @@
                 document.getElementById('prop-mantenimiento').style.display = 'none';
             }
 
-            // Includes
+            // ========== AI CONTENT (FORMATTED) ==========
             const contHtml = c.contenido_ia || '';
-            const incList = document.getElementById('prop-includes');
+            const incContainer = document.getElementById('prop-includes-container');
             
-            // Si el contenido ya viene formateado con HTML desde el agente (ej. <ul><li>), lo pegamos directo
-            if (contHtml.includes('<li')) {
-                incList.innerHTML = contHtml;
+            if (!contHtml.trim()) {
+                incContainer.innerHTML = '<div class="empty-placeholder">Contenido en preparación</div>';
+            } else if (contHtml.includes('<li')) {
+                // Already formatted HTML
+                incContainer.innerHTML = `<ul class="includes-list">${contHtml}</ul>`;
             } else {
-                // Sino, hacemos un split por saltos de línea rudimentario
-                const parts = contHtml.split('\\n').filter(p => p.trim() !== '');
-                parts.forEach(p => {
-                    const li = document.createElement('li');
-                    li.textContent = p.replace(/^[-*✓]\s*/, '');
-                    incList.appendChild(li);
-                });
+                // Parse line by line for nice formatting
+                const rawLines = contHtml.split('\n').filter(p => p.trim() !== '');
+                
+                if (rawLines.length <= 1 && !contHtml.includes('\n')) {
+                    // Single block — render as paragraph
+                    incContainer.innerHTML = `<p style="font-size: 0.85rem; line-height: 1.55; color: var(--text-main);">${escapeHtml(contHtml)}</p>`;
+                } else {
+                    // Multi-line: use styled list
+                    let html = '<ul class="ai-content-block">';
+                    rawLines.forEach(line => {
+                        const cleaned = line.replace(/^[-*✓•]\s*/, '').trim();
+                        if (cleaned) {
+                            html += `<li>${escapeHtml(cleaned)}</li>`;
+                        }
+                    });
+                    html += '</ul>';
+                    incContainer.innerHTML = html;
+                }
             }
 
-            // Formas de pago ofrecidas
+            // ========== PAYMENT CALCULATOR ==========
+            renderCalculator(c, totalNeto, totalMant);
+
+            // ========== BONUS SECTION ==========
+            renderBonus(c);
+
+            // ========== PAYMENT METHODS ==========
             const ofrecidas = c.formas_pago_ofrecidas || [];
             const pmContainer = document.getElementById('payment-methods-container');
             pmContainer.innerHTML = '';
             
             if (ofrecidas.length === 0) {
-                pmContainer.innerHTML = '<p style="font-size:0.8rem;color:var(--text-grey);">No se han configurado métodos de pago específicos. Se definirán en el contrato.</p>';
+                pmContainer.innerHTML = '<div class="empty-placeholder">Los métodos de pago se definirán en el contrato</div>';
             } else {
                 ofrecidas.forEach((key, idx) => {
                     const meta = payMethodsMeta[key] || { title: key, desc: '' };
@@ -778,10 +1130,141 @@
                 });
             }
 
+            // Validez
+            if (c.fecha) {
+                const fechaProp = new Date(c.fecha);
+                const validezDate = new Date(fechaProp);
+                validezDate.setDate(validezDate.getDate() + 30);
+                document.getElementById('prop-validez').textContent = `30 días (hasta ${validezDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })})`;
+            }
+
             document.getElementById('loading').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
         }
 
+        // ========== PAYMENT CALCULATOR RENDERER ==========
+        function renderCalculator(c, totalNeto, totalMant) {
+            const calcContainer = document.getElementById('prop-calculator-container');
+            const pc = c.pago_config;
+
+            if (!pc || !pc.selected_options || pc.selected_options.length === 0) {
+                // Show empty state
+                calcContainer.innerHTML = `
+                    <div class="calc-card">
+                        <div class="section-title">💰 OPCIONES DE PAGO</div>
+                        <div class="empty-placeholder">Las opciones de financiación se detallarán en el contrato</div>
+                    </div>`;
+                return;
+            }
+
+            const opts = pc.selected_options;
+            let html = `
+                <div class="calc-card fade-in">
+                    <div class="section-title">💰 OPCIONES DE PAGO</div>
+                    <p style="font-size: 0.82rem; color: var(--text-grey); margin-bottom: 16px;">Selecciona la opción que mejor se adapte a tu negocio</p>
+                    <div class="calc-options">`;
+
+            // Option A: Financiación
+            if (opts.includes('A')) {
+                const invPct = pc.inv_min_pct || 15;
+                const numCuotas = pc.num_cuotas || 24;
+                const invInicial = totalNeto * (invPct / 100);
+                const restante = totalNeto - invInicial;
+                const cuotaMensual = restante / numCuotas;
+
+                html += `
+                    <div class="calc-option" onclick="selectCalcOption(this, 'A')">
+                        <div class="calc-option-label">Opción A</div>
+                        <div class="calc-option-title">Financiación</div>
+                        <div class="calc-option-detail">
+                            Inversión inicial del ${invPct}%<br>
+                            <strong>${fmt(invInicial)}</strong> ahora<br>
+                            + ${numCuotas} cuotas de <strong>${fmt(cuotaMensual)}/mes</strong>
+                        </div>
+                        <div class="calc-option-price">${fmt(totalNeto)}</div>
+                    </div>`;
+            }
+
+            // Option B: Parcial (3 pagos)
+            if (opts.includes('B')) {
+                const descB = pc.descuento_b_pct || 4;
+                const totalB = totalNeto * (1 - descB / 100);
+                const pagoB = totalB / 3;
+                const ahorro = totalNeto - totalB;
+
+                html += `
+                    <div class="calc-option" onclick="selectCalcOption(this, 'B')">
+                        <div class="calc-option-label">Opción B</div>
+                        <div class="calc-option-title">Pago parcial</div>
+                        <div class="calc-option-detail">
+                            3 pagos iguales de<br>
+                            <strong>${fmt(pagoB)}</strong> cada uno<br>
+                            con ${descB}% de descuento
+                        </div>
+                        <div class="calc-option-price"><span class="old-price">${fmt(totalNeto)}</span>${fmt(totalB)}</div>
+                        <div class="calc-option-savings">Ahorras ${fmt(ahorro)}</div>
+                    </div>`;
+            }
+
+            // Option C: Anticipado
+            if (opts.includes('C')) {
+                const descC = pc.descuento_c_pct || 8;
+                const totalC = totalNeto * (1 - descC / 100);
+                const ahorro = totalNeto - totalC;
+
+                html += `
+                    <div class="calc-option" onclick="selectCalcOption(this, 'C')">
+                        <div class="calc-option-label">Opción C</div>
+                        <div class="calc-option-title">Pago anticipado</div>
+                        <div class="calc-option-detail">
+                            Pago único al contado<br>
+                            con ${descC}% de descuento<br>
+                            <strong>Máximo ahorro</strong>
+                        </div>
+                        <div class="calc-option-price"><span class="old-price">${fmt(totalNeto)}</span>${fmt(totalC)}</div>
+                        <div class="calc-option-savings">Ahorras ${fmt(ahorro)}</div>
+                    </div>`;
+            }
+
+            html += `</div>`;
+
+            // Maintenance note
+            if (totalMant > 0) {
+                html += `<p style="font-size: 0.75rem; color: var(--text-grey); margin-top: 14px; text-align: center;">* Estos precios son de alta/implantación. El mantenimiento mensual (${fmt(totalMant)}/mes) se cobra aparte.</p>`;
+            }
+
+            html += `<p style="font-size: 0.7rem; color: var(--text-grey); margin-top: 8px; text-align: center;">Todos los precios son + IVA (21%)</p>`;
+            html += `</div>`;
+
+            calcContainer.innerHTML = html;
+        }
+
+        window.selectCalcOption = function(el, option) {
+            document.querySelectorAll('.calc-option').forEach(o => o.classList.remove('selected'));
+            el.classList.add('selected');
+        };
+
+        // ========== BONUS RENDERER ==========
+        function renderBonus(c) {
+            const container = document.getElementById('prop-bonus-container');
+
+            if (!c.bonus || !c.bonus.trim()) {
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="section-title">🎁 REGALOS Y BONIFICACIONES</div>
+                        <div class="empty-placeholder">No hay bonificaciones adicionales para esta propuesta</div>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="bonus-card fade-in">
+                    <div class="section-title">🎁 REGALOS Y BONIFICACIONES</div>
+                    <div class="bonus-content">${escapeHtml(c.bonus)}</div>
+                </div>`;
+        }
+
+        // ========== PAYMENT METHOD SELECTION ==========
         window.showAcceptanceForm = function() {
             document.getElementById('btn-show-form-container').style.display = 'none';
             document.getElementById('acceptance-form-container').style.display = 'block';
@@ -798,21 +1281,25 @@
             document.getElementById(`pm_${key}`).checked = true;
             document.getElementById(`pm_${key}`).closest('.pay-option').classList.add('selected');
 
+            // Show payment instructions
+            const instrBox = document.getElementById('pay-instructions-box');
+            if (payInstructions[key]) {
+                instrBox.innerHTML = `<div class="pay-instructions fade-in">${payInstructions[key]}</div>`;
+            } else {
+                instrBox.innerHTML = '';
+            }
+
             // Show IBAN box if needed
             const ibanBox = document.getElementById('iban-info-box');
             if (key === 'giro') {
                 ibanBox.style.display = 'block';
                 ibanBox.querySelector('div').innerHTML = '🏦 Datos bancarios para la domiciliación (Giro bancario)';
-            } else if (key === 'transferencia') {
-                // If they pay by transfer, we don't necessarily NEED their IBAN to charge them, 
-                // but sometimes businesses request it for refunds or tracking. For now we follow the screenshot (only giro asked for it explicitly).
-                // Actually, let's just ask it if they choose giro.
-                ibanBox.style.display = 'none';
             } else {
                 ibanBox.style.display = 'none';
             }
         };
 
+        // ========== FORM SUBMISSION ==========
         window.submitAcceptance = async function(e) {
             e.preventDefault();
             
@@ -889,6 +1376,14 @@
                 btn.textContent = '✅ Confirmar propuesta, firmar y enviar datos';
             }
         };
+
+        // Utility: escape HTML to prevent XSS
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
 
         // Initialize
         document.addEventListener('DOMContentLoaded', init);
