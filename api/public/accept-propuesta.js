@@ -3,12 +3,12 @@ const { Resend } = require('resend');
 
 // Init Supabase
 const supabaseUrl = process.env.SUPABASE_URL || 'https://lmozoetpehmdxxremtqn.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; 
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxtb3pvZXRwZWhtZHh4cmVtdHFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNTA2NDUsImV4cCI6MjA5NTgyNjY0NX0.1xkCCw7q9CDvVbqGswCeFwXpgYfMtb0wcl7lHWlKQ8U';
 
 // Init Resend
 const resend = new Resend(process.env.RESEND_API_KEY || 're_3MvY86D9_P1UjS4P6g84k4J6P6M3V2D7S'); // Using the known Resend key or env var
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
