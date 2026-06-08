@@ -7327,18 +7327,28 @@ function renderPresupuestos() {
                 const actColor = actState ? 'var(--accent-green)' : 'var(--text-grey)';
                 const actLeft = actState ? '18px' : '2px';
 
+                // Check if any sent proposal for this presupuesto was accepted
+                const sentProp = propuestasEnviadas.find(pe => pe.presupuesto_id === p.id);
+                const isAccepted = sentProp && sentProp.estado === 'aceptada';
+                const acceptedBadge = isAccepted 
+                    ? `<span style="display:inline-block; padding:3px 10px; border-radius:8px; background:rgba(52,199,89,0.15); color:#34c759; font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; border:1px solid rgba(52,199,89,0.3); margin-left:6px;">✅ ACEPTADA</span>`
+                    : '';
+
                 return `
-                    <div class="pres-card" id="pres-card-${p.id}" style="border: ${p.es_prueba ? '2px dashed #ff9500' : cardBorder}; background: ${cardBg};"
-                         onmouseenter="this.style.borderColor='rgba(255,255,255,0.15)'" onmouseleave="this.style.borderColor='${p.es_prueba ? '#ff9500' : isClient ? 'var(--accent)' : meta.accent + '30'}'">
+                    <div class="pres-card" id="pres-card-${p.id}" style="border: ${isAccepted ? '2px solid #34c759' : p.es_prueba ? '2px dashed #ff9500' : cardBorder}; background: ${isAccepted ? 'rgba(52,199,89,0.04)' : cardBg};"
+                         onmouseenter="this.style.borderColor='${isAccepted ? '#34c759' : 'rgba(255,255,255,0.15)'}'" onmouseleave="this.style.borderColor='${isAccepted ? '#34c759' : p.es_prueba ? '#ff9500' : isClient ? 'var(--accent)' : meta.accent + '30'}'">
                         
                         ${p.es_prueba ? '<div class="test-mode-stripes"></div>' : ''}
                         
                         <!-- Top Header bar -->
                         <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px 0; position:relative; z-index:2;">
+                            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
                             ${isClient 
                                 ? `<span class="pres-cat-badge" style="background:var(--accent); color:#fff;">👤 Propuesta #${leadNumMap.get(p.id) || '?'}</span>`
                                 : `<span class="pres-cat-badge" style="background:${meta.accent}18; color:${meta.accent}; border: 1px solid ${meta.accent}30;">Plantilla #${tplNumMap.get(p.id) || '?'}</span>`
                             }
+                            ${acceptedBadge}
+                            </div>
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <button type="button" title="${p.es_prueba ? 'Quitar modo prueba' : 'Marcar como prueba'}"
                                     onclick="togglePresTestMode('${p.id}')"
