@@ -1037,6 +1037,9 @@
                 currentPropuesta = data;
                 renderPropuesta(data);
 
+                // Phase 1: Pre-fill form if we have lead data
+                await prefillLeadData(data);
+
             } catch (err) {
                 console.error('init() error:', err);
                 showError();
@@ -1385,6 +1388,185 @@
                 ibanBox.style.display = 'none';
             }
         };
+
+        // ========== PHASE 1: PRE-FILL LEAD DATA ==========
+        let prefillOriginalData = null; // Store original data for Phase 2 conflict detection
+
+        async function prefillLeadData(propData) {
+            try {
+                let leadData = null;
+                let prevAcceptance = null;
+
+                // Strategy 1: Get data from lead record (outreach_leads)
+                if (propData.lead_id) {
+                    const { data: lead } = await _sb
+                        .from('outreach_leads')
+                        .select('first_name, last_name, email, phone, company_name, nif, position')
+                        .eq('id', propData.lead_id)
+                        .maybeSingle();
+                    if (lead) leadData = lead;
+                }
+
+                // Strategy 2: Get data from previous accepted proposals (richer data)
+                const leadEmail = propData.lead_email || leadData?.email;
+                if (leadEmail) {
+                    const { data: prevProps } = await _sb
+                        .from('propuestas_enviadas')
+                        .select('datos_cliente_aceptacion')
+                        .eq('lead_email', leadEmail)
+                        .not('datos_cliente_aceptacion', 'is', null)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+                    
+                    if (prevProps && prevProps.length > 0 && prevProps[0].datos_cliente_aceptacion) {
+                        prevAcceptance = prevProps[0].datos_cliente_aceptacion.datos_formulario;
+                    }
+                }
+
+                // Strategy 3: Get data from existing contracts (most complete)
+                if (!prevAcceptance && leadEmail) {
+                    const { data: contracts } = await _sb
+                        .from('contratos')
+                        .select('cliente_nombre, cliente_email, cliente_telefono, cliente_nif, cliente_direccion, cliente_profesion, datos_cliente')
+                        .eq('cliente_email', leadEmail)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+                    
+                    if (contracts && contracts.length > 0) {
+                        const c = contracts[0];
+                        const dc = c.datos_cliente || {};
+                        // Build a prevAcceptance-like structure from contract data
+                        prevAcceptance = {
+                            lead: {
+                                nombre: c.cliente_nombre?.split(' ')[0] || '',
+                                apellidos: dc.apellidos || c.cliente_nombre?.split(' ').slice(1).join(' ') || '',
+                                nif: c.cliente_nif || '',
+                                fecha_nacimiento: dc.fecha_nacimiento || '',
+                                profesion: c.cliente_profesion || '',
+                                email: c.cliente_email || '',
+                                telefono: c.cliente_telefono || '',
+                                iban: dc.iban || '',
+                                iban_titular: dc.iban_titular || ''
+                            },
+                            negocio: {
+                                empresa: dc.nombre_negocio || '',
+                                comercial: dc.nombre_comercial || '',
+                                cif: dc.cif_negocio || '',
+                                actividad: dc.actividad || '',
+                                direccion: dc.direccion_negocio || c.cliente_direccion || '',
+                                cp: dc.codigo_postal || '',
+                                localidad: dc.localidad || '',
+                                provincia: dc.provincia || '',
+                                email: dc.email_negocio || '',
+                                telefono: dc.telefono_negocio || '',
+                                web: dc.web || '',
+                                instagram: dc.instagram || '',
+                                facebook: dc.facebook || '',
+                                linkedin: dc.linkedin || '',
+                                tiktok: dc.tiktok || ''
+                            }
+                        };
+                    }
+                }
+
+                // Now fill the form
+                let filledCount = 0;
+
+                if (prevAcceptance) {
+                    // Best source: previous acceptance form data (complete)
+                    const l = prevAcceptance.lead || {};
+                    const n = prevAcceptance.negocio || {};
+
+                    filledCount += setVal('lead_nombre', l.nombre);
+                    filledCount += setVal('lead_apellidos', l.apellidos);
+                    filledCount += setVal('lead_nif', l.nif);
+                    filledCount += setVal('lead_fecha_nac', l.fecha_nacimiento);
+                    filledCount += setVal('lead_profesion', l.profesion);
+                    filledCount += setVal('lead_email', l.email);
+                    filledCount += setVal('lead_telefono', l.telefono);
+                    filledCount += setVal('lead_iban', l.iban);
+                    filledCount += setVal('lead_iban_titular', l.iban_titular);
+
+                    filledCount += setVal('neg_empresa', n.empresa);
+                    filledCount += setVal('neg_comercial', n.comercial);
+                    filledCount += setVal('neg_cif', n.cif);
+                    filledCount += setVal('neg_actividad', n.actividad);
+                    filledCount += setVal('neg_direccion', n.direccion);
+                    filledCount += setVal('neg_cp', n.cp);
+                    filledCount += setVal('neg_localidad', n.localidad);
+                    filledCount += setVal('neg_provincia', n.provincia);
+                    filledCount += setVal('neg_email', n.email);
+                    filledCount += setVal('neg_telefono', n.telefono);
+                    filledCount += setVal('neg_web', n.web);
+                    filledCount += setVal('neg_instagram', n.instagram);
+                    filledCount += setVal('neg_facebook', n.facebook);
+                    filledCount += setVal('neg_linkedin', n.linkedin);
+                    filledCount += setVal('neg_tiktok', n.tiktok);
+
+                    // Also pre-fill firma_nombre
+                    const fullName = [l.nombre, l.apellidos].filter(Boolean).join(' ');
+                    filledCount += setVal('firma_nombre', fullName);
+
+                    // Save for Phase 2 conflict detection
+                    prefillOriginalData = prevAcceptance;
+
+                } else if (leadData) {
+                    // Fallback: basic data from outreach_leads
+                    filledCount += setVal('lead_nombre', leadData.first_name);
+                    filledCount += setVal('lead_apellidos', leadData.last_name);
+                    filledCount += setVal('lead_email', leadData.email || propData.lead_email);
+                    filledCount += setVal('lead_telefono', leadData.phone);
+                    filledCount += setVal('lead_nif', leadData.nif);
+                    filledCount += setVal('neg_empresa', leadData.company_name);
+                    filledCount += setVal('lead_profesion', leadData.position);
+
+                    const fullName = [leadData.first_name, leadData.last_name].filter(Boolean).join(' ');
+                    filledCount += setVal('firma_nombre', fullName);
+                } else {
+                    // Minimal: just the name and email from propuesta_enviada
+                    filledCount += setVal('lead_nombre', propData.lead_nombre);
+                    filledCount += setVal('lead_email', propData.lead_email);
+                    filledCount += setVal('firma_nombre', propData.lead_nombre);
+                }
+
+                // Show pre-fill banner if we filled significant data
+                if (filledCount > 3) {
+                    showPrefillBanner(filledCount);
+                }
+
+            } catch (err) {
+                console.warn('Prefill error (non-fatal):', err);
+            }
+        }
+
+        function setVal(id, value) {
+            if (!value) return 0;
+            const el = document.getElementById(id);
+            if (!el) return 0;
+            el.value = value;
+            // Add subtle visual indicator that this field was pre-filled
+            el.style.borderColor = 'rgba(52,199,89,0.4)';
+            el.style.background = 'rgba(52,199,89,0.03)';
+            return 1;
+        }
+
+        function showPrefillBanner(count) {
+            const banner = document.createElement('div');
+            banner.id = 'prefill-banner';
+            banner.innerHTML = `
+                <div style="background: linear-gradient(135deg, rgba(52,199,89,0.1), rgba(52,199,89,0.05)); border: 1px solid rgba(52,199,89,0.25); border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; display:flex; align-items:center; gap:12px;">
+                    <span style="font-size:1.5rem;">✅</span>
+                    <div>
+                        <div style="font-weight:700; font-size:0.85rem; color:#34c759;">Datos pre-rellenados</div>
+                        <div style="font-size:0.75rem; color:var(--text-grey); margin-top:2px;">Hemos cargado ${count} campos con tus datos anteriores. Revísalos y modifica lo que necesites.</div>
+                    </div>
+                </div>
+            `;
+            const formContainer = document.getElementById('acceptance-form-container');
+            if (formContainer) {
+                formContainer.insertBefore(banner, formContainer.firstChild);
+            }
+        }
 
         // ========== FORM SUBMISSION ==========
         window.submitAcceptance = async function(e) {
