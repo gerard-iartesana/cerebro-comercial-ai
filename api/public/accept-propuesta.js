@@ -1,12 +1,11 @@
 const { createClient } = require('@supabase/supabase-js');
-const { Resend } = require('resend');
 
 // Init Supabase
 const supabaseUrl = process.env.SUPABASE_URL || 'https://lmozoetpehmdxxremtqn.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxtb3pvZXRwZWhtZHh4cmVtdHFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNTA2NDUsImV4cCI6MjA5NTgyNjY0NX0.1xkCCw7q9CDvVbqGswCeFwXpgYfMtb0wcl7lHWlKQ8U';
 
-// Init Resend
-const resend = new Resend(process.env.RESEND_API_KEY || 're_3MvY86D9_P1UjS4P6g84k4J6P6M3V2D7S'); // Using the known Resend key or env var
+// Resend API key (matching working endpoints)
+const RESEND_API_KEY = process.env.RESEND_API_KEY || 're_UVTNRfhh_EVoej22sdW9aCdhpKEFCKqkj';
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -199,14 +198,20 @@ module.exports = async function handler(req, res) {
 
         // 4. Send Email Notification to Gerard
         try {
-            await resend.emails.send({
-                from: 'iArtesana Notificaciones <no-reply@iartesana.es>',
-                to: ['gerard@iartesana.es'], // Email to the owner
-                subject: `🎉 Propuesta Aceptada: ${datos.negocio.empresa || datos.lead.nombre}`,
-                html: `
+            const emailRes = await fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${RESEND_API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    from: 'CerebroComercial <gerard@gerardfanals.online>',
+                    to: ['gerard@iartesana.es'],
+                    subject: `🎉 Propuesta Aceptada: ${datos.negocio.empresa || datos.lead.nombre}`,
+                    html: `
                     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                         <h2 style="color: #34c759;">¡Propuesta Aceptada!</h2>
-                        <p>El cliente <strong>${datos.lead.nombre} ${datos.lead.apellidos}</strong> ha aceptado la propuesta <em>${prop.titulo || ''}</em>.</p>
+                        <p>El cliente <strong>${datos.lead.nombre} ${datos.lead.apellidos || ''}</strong> ha aceptado la propuesta <em>${prop.titulo || ''}</em>.</p>
                         
                         <div style="background: #f5f5f7; padding: 16px; border-radius: 8px; margin: 20px 0;">
                             <h3 style="margin-top: 0;">Datos rellenados:</h3>
@@ -222,11 +227,14 @@ module.exports = async function handler(req, res) {
                         <p><strong>Acción requerida:</strong> Entra en la plataforma, ve a la sección de Contratos, revisa las cláusulas, firma y envíalo al cliente.</p>
                         
                         <div style="text-align: center; margin-top: 30px;">
-                            <a href="https://cerebro-comercial-ai.vercel.app/" style="background: #0071e3; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold;">Ir a la plataforma</a>
+                            <a href="https://cerebrocomercial-ai.iadebarrio.com/dashboard" style="background: #0071e3; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold;">Ir a la plataforma</a>
                         </div>
                     </div>
-                `
+                    `
+                })
             });
+            const emailResult = await emailRes.json();
+            console.log('Email send result:', JSON.stringify(emailResult));
         } catch (emailErr) {
             console.error('Error sending email:', emailErr);
         }
