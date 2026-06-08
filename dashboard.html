@@ -3546,6 +3546,7 @@
                                         <span style="font-size:0.75rem;color:var(--text-grey)" id="firma-prestador-text">No firmada</span>
                                         <img id="firma-prestador-img" style="display:none;max-height:80px;max-width:100%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)" />
                                     </div>
+                                    <button id="btn-borrar-firma-prestador" class="btn-secondary" style="display:none;margin-top:6px;padding:4px 12px;font-size:0.7rem;border-color:rgba(255,59,48,0.2);color:#ff3b30;width:100%" onclick="borrarFirmaContrato('prestador')">🗑 Borrar firma prestador</button>
                                 </div>
                                 <div>
                                     <label class="nl-config-field-label">Firma del Cliente</label>
@@ -3554,6 +3555,7 @@
                                         <img id="firma-cliente-img" style="display:none;max-height:80px;max-width:100%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)" />
                                     </div>
                                     <div id="firma-cliente-fecha" style="font-size:0.65rem;color:var(--text-grey);text-align:center;margin-top:4px"></div>
+                                    <button id="btn-borrar-firma-cliente" class="btn-secondary" style="display:none;margin-top:6px;padding:4px 12px;font-size:0.7rem;border-color:rgba(255,59,48,0.2);color:#ff3b30;width:100%" onclick="borrarFirmaContrato('cliente')">🗑 Borrar firma cliente</button>
                                 </div>
                             </div>
                         </div>
@@ -3826,6 +3828,6 @@
     </div>
 
     <!-- App Scripts -->
-    <script src="app.js?v=20260608a"></script>
+    <script src="app.js?v=20260608b"></script>
 </body>
 </html>

@@ -819,6 +819,7 @@ function editarContrato(id) {
     clearFirma();
     const prestText = document.getElementById('firma-prestador-text');
     const prestImg = document.getElementById('firma-prestador-img');
+    const btnBorrarPrest = document.getElementById('btn-borrar-firma-prestador');
     if (ct.firma_prestador) {
         const preview = document.getElementById('firma-preview-img');
         const container = document.getElementById('firma-preview-container');
@@ -828,14 +829,17 @@ function editarContrato(id) {
             prestImg.style.display = '';
             prestText.style.display = 'none';
         }
+        if (btnBorrarPrest) btnBorrarPrest.style.display = '';
     } else {
         if (prestImg && prestText) { prestImg.style.display = 'none'; prestText.style.display = ''; }
+        if (btnBorrarPrest) btnBorrarPrest.style.display = 'none';
     }
 
     // Firma cliente
     const cliText = document.getElementById('firma-cliente-text');
     const cliImg = document.getElementById('firma-cliente-img');
     const cliFecha = document.getElementById('firma-cliente-fecha');
+    const btnBorrarCli = document.getElementById('btn-borrar-firma-cliente');
     if (ct.firma_cliente) {
         if (cliImg && cliText) {
             cliImg.src = ct.firma_cliente;
@@ -845,9 +849,11 @@ function editarContrato(id) {
         if (cliFecha && ct.firma_cliente_fecha) {
             cliFecha.textContent = 'Firmado el ' + new Date(ct.firma_cliente_fecha).toLocaleString('es-ES');
         }
+        if (btnBorrarCli) btnBorrarCli.style.display = '';
     } else {
         if (cliImg && cliText) { cliImg.style.display = 'none'; cliText.style.display = ''; }
         if (cliFecha) cliFecha.textContent = '';
+        if (btnBorrarCli) btnBorrarCli.style.display = 'none';
     }
     
     // Auto-expand all textareas based on their initial content
@@ -1043,6 +1049,66 @@ async function togglePruebaContrato(id, currentValue) {
         if (result.success) {
             showAlert(newVal ? '🧪 Prueba' : '✅ Real', newVal ? 'Contrato marcado como prueba' : 'Contrato marcado como real', newVal ? '🧪' : '✅');
             await loadContratos();
+        }
+    } catch (e) {
+        showAlert('Error', e.message, '❌');
+    }
+}
+
+async function borrarFirmaContrato(tipo) {
+    const id = contratoEditId;
+    if (!id) { showToast('No hay contrato abierto', true); return; }
+
+    const label = tipo === 'prestador' ? 'del prestador' : 'del cliente';
+    const confirmed = await showConfirm('¿Borrar firma?', `¿Seguro que quieres borrar la firma ${label}? Esta acción no se puede deshacer.`, '✍️');
+    if (!confirmed) return;
+
+    const payload = { id };
+    if (tipo === 'prestador') {
+        payload.firma_prestador = null;
+    } else {
+        payload.firma_cliente = null;
+        payload.firma_cliente_fecha = null;
+        payload.firmado_at = null;
+    }
+
+    try {
+        const res = await fetch(`/api/contratos?id=${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        if (result.success || result.data) {
+            showAlert('Firma eliminada', `La firma ${label} ha sido eliminada correctamente.`, '✍️');
+
+            // Update UI immediately
+            if (tipo === 'prestador') {
+                const img = document.getElementById('firma-prestador-img');
+                const text = document.getElementById('firma-prestador-text');
+                const btn = document.getElementById('btn-borrar-firma-prestador');
+                if (img) { img.style.display = 'none'; img.src = ''; }
+                if (text) text.style.display = '';
+                if (btn) btn.style.display = 'none';
+                const preview = document.getElementById('firma-preview-img');
+                const container = document.getElementById('firma-preview-container');
+                if (preview) preview.src = '';
+                if (container) container.style.display = 'none';
+            } else {
+                const img = document.getElementById('firma-cliente-img');
+                const text = document.getElementById('firma-cliente-text');
+                const fecha = document.getElementById('firma-cliente-fecha');
+                const btn = document.getElementById('btn-borrar-firma-cliente');
+                if (img) { img.style.display = 'none'; img.src = ''; }
+                if (text) text.style.display = '';
+                if (fecha) fecha.textContent = '';
+                if (btn) btn.style.display = 'none';
+            }
+
+            // Reload contracts to update cards
+            await loadContratos();
+        } else {
+            showAlert('Error', result.error || 'No se pudo borrar la firma.', '❌');
         }
     } catch (e) {
         showAlert('Error', e.message, '❌');
