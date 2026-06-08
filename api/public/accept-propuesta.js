@@ -114,7 +114,7 @@ module.exports = async function handler(req, res) {
         }
 
         // 3. Create Contract Draft (best-effort)
-        const contratoId = 'cont_' + Math.random().toString(36).substr(2, 9);
+        let contratoId = null;
         
         try {
             const lineas = prop.content?.lineas?.filter(l => l.activo !== false && !l.recomendado) || [];
@@ -138,7 +138,6 @@ module.exports = async function handler(req, res) {
             };
 
             const nuevoContrato = {
-                id: contratoId,
                 estado: 'borrador',
                 lead_id: finalLeadId || prop.lead_id || null,
                 cliente_nombre: datos.lead.nombre + (datos.lead.apellidos ? ' ' + datos.lead.apellidos : ''),
@@ -190,7 +189,9 @@ module.exports = async function handler(req, res) {
                 .insert([nuevoContrato]);
 
             if (contErr) {
-                console.error('Error creating contract (non-fatal):', contErr);
+                console.error('Error creating contract (non-fatal):', JSON.stringify(contErr));
+            } else {
+                console.log('Contract created successfully');
             }
         } catch (contCatchErr) {
             console.error('Error creating contract (non-fatal):', contCatchErr);

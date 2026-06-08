@@ -9110,11 +9110,22 @@ function renderPropuestasEnviadas() {
             row.style.background = 'rgba(255,149,0,0.04)';
             row.style.borderLeft = '3px solid #ff9500';
         }
+        if (stateVal === 'aceptada') {
+            row.style.background = 'rgba(52,199,89,0.06)';
+            row.style.borderLeft = '3px solid #34c759';
+        }
+
+        const isAccepted = stateVal === 'aceptada';
 
         row.innerHTML = `
             <td>
-                <div style="font-weight: 700; color:var(--text-main);">${pe.lead_nombre}</div>
-                <div style="font-size: 0.75rem; color: var(--text-grey);">${pe.lead_email}</div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div>
+                        <div style="font-weight: 700; color:var(--text-main);">${pe.lead_nombre}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-grey);">${pe.lead_email}</div>
+                    </div>
+                    ${isAccepted ? '<span style="display:inline-block; padding:2px 8px; border-radius:6px; background:rgba(52,199,89,0.12); color:#34c759; font-size:0.65rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; border:1px solid rgba(52,199,89,0.25); white-space:nowrap;">✅ ACEPTADA</span>' : ''}
+                </div>
             </td>
             <td style="font-weight: 700; color:var(--text-main);">${pe.titulo}</td>
             <td>
