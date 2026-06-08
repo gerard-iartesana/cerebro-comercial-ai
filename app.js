@@ -9310,82 +9310,125 @@ async function addLeadToSeguimiento() {
 }
 
 function renderSeguimientoKanban() {
-    const cols = ['enviada', 'inmediato', 'mensual', 'anual', 'stop'];
+    const cols = ['enviada', 'inmediato', 'mensual', 'anual', 'cliente', 'perdido', 'stop'];
     
     // Clear lists
     cols.forEach(c => {
-        document.getElementById(`seg-cards-${c}`).innerHTML = '';
-        document.getElementById(`seg-badge-${c}`).textContent = '0';
+        const el = document.getElementById(`seg-cards-${c}`);
+        if (el) el.innerHTML = '';
+        const badge = document.getElementById(`seg-badge-${c}`);
+        if (badge) badge.textContent = '0';
     });
 
-    const counts = { enviada: 0, inmediato: 0, mensual: 0, anual: 0, stop: 0 };
-
-    seguimientos.forEach(seg => {
-        const col = seg.columna || 'enviada';
-        if (counts[col] !== undefined) {
-            counts[col]++;
-
-            const meta = ALL_CATEGORIES_METADATA[seg.categoria || 'personalizada'] || ALL_CATEGORIES_METADATA.personalizada;
-
-            const card = document.createElement('div');
-            card.className = 'pres-kanban-card';
-            card.draggable = true;
-            card.id = `seg-card-${seg.id}`;
-            card.ondragstart = (e) => {
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/plain', seg.id);
-            };
-
-            // Sequence meta text
-            let seqMetaHtml = '';
-            if (seg.secuencia_activa) {
-                const stepsMax = { inmediato: 5, mensual: 4, anual: 12 };
-                seqMetaHtml = `
-                    <div style="font-size:0.72rem; color:var(--text-main); font-weight:600; margin-top:6px;">
-                        Paso ${seg.paso_actual || 0}/${stepsMax[seg.secuencia_activa] || 12} 
-                        <span style="color:var(--text-grey);">· cada ${seg.frecuencia_dias || 2}d</span>
-                    </div>
-                `;
-            }
-
-            // Date meta text
-            let dateMetaHtml = '';
-            if (seg.ultimo_envio_at) {
-                const lastD = new Date(seg.ultimo_envio_at).toLocaleDateString('es-ES', {day:'2-digit', month:'short'});
-                let nextDHtml = '';
-                if (seg.proximo_envio_at && !seg.pausada && col !== 'stop' && col !== 'enviada') {
-                    const nextD = new Date(seg.proximo_envio_at).toLocaleDateString('es-ES', {day:'2-digit', month:'short'});
-                    nextDHtml = ` · ⏰ ${nextD}`;
-                }
-                dateMetaHtml = `<div style="font-size:0.68rem; color:var(--text-grey); margin-top:4px;">📤 ${lastD}${nextDHtml}</div>`;
-            } else if (seg.fecha_propuesta_enviada) {
-                const addD = new Date(seg.fecha_propuesta_enviada).toLocaleDateString('es-ES', {day:'2-digit', month:'short'});
-                dateMetaHtml = `<div style="font-size:0.68rem; color:var(--text-grey); margin-top:4px;">📅 Añadido: ${addD}</div>`;
-            }
-
-            card.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
-                    <div style="font-size:0.82rem; font-weight:700; color:var(--text-main); max-width: 110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${seg.lead_nombre}</div>
-                    <span style="font-size:0.64rem; padding:2px 6px; border-radius:6px; background:${meta.bg}; color:${meta.accent}; border: 1px solid ${meta.accent}20; font-weight:600; white-space:nowrap;">${meta.label}</span>
-                </div>
-                <div style="font-size:0.7rem; color:var(--text-grey); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${seg.lead_email}</div>
-                ${seqMetaHtml}
-                ${dateMetaHtml}
-                <div style="display:flex; gap:4px; margin-top:10px;">
-                    <button onclick="deleteSeguimientoCard('${seg.id}')"
-                        style="font-size:0.68rem; padding:3px 8px; border-radius:6px; border:1px solid rgba(255,59,48,0.15); background:rgba(255,59,48,0.04); color:var(--accent-red); cursor:pointer; font-family:inherit; transition: all 0.2s;"
-                        onmouseenter="this.style.background='rgba(255,59,48,0.1)'" onmouseleave="this.style.background='rgba(255,59,48,0.04)'">
-                        🗑 Retirar
-                    </button>
-                </div>
-            `;
-
-            document.getElementById(`seg-cards-${col}`).appendChild(card);
+    // Auto-sync: ensure every propuesta_enviada has a seguimiento card
+    propuestasEnviadas.forEach(pe => {
+        const exists = seguimientos.find(s => s.propuesta_enviada_id === pe.id);
+        if (!exists) {
+            // Auto-create a seguimiento entry for this proposal
+            const autoCol = pe.estado === 'aceptada' ? 'cliente' : 'enviada';
+            seguimientos.push({
+                id: 'auto_' + pe.id,
+                propuesta_enviada_id: pe.id,
+                lead_id: pe.lead_id,
+                lead_nombre: pe.lead_nombre,
+                lead_email: pe.lead_email,
+                categoria: pe.categoria || 'personalizada',
+                columna: autoCol,
+                fecha_propuesta_enviada: pe.enviado_at,
+                titulo_propuesta: pe.titulo,
+                auto_synced: true
+            });
+        } else if (pe.estado === 'aceptada' && exists.columna !== 'cliente') {
+            // Auto-move accepted proposals to 'cliente' column
+            exists.columna = 'cliente';
         }
     });
 
+    const counts = {};
+    cols.forEach(c => counts[c] = 0);
+
+    seguimientos.forEach(seg => {
+        const col = seg.columna || 'enviada';
+        if (counts[col] === undefined) return;
+        counts[col]++;
+
+        const meta = ALL_CATEGORIES_METADATA[seg.categoria || 'personalizada'] || ALL_CATEGORIES_METADATA.personalizada;
+
+        const card = document.createElement('div');
+        card.className = 'pres-kanban-card';
+        card.draggable = true;
+        card.id = `seg-card-${seg.id}`;
+        card.ondragstart = (e) => {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', seg.id);
+        };
+
+        // Style based on column
+        if (col === 'cliente') {
+            card.style.borderLeft = '3px solid #34c759';
+            card.style.background = 'rgba(52,199,89,0.04)';
+        } else if (col === 'perdido') {
+            card.style.borderLeft = '3px solid #ff9500';
+            card.style.opacity = '0.7';
+        }
+
+        // Sequence meta text
+        let seqMetaHtml = '';
+        if (seg.secuencia_activa) {
+            const stepsMax = { inmediato: 5, mensual: 4, anual: 12 };
+            seqMetaHtml = `
+                <div style="font-size:0.72rem; color:var(--text-main); font-weight:600; margin-top:6px;">
+                    Paso ${seg.paso_actual || 0}/${stepsMax[seg.secuencia_activa] || 12} 
+                    <span style="color:var(--text-grey);">· cada ${seg.frecuencia_dias || 2}d</span>
+                </div>
+            `;
+        }
+
+        // Proposal title badge
+        const titleBadge = seg.titulo_propuesta 
+            ? `<div style="font-size:0.65rem; color:var(--text-grey); margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">📋 ${seg.titulo_propuesta}</div>`
+            : '';
+
+        // Date meta text
+        let dateMetaHtml = '';
+        if (seg.ultimo_envio_at) {
+            const lastD = new Date(seg.ultimo_envio_at).toLocaleDateString('es-ES', {day:'2-digit', month:'short'});
+            let nextDHtml = '';
+            if (seg.proximo_envio_at && !seg.pausada && col !== 'stop' && col !== 'enviada' && col !== 'cliente' && col !== 'perdido') {
+                const nextD = new Date(seg.proximo_envio_at).toLocaleDateString('es-ES', {day:'2-digit', month:'short'});
+                nextDHtml = ` · ⏰ ${nextD}`;
+            }
+            dateMetaHtml = `<div style="font-size:0.68rem; color:var(--text-grey); margin-top:4px;">📤 ${lastD}${nextDHtml}</div>`;
+        } else if (seg.fecha_propuesta_enviada) {
+            const addD = new Date(seg.fecha_propuesta_enviada).toLocaleDateString('es-ES', {day:'2-digit', month:'short'});
+            dateMetaHtml = `<div style="font-size:0.68rem; color:var(--text-grey); margin-top:4px;">📅 Enviada: ${addD}</div>`;
+        }
+
+        card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+                <div style="font-size:0.82rem; font-weight:700; color:var(--text-main); max-width: 110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${seg.lead_nombre}</div>
+                <span style="font-size:0.64rem; padding:2px 6px; border-radius:6px; background:${meta.bg}; color:${meta.accent}; border: 1px solid ${meta.accent}20; font-weight:600; white-space:nowrap;">${meta.label}</span>
+            </div>
+            <div style="font-size:0.7rem; color:var(--text-grey); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${seg.lead_email}</div>
+            ${titleBadge}
+            ${seqMetaHtml}
+            ${dateMetaHtml}
+            <div style="display:flex; gap:4px; margin-top:10px;">
+                <button onclick="deleteSeguimientoCard('${seg.id}')"
+                    style="font-size:0.68rem; padding:3px 8px; border-radius:6px; border:1px solid rgba(255,59,48,0.15); background:rgba(255,59,48,0.04); color:var(--accent-red); cursor:pointer; font-family:inherit; transition: all 0.2s;"
+                    onmouseenter="this.style.background='rgba(255,59,48,0.1)'" onmouseleave="this.style.background='rgba(255,59,48,0.04)'">
+                    🗑 Retirar
+                </button>
+            </div>
+        `;
+
+        const container = document.getElementById(`seg-cards-${col}`);
+        if (container) container.appendChild(card);
+    });
+
     cols.forEach(c => {
-        document.getElementById(`seg-badge-${c}`).textContent = counts[c];
+        const badge = document.getElementById(`seg-badge-${c}`);
+        if (badge) badge.textContent = counts[c];
     });
 }
 
@@ -9432,6 +9475,22 @@ async function handleDropSegCard(e, targetCol) {
         patchBody.secuencia_activa = null;
         patchBody.pausada = true;
         patchBody.proximo_envio_at = null;
+    } else if (targetCol === 'cliente') {
+        seg.secuencia_activa = null;
+        seg.pausada = false;
+        seg.proximo_envio_at = null;
+
+        patchBody.secuencia_activa = null;
+        patchBody.pausada = false;
+        patchBody.proximo_envio_at = null;
+    } else if (targetCol === 'perdido') {
+        seg.secuencia_activa = null;
+        seg.pausada = false;
+        seg.proximo_envio_at = null;
+
+        patchBody.secuencia_activa = null;
+        patchBody.pausada = false;
+        patchBody.proximo_envio_at = null;
     } else if (targetCol === 'enviada') {
         seg.secuencia_activa = null;
         seg.pausada = false;
@@ -9456,7 +9515,9 @@ async function handleDropSegCard(e, targetCol) {
         enviada: 'Lead en espera de seguimiento', 
         inmediato: 'Secuencia Inmediata activada', 
         mensual: 'Secuencia Mensual semanal activada', 
-        anual: 'Secuencia Anual mensual activada' 
+        anual: 'Secuencia Anual mensual activada',
+        cliente: '✅ Marcado como Cliente',
+        perdido: '💤 Lead marcado como perdido'
     };
     showToast(messages[targetCol] || 'Estado de seguimiento actualizado');
     

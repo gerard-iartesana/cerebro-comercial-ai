@@ -1792,7 +1792,7 @@
                         </div>
 
                         <!-- Kanban Board -->
-                        <div class="pres-kanban-board" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; overflow-x: auto; width: 100%;">
+                        <div class="pres-kanban-board" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; overflow-x: auto; width: 100%;">
                             <!-- Columns populated in app.js -->
                             <!-- Column 1: Propuesta enviada -->
                             <div class="pres-kanban-column" id="seg-col-enviada" ondragover="allowDropSegCard(event)" ondrop="handleDropSegCard(event, 'enviada')">
@@ -1826,7 +1826,23 @@
                                 </div>
                                 <div class="kanban-cards-container" id="seg-cards-anual"></div>
                             </div>
-                            <!-- Column 5: Stop -->
+                            <!-- Column 5: Es Cliente -->
+                            <div class="pres-kanban-column" id="seg-col-cliente" ondragover="allowDropSegCard(event)" ondrop="handleDropSegCard(event, 'cliente')">
+                                <div class="column-header" style="border-bottom: 2px solid #34c759;">
+                                    <span class="column-title" style="color: #34c759;">✅ Es Cliente</span>
+                                    <span class="column-badge" id="seg-badge-cliente" style="background: rgba(52,199,89,0.15); color: #34c759;">0</span>
+                                </div>
+                                <div class="kanban-cards-container" id="seg-cards-cliente"></div>
+                            </div>
+                            <!-- Column 6: Lead Perdido -->
+                            <div class="pres-kanban-column" id="seg-col-perdido" ondragover="allowDropSegCard(event)" ondrop="handleDropSegCard(event, 'perdido')">
+                                <div class="column-header" style="border-bottom: 2px solid #ff9500;">
+                                    <span class="column-title" style="color: #ff9500;">💤 Lead Perdido</span>
+                                    <span class="column-badge" id="seg-badge-perdido" style="background: rgba(255,149,0,0.15); color: #ff9500;">0</span>
+                                </div>
+                                <div class="kanban-cards-container" id="seg-cards-perdido"></div>
+                            </div>
+                            <!-- Column 7: Stop -->
                             <div class="pres-kanban-column" id="seg-col-stop" ondragover="allowDropSegCard(event)" ondrop="handleDropSegCard(event, 'stop')">
                                 <div class="column-header" style="border-bottom: 2px solid var(--accent-red);">
                                     <span class="column-title" style="color: var(--accent-red);">⏹ Stop</span>
@@ -3828,6 +3844,6 @@
     </div>
 
     <!-- App Scripts -->
-    <script src="app.js?v=20260608d"></script>
+    <script src="app.js?v=20260608e"></script>
 </body>
 </html>
