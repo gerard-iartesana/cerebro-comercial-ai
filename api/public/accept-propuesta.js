@@ -48,8 +48,9 @@ module.exports = async function handler(req, res) {
             prop.content = presupuesto;
         }
 
-        // 2. Mark proposal as accepted
-        const { error: updateErr } = await supabase
+        // 2. Mark proposal as accepted - try full update first, fallback to simple
+        let updateSuccess = false;
+        const { error: updateErr1 } = await supabase
             .from('propuestas_enviadas')
             .update({ 
                 estado: 'aceptada',
@@ -61,9 +62,22 @@ module.exports = async function handler(req, res) {
             })
             .eq('presupuesto_id', propuesta_id);
 
-        if (updateErr) {
-            console.error('Error updating propuesta:', updateErr);
-            throw updateErr;
+        if (updateErr1) {
+            console.error('Full update failed, trying simple update:', updateErr1);
+            // Fallback: just update estado
+            const { error: updateErr2 } = await supabase
+                .from('propuestas_enviadas')
+                .update({ estado: 'aceptada' })
+                .eq('presupuesto_id', propuesta_id);
+            
+            if (updateErr2) {
+                console.error('Simple update also failed:', updateErr2);
+                // Don't throw - continue with contract creation anyway
+            } else {
+                updateSuccess = true;
+            }
+        } else {
+            updateSuccess = true;
         }
 
         // 2.5 Sync data with outreach_leads (best-effort, don't crash if columns missing)
@@ -220,6 +234,6 @@ module.exports = async function handler(req, res) {
 
     } catch (err) {
         console.error('API Error:', err);
-        return res.status(500).json({ error: 'Error interno del servidor' });
+        return res.status(500).json({ error: 'Error interno del servidor', details: err.message });
     }
 }
