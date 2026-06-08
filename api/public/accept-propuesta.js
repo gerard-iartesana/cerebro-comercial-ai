@@ -66,141 +66,120 @@ module.exports = async function handler(req, res) {
             throw updateErr;
         }
 
-        // 2.5 Sync data with outreach_leads
+        // 2.5 Sync data with outreach_leads (best-effort, don't crash if columns missing)
         let finalLeadId = prop.lead_id;
         
-        const leadPayload = {
-            first_name: datos.lead.nombre,
-            last_name: datos.lead.apellidos,
-            phone: datos.lead.telefono,
-            company_name: datos.negocio.empresa,
-            status: 'cliente', // Because they accepted the proposal
-            nif: datos.lead.nif,
-            fecha_nacimiento: datos.lead.fecha_nacimiento,
-            position: datos.lead.cargo,
-            nombre_comercial: datos.negocio.comercial,
-            cif: datos.negocio.cif,
-            actividad: datos.negocio.actividad,
-            direccion: datos.negocio.direccion,
-            cp: datos.negocio.cp,
-            localidad: datos.negocio.localidad,
-            provincia: datos.negocio.provincia,
-            pais: datos.negocio.pais || 'España',
-            email_negocio: datos.negocio.email,
-            telefono_negocio: datos.negocio.telefono,
-            web: datos.negocio.web,
-            instagram: datos.negocio.instagram,
-            facebook: datos.negocio.facebook,
-            linkedin: datos.negocio.linkedin,
-            tiktok: datos.negocio.tiktok,
-            twitter: datos.negocio.twitter,
-            pinterest: datos.negocio.pinterest,
-            youtube: datos.negocio.youtube,
-            otra_red: datos.negocio.otra_red,
-            iban: datos.lead.iban,
-            iban_titular: datos.lead.iban_titular
-        };
+        try {
+            const leadPayload = {
+                first_name: datos.lead.nombre,
+                last_name: datos.lead.apellidos || '',
+                phone: datos.lead.telefono,
+                company_name: datos.negocio.empresa,
+                status: 'cliente'
+            };
 
-        if (finalLeadId) {
-            // Update existing lead linked to proposal
-            await supabase.from('outreach_leads').update(leadPayload).eq('id', finalLeadId);
-        } else {
-            // Search by email to avoid duplicates
-            const { data: existingLeads } = await supabase
-                .from('outreach_leads')
-                .select('id')
-                .eq('email', datos.lead.email);
-            
-            if (existingLeads && existingLeads.length > 0) {
-                finalLeadId = existingLeads[0].id;
+            if (finalLeadId) {
                 await supabase.from('outreach_leads').update(leadPayload).eq('id', finalLeadId);
             } else {
-                // Create new lead
-                leadPayload.email = datos.lead.email;
-                const { data: newLead } = await supabase.from('outreach_leads').insert([leadPayload]).select('id').single();
-                if (newLead) {
-                    finalLeadId = newLead.id;
+                const { data: existingLeads } = await supabase
+                    .from('outreach_leads')
+                    .select('id')
+                    .eq('email', datos.lead.email);
+                
+                if (existingLeads && existingLeads.length > 0) {
+                    finalLeadId = existingLeads[0].id;
+                    await supabase.from('outreach_leads').update(leadPayload).eq('id', finalLeadId);
+                } else {
+                    leadPayload.email = datos.lead.email;
+                    const { data: newLead } = await supabase.from('outreach_leads').insert([leadPayload]).select('id').single();
+                    if (newLead) finalLeadId = newLead.id;
                 }
             }
+        } catch (leadErr) {
+            console.error('Error syncing lead (non-fatal):', leadErr);
         }
 
-        // 3. Create Contract Draft
+        // 3. Create Contract Draft (best-effort)
         const contratoId = 'cont_' + Math.random().toString(36).substr(2, 9);
         
-        // Prepare lineas for contract
-        const lineas = prop.content?.lineas?.filter(l => l.activo !== false && !l.recomendado) || [];
-        let totalNeto = 0;
-        let totalMant = 0;
+        try {
+            const lineas = prop.content?.lineas?.filter(l => l.activo !== false && !l.recomendado) || [];
+            let totalNeto = 0;
+            let totalMant = 0;
 
-        lineas.forEach(l => {
-            const p = l.precio || 0;
-            const d = l.descuento || 0;
-            totalNeto += p * (1 - d/100);
-            if (l.mantenimiento) {
-                totalMant += (l.mantenimiento_precio || 0);
+            lineas.forEach(l => {
+                const p = l.precio || 0;
+                const d = l.descuento || 0;
+                totalNeto += p * (1 - d/100);
+                if (l.mantenimiento) totalMant += (l.mantenimiento_precio || 0);
+            });
+
+            const formasPagoContrato = {
+                seleccionada: forma_pago_elegida || '',
+                stripe: { active: forma_pago_elegida === 'stripe' },
+                giro: { active: forma_pago_elegida === 'giro' },
+                transferencia: { active: forma_pago_elegida === 'transferencia' },
+                bizum: { active: forma_pago_elegida === 'bizum' },
+                efectivo: { active: forma_pago_elegida === 'efectivo' }
+            };
+
+            const nuevoContrato = {
+                id: contratoId,
+                estado: 'borrador',
+                lead_id: finalLeadId || prop.lead_id || null,
+                cliente_nombre: datos.lead.nombre + (datos.lead.apellidos ? ' ' + datos.lead.apellidos : ''),
+                cliente_email: datos.lead.email,
+                cliente_telefono: datos.lead.telefono,
+                cliente_nif: datos.lead.nif || '',
+                cliente_direccion: datos.negocio.direccion || '',
+                cliente_profesion: datos.lead.profesion || '',
+                precio_total: totalNeto,
+                precio_mensual: totalMant,
+                duracion_meses: 12,
+                fecha_contrato: new Date().toISOString().split('T')[0],
+                formas_pago: formasPagoContrato,
+                firma_cliente: firma,
+                firma_cliente_fecha: new Date().toISOString(),
+                datos_cliente: {
+                    apellidos: datos.lead.apellidos || '',
+                    fecha_nacimiento: datos.lead.fecha_nacimiento || '',
+                    nombre_negocio: datos.negocio.empresa || '',
+                    nombre_comercial: datos.negocio.comercial || '',
+                    cif_negocio: datos.negocio.cif || '',
+                    actividad: datos.negocio.actividad || '',
+                    direccion_negocio: datos.negocio.direccion || '',
+                    codigo_postal: datos.negocio.cp || '',
+                    localidad: datos.negocio.localidad || '',
+                    provincia: datos.negocio.provincia || '',
+                    pais: 'España',
+                    email_negocio: datos.negocio.email || '',
+                    telefono_negocio: datos.negocio.telefono || '',
+                    web: datos.negocio.web || '',
+                    instagram: datos.negocio.instagram || '',
+                    facebook: datos.negocio.facebook || '',
+                    linkedin: datos.negocio.linkedin || '',
+                    tiktok: datos.negocio.tiktok || '',
+                    iban: datos.lead.iban || '',
+                    iban_titular: datos.lead.iban_titular || '',
+                    _extra: {
+                        presupuesto_id: prop.presupuesto_id,
+                        firma_propuesta: firma,
+                        forma_pago_elegida: forma_pago_elegida
+                    }
+                },
+                servicios: lineas.map(l => l.concepto || l.nombre || '').filter(Boolean),
+                notas: 'Contrato generado automáticamente al aceptar propuesta ' + (prop.presupuesto_id || '')
+            };
+
+            const { error: contErr } = await supabase
+                .from('contratos')
+                .insert([nuevoContrato]);
+
+            if (contErr) {
+                console.error('Error creating contract (non-fatal):', contErr);
             }
-        });
-
-        // Formas de pago structure for Contract
-        const formasPagoContrato = {
-            stripe: { active: forma_pago_elegida === 'stripe' },
-            giro: { active: forma_pago_elegida === 'giro' },
-            transferencia: { active: forma_pago_elegida === 'transferencia' },
-            bizum: { active: forma_pago_elegida === 'bizum' },
-            efectivo: { active: forma_pago_elegida === 'efectivo' }
-        };
-
-        const nuevoContrato = {
-            id: contratoId,
-            estado: 'borrador', // You will review it
-            lead_id: prop.lead_id, // Might be null if it was generated ad-hoc
-            presupuesto_id: prop.presupuesto_id,
-            cliente_nombre: datos.lead.nombre,
-            cliente_email: datos.lead.email,
-            cliente_telefono: datos.lead.telefono,
-            cliente_empresa: datos.negocio.empresa,
-            cliente_nif: datos.lead.nif,
-            cliente_direccion: datos.negocio.direccion,
-            total_neto: totalNeto,
-            mantenimiento_mensual: totalMant,
-            datos_cliente: {
-                apellidos: datos.lead.apellidos,
-                fecha_nacimiento: datos.lead.fecha_nacimiento,
-                nombre_negocio: datos.negocio.empresa,
-                nombre_comercial: datos.negocio.comercial,
-                cif_negocio: datos.negocio.cif,
-                actividad: datos.negocio.actividad,
-                direccion_negocio: datos.negocio.direccion,
-                codigo_postal: datos.negocio.cp,
-                localidad: datos.negocio.localidad,
-                provincia: datos.negocio.provincia,
-                pais: 'España',
-                email_negocio: datos.negocio.email,
-                telefono_negocio: datos.negocio.telefono,
-                web: datos.negocio.web,
-                instagram: datos.negocio.instagram,
-                facebook: datos.negocio.facebook,
-                linkedin: datos.negocio.linkedin,
-                tiktok: datos.negocio.tiktok
-            },
-            formas_pago: formasPagoContrato,
-            content: {
-                ...prop.content, // inherit details
-                firma_propuesta: firma,
-                datos_aceptacion: datos,
-                forma_pago_elegida: forma_pago_elegida,
-                lead_iban: datos.lead.iban,
-                lead_iban_titular: datos.lead.iban_titular
-            }
-        };
-
-        const { error: contErr } = await supabase
-            .from('contratos')
-            .insert([nuevoContrato]);
-
-        if (contErr) {
-            console.error('Error creating contract:', contErr);
-            // We don't throw, we want to finish the email process at least
+        } catch (contCatchErr) {
+            console.error('Error creating contract (non-fatal):', contCatchErr);
         }
 
         // 4. Send Email Notification to Gerard
