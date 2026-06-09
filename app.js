@@ -3129,6 +3129,7 @@ document.querySelectorAll('.sidebar-nav-item[data-section]').forEach(btn => {
         if (btn.dataset.section === 'calendar') { renderCalGrid(); loadMeetings(); }
         if (btn.dataset.section === 'proposals') loadProposalsModule();
         if (btn.dataset.section === 'contracts') loadContratos();
+        if (btn.dataset.section === 'config-forms') loadFormularios();
     });
 });
 
