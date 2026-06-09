@@ -96,15 +96,16 @@ module.exports = async function handler(req, res) {
 
     // ── 2. Contratos from DB table ──────────────────────────────────
     try {
-      const { data: contratos } = await supabase
+      const { data: contratos, error: contratosErr } = await supabase
         .from('contratos')
-        .select('id, titulo, codigo_contrato, cliente_nombre, estado, firma_cliente, firmado_at, created_at, updated_at, servicios, precio_total')
+        .select('id, codigo_contrato, cliente_nombre, cliente_email, estado, firma_cliente, firmado_at, created_at, updated_at, servicios, precio_total')
         .order('created_at', { ascending: false });
 
-      if (contratos && contratos.length > 0) {
+      if (contratosErr) {
+        console.warn('Contratos query error:', contratosErr.message);
+      } else if (contratos && contratos.length > 0) {
         for (const c of contratos) {
-          // Estimate size based on content
-          const estimatedSize = JSON.stringify(c).length * 2; // rough estimate
+          const estimatedSize = JSON.stringify(c).length * 2;
           totalSize += estimatedSize;
           categories.contratos.count++;
           categories.contratos.size += estimatedSize;
@@ -112,7 +113,7 @@ module.exports = async function handler(req, res) {
           const estadoBadge = c.estado === 'firmado' ? '✅ Firmado' : c.firma_cliente ? '✍️ Pendiente firma prestador' : '📋 Borrador';
 
           allFiles.push({
-            name: `${c.codigo_contrato || 'contrato'} — ${c.cliente_nombre || 'Sin cliente'}.html`,
+            name: `${c.codigo_contrato || 'Contrato'} — ${c.cliente_nombre || 'Sin cliente'}`,
             path: `contratos/${c.id}`,
             bucket: 'base_datos',
             source: 'db_contratos',
@@ -125,7 +126,7 @@ module.exports = async function handler(req, res) {
               estado: c.estado,
               estado_label: estadoBadge,
               cliente: c.cliente_nombre,
-              titulo: c.titulo,
+              codigo: c.codigo_contrato,
               precio: c.precio_total,
               firmado_at: c.firmado_at
             }
