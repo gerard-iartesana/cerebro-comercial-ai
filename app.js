@@ -4905,14 +4905,14 @@ function setEmailLabel(label) {
     renderEmailList();
 }
 
-function replyToEmail() {
+async function replyToEmail() {
     if (!_currentViewEmail) return;
     const lead = _currentViewEmail.outreach_leads || {};
-    openComposeEmailModal();
+    await openComposeEmailModal();
+    // Pre-fill after modal is ready
     setTimeout(() => {
         const select = document.getElementById('compose-email-to');
         if (select && lead.email) {
-            // Try to select matching option
             for (let opt of select.options) {
                 if (opt.value === lead.email) { select.value = lead.email; break; }
             }
@@ -4921,19 +4921,19 @@ function replyToEmail() {
         if (subjectEl) subjectEl.value = `Re: ${_currentViewEmail.subject || ''}`;
         const bodyEl = document.getElementById('compose-email-body');
         if (bodyEl) bodyEl.value = `\n\n--- Mensaje original ---\n${(_currentViewEmail.body || '').replace(/<[^>]+>/g, '')}`;
-    }, 300);
+    }, 500);
 }
 
-function forwardEmail() {
+async function forwardEmail() {
     if (!_currentViewEmail) return;
-    openComposeEmailModal();
+    await openComposeEmailModal();
     setTimeout(() => {
         const subjectEl = document.getElementById('compose-email-subject');
         if (subjectEl) subjectEl.value = `Fwd: ${_currentViewEmail.subject || ''}`;
         const bodyEl = document.getElementById('compose-email-body');
         const lead = _currentViewEmail.outreach_leads || {};
         if (bodyEl) bodyEl.value = `\n\n--- Mensaje reenviado ---\nDe: Para ${lead.first_name || ''} <${lead.email || ''}>\nAsunto: ${_currentViewEmail.subject || ''}\n\n${(_currentViewEmail.body || '').replace(/<[^>]+>/g, '')}`;
-    }, 300);
+    }, 500);
 }
 
 function switchOutreachSubTab(subTab) {
@@ -5909,28 +5909,58 @@ window.startOutreachSequence = async function(leadId) {
 };
 
 async function openComposeEmailModal() {
+    console.log('[Compose] openComposeEmailModal called');
     if (sessionStorage.getItem('cc_role') === 'guest') {
         showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
         return;
     }
+    
+    // FIRST: Open modal immediately so user sees response
+    const modal = document.getElementById('email-compose-modal');
+    if (!modal) { console.error('[Compose] Modal not found'); return; }
+    modal.style.display = 'flex';
+    console.log('[Compose] Modal opened');
+    
     try {
-        // Load leads if not loaded yet
-        if (!outreachLeadsList || outreachLeadsList.length === 0) {
-            await fetchOutreachLeadsList();
-        }
-        
         const select = document.getElementById('compose-email-to');
-        if (!select) { console.error('compose-email-to not found'); return; }
-        select.innerHTML = '';
+        if (!select) { console.error('[Compose] Select not found'); return; }
+        select.innerHTML = '<option value="">⏳ Cargando contactos...</option>';
         
-        // Merge leads from outreach + registry, deduplicate by email
-        const allLeads = [...(outreachLeadsList || [])];
-        if (typeof _allLeadsGridData !== 'undefined' && _allLeadsGridData && _allLeadsGridData.length > 0) {
-            const existing = new Set(allLeads.map(l => l.email));
-            _allLeadsGridData.forEach(l => {
-                if (l.email && !existing.has(l.email)) allLeads.push(l);
-            });
+        // Reset fields
+        const subjectEl = document.getElementById('compose-email-subject');
+        const bodyEl = document.getElementById('compose-email-body');
+        if (subjectEl) subjectEl.value = '';
+        if (bodyEl) bodyEl.value = '';
+        
+        // Reset custom input
+        const customInput = document.getElementById('compose-custom-email');
+        if (customInput) { customInput.style.display = 'none'; customInput.value = ''; }
+        
+        // Reset attachments
+        window._composeAttachments = [];
+        const attachList = document.getElementById('compose-attachments-list');
+        if (attachList) attachList.innerHTML = '';
+        
+        // Load leads in background
+        try {
+            if (!outreachLeadsList || outreachLeadsList.length === 0) {
+                await fetchOutreachLeadsList();
+            }
+        } catch(loadErr) {
+            console.warn('[Compose] Failed to load leads:', loadErr);
         }
+        
+        // Populate select
+        select.innerHTML = '';
+        const allLeads = [...(outreachLeadsList || [])];
+        try {
+            if (typeof _allLeadsGridData !== 'undefined' && _allLeadsGridData && _allLeadsGridData.length > 0) {
+                const existing = new Set(allLeads.map(l => l.email));
+                _allLeadsGridData.forEach(l => {
+                    if (l.email && !existing.has(l.email)) allLeads.push(l);
+                });
+            }
+        } catch(e) { /* ignore grid data errors */ }
         
         allLeads.forEach(l => {
             if (!l.email) return;
@@ -5946,22 +5976,9 @@ async function openComposeEmailModal() {
         customOpt.textContent = '✏️ Escribir otro email...';
         select.appendChild(customOpt);
         
-        // Reset custom input
-        const customInput = document.getElementById('compose-custom-email');
-        if (customInput) { customInput.style.display = 'none'; customInput.value = ''; }
-        
-        document.getElementById('compose-email-subject').value = '';
-        document.getElementById('compose-email-body').value = '';
-        
-        // Reset attachments
-        window._composeAttachments = [];
-        const attachList = document.getElementById('compose-attachments-list');
-        if (attachList) attachList.innerHTML = '';
-        
-        document.getElementById('email-compose-modal').style.display = 'flex';
+        console.log('[Compose] Populated with', allLeads.length, 'leads');
     } catch(e) {
-        console.error('Error opening compose modal:', e);
-        showAlert('Error', 'No se pudo abrir el compositor de correo: ' + e.message, '❌');
+        console.error('[Compose] Error populating:', e);
     }
 }
 
