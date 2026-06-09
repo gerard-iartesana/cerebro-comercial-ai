@@ -186,6 +186,8 @@ function switchConfigTab(tabName) {
     if (tabName === 'contracts') loadContratos();
     // Auto-load activity log when switching to the actividad tab
     if (tabName === 'actividad') loadActivityLog();
+    // Auto-load formularios when switching to the forms tab
+    if (tabName === 'forms') loadFormularios();
 }
 
 // ── User Management ──────────────────────────────────────────
@@ -2082,6 +2084,499 @@ async function loadActivityLog() {
         timelineEl.innerHTML = '<div style="position:absolute;left:5px;top:0;bottom:0;width:2px;background:var(--border-color)"></div><div style="text-align:center;padding:40px;color:var(--accent-red);font-size:0.85rem;">❌ Error al cargar la actividad</div>';
     }
 }
+
+// ═══════════════════════════════════════════════════════════
+// ── FORMULARIOS MANAGEMENT ─────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+
+let formulariosList = [];
+let formBuilderFields = [];
+let currentEmbedForm = null;
+let currentResponsesForm = null;
+
+async function loadFormularios() {
+    const listEl = document.getElementById('forms-list');
+    try {
+        const res = await fetch('/api/formularios');
+        const data = await res.json();
+
+        if (!data.success) {
+            // Maybe tables don't exist yet — try setup
+            if (data.sql) {
+                listEl.innerHTML = `<div class="stat-card-glass" style="padding:30px;text-align:center">
+                    <div style="font-size:2rem;margin-bottom:12px">🔧</div>
+                    <h3 style="font-size:0.95rem;font-weight:700;color:var(--text-main);margin-bottom:8px">Configuración necesaria</h3>
+                    <p style="color:var(--text-grey);font-size:0.82rem;margin-bottom:16px">Ejecuta el SQL en Supabase para crear las tablas de formularios.</p>
+                    <button class="btn-primary" style="padding:8px 18px;font-size:0.82rem" onclick="navigator.clipboard.writeText(${JSON.stringify(data.sql)}).then(()=>showAlert('Copiado','SQL copiado al portapapeles. Pégalo en Supabase SQL Editor.','✅'))">📋 Copiar SQL</button>
+                </div>`;
+            } else {
+                listEl.innerHTML = `<div style="text-align:center;padding:30px;color:var(--accent-red);font-size:0.82rem">❌ ${data.error || 'Error desconocido'}</div>`;
+            }
+            return;
+        }
+
+        formulariosList = data.formularios || [];
+
+        // Update stats
+        document.getElementById('forms-count').textContent = formulariosList.length;
+        document.getElementById('forms-active-count').textContent = formulariosList.filter(f => f.activo).length;
+
+        // Load responses count
+        let totalResp = 0;
+        let todayResp = 0;
+        const today = new Date().toISOString().split('T')[0];
+        for (const f of formulariosList) {
+            if (f._response_count) {
+                totalResp += f._response_count;
+            }
+        }
+        document.getElementById('forms-responses-count').textContent = totalResp;
+        document.getElementById('forms-today-count').textContent = todayResp || '—';
+
+        renderFormulariosList(formulariosList);
+
+    } catch (err) {
+        console.error('loadFormularios error:', err);
+        listEl.innerHTML = `<div style="text-align:center;padding:30px;color:var(--accent-red);font-size:0.82rem">❌ Error al cargar formularios</div>`;
+    }
+}
+
+function renderFormulariosList(forms) {
+    const listEl = document.getElementById('forms-list');
+    const filter = document.getElementById('forms-filter')?.value || 'all';
+
+    let filtered = forms;
+    if (filter === 'active') filtered = forms.filter(f => f.activo);
+    if (filter === 'inactive') filtered = forms.filter(f => !f.activo);
+    if (filter === 'ficha_cliente') filtered = forms.filter(f => f.tipo === 'ficha_cliente');
+    if (filter === 'custom') filtered = forms.filter(f => f.tipo !== 'ficha_cliente');
+
+    if (filtered.length === 0) {
+        listEl.innerHTML = `<div class="stat-card-glass" style="padding:40px;text-align:center">
+            <div style="font-size:2.5rem;margin-bottom:12px;opacity:0.4">📋</div>
+            <h3 style="font-size:0.95rem;font-weight:700;color:var(--text-main);margin-bottom:8px">No hay formularios</h3>
+            <p style="color:var(--text-grey);font-size:0.82rem;margin-bottom:16px">Crea tu primer formulario para empezar a captar datos.</p>
+            <button class="btn-primary" style="padding:8px 18px;font-size:0.82rem" onclick="openFormBuilder()">+ Crear Formulario</button>
+        </div>`;
+        return;
+    }
+
+    let html = '';
+    filtered.forEach(f => {
+        const campos = f.campos || [];
+        const isFicha = f.tipo === 'ficha_cliente';
+        const typeIcon = isFicha ? '👤' : f.tipo === 'contacto' ? '📞' : f.tipo === 'captacion' ? '🎯' : f.tipo === 'encuesta' ? '📊' : '📋';
+        const typeLabel = isFicha ? 'Ficha Cliente' : f.tipo === 'contacto' ? 'Contacto' : f.tipo === 'captacion' ? 'Captación' : f.tipo === 'encuesta' ? 'Encuesta' : 'Personalizado';
+        const statusColor = f.activo ? '#34c759' : '#8e8e93';
+        const statusLabel = f.activo ? '🟢 Activo' : '⚪ Inactivo';
+        const dateStr = f.created_at ? new Date(f.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+        html += `<div class="stat-card-glass" style="padding:16px 20px;display:flex;align-items:center;gap:16px;transition:all 0.15s" 
+                     onmouseenter="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'" 
+                     onmouseleave="this.style.transform='none';this.style.boxShadow='none'">
+            <!-- Icon -->
+            <div style="width:48px;height:48px;border-radius:14px;background:${isFicha ? 'linear-gradient(135deg,#007AFF,#5856d6)' : 'linear-gradient(135deg,#ff9500,#ff6b35)'};display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">${typeIcon}</div>
+            
+            <!-- Info -->
+            <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+                    <span style="font-weight:700;font-size:0.9rem;color:var(--text-main)">${escHtml(f.nombre)}</span>
+                    ${isFicha ? '<span style="padding:2px 8px;border-radius:5px;background:rgba(0,113,227,0.1);color:#007AFF;font-size:0.62rem;font-weight:700">PRINCIPAL</span>' : ''}
+                    <span style="font-size:0.7rem;color:${statusColor};font-weight:600">${statusLabel}</span>
+                </div>
+                <div style="font-size:0.75rem;color:var(--text-grey);margin-bottom:4px">${escHtml(f.descripcion || '')}</div>
+                <div style="display:flex;gap:12px;font-size:0.7rem;color:var(--text-grey)">
+                    <span>📋 ${campos.length} campos</span>
+                    <span>🏷️ ${typeLabel}</span>
+                    <span>📅 ${dateStr}</span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div style="display:flex;gap:6px;flex-shrink:0">
+                <button onclick="viewFormResponses('${f.id}')" title="Ver respuestas" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-main);cursor:pointer;font-size:0.82rem;transition:all 0.15s" onmouseenter="this.style.background='rgba(0,113,227,0.08)'" onmouseleave="this.style.background='var(--bg-main)'">📊</button>
+                <button onclick="openFormEmbed('${f.id}')" title="Compartir/Embed" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-main);cursor:pointer;font-size:0.82rem;transition:all 0.15s" onmouseenter="this.style.background='rgba(0,113,227,0.08)'" onmouseleave="this.style.background='var(--bg-main)'">🔗</button>
+                <button onclick="editFormulario('${f.id}')" title="Editar" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-main);cursor:pointer;font-size:0.82rem;transition:all 0.15s" onmouseenter="this.style.background='rgba(255,149,0,0.08)'" onmouseleave="this.style.background='var(--bg-main)'">✏️</button>
+                <button onclick="toggleFormulario('${f.id}', ${!f.activo})" title="${f.activo ? 'Desactivar' : 'Activar'}" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-main);cursor:pointer;font-size:0.82rem;transition:all 0.15s" onmouseenter="this.style.background='rgba(52,199,89,0.08)'" onmouseleave="this.style.background='var(--bg-main)'">${f.activo ? '⏸️' : '▶️'}</button>
+                ${!isFicha ? `<button onclick="deleteFormulario('${f.id}')" title="Eliminar" style="padding:8px 10px;border-radius:8px;border:1px solid rgba(255,59,48,0.2);background:var(--bg-main);cursor:pointer;font-size:0.82rem;transition:all 0.15s" onmouseenter="this.style.background='rgba(255,59,48,0.08)'" onmouseleave="this.style.background='var(--bg-main)'">🗑️</button>` : ''}
+            </div>
+        </div>`;
+    });
+
+    listEl.innerHTML = html;
+}
+
+function filterFormularios() {
+    renderFormulariosList(formulariosList);
+}
+
+// ── Form Builder ──────────────────────────────────────────
+function openFormBuilder(editData) {
+    formBuilderFields = [];
+    document.getElementById('fb-edit-id').value = '';
+    document.getElementById('fb-nombre').value = '';
+    document.getElementById('fb-descripcion').value = '';
+    document.getElementById('fb-tipo').value = 'custom';
+    document.getElementById('fb-color').value = '#0071e3';
+    document.getElementById('fb-submit-text').value = 'Enviar';
+    document.getElementById('fb-success-msg').value = '¡Gracias! Tus datos se han enviado correctamente.';
+    document.getElementById('form-builder-title').textContent = 'Crear Formulario';
+
+    if (editData) {
+        document.getElementById('fb-edit-id').value = editData.id;
+        document.getElementById('fb-nombre').value = editData.nombre || '';
+        document.getElementById('fb-descripcion').value = editData.descripcion || '';
+        document.getElementById('fb-tipo').value = editData.tipo || 'custom';
+        document.getElementById('fb-color').value = editData.config?.color_primary || '#0071e3';
+        document.getElementById('fb-submit-text').value = editData.config?.submit_text || 'Enviar';
+        document.getElementById('fb-success-msg').value = editData.config?.success_message || '¡Gracias!';
+        document.getElementById('form-builder-title').textContent = 'Editar Formulario';
+        formBuilderFields = (editData.campos || []).map(c => ({...c}));
+    }
+
+    renderBuilderFields();
+    document.getElementById('form-builder-modal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeFormBuilder() {
+    document.getElementById('form-builder-modal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function addFormField() {
+    const id = 'field_' + Date.now();
+    formBuilderFields.push({
+        id,
+        label: 'Nuevo campo',
+        type: 'text',
+        required: false,
+        placeholder: '',
+        section: 'general',
+        options: []
+    });
+    renderBuilderFields();
+}
+
+function removeFormField(idx) {
+    formBuilderFields.splice(idx, 1);
+    renderBuilderFields();
+}
+
+function moveFormField(idx, dir) {
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= formBuilderFields.length) return;
+    [formBuilderFields[idx], formBuilderFields[newIdx]] = [formBuilderFields[newIdx], formBuilderFields[idx]];
+    renderBuilderFields();
+}
+
+function updateFormField(idx, key, val) {
+    if (formBuilderFields[idx]) {
+        formBuilderFields[idx][key] = val;
+        if (key === 'label' && !formBuilderFields[idx]._idManual) {
+            formBuilderFields[idx].id = 'field_' + val.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, '');
+        }
+    }
+}
+
+function renderBuilderFields() {
+    const container = document.getElementById('fb-fields-list');
+    if (formBuilderFields.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-grey);font-size:0.8rem">Haz clic en "+ Añadir campo" para empezar</div>';
+        return;
+    }
+
+    const typeLabels = { text: '📝 Texto', email: '📧 Email', tel: '📞 Teléfono', number: '🔢 Número', date: '📅 Fecha', url: '🔗 URL', textarea: '📄 Texto largo', select: '📋 Selector', checkbox: '☑️ Checkbox', radio: '🔘 Radio' };
+    const sectionLabels = { general: 'General', personal: 'Personal', negocio: 'Negocio', redes: 'Redes Sociales' };
+
+    let html = '';
+    formBuilderFields.forEach((f, i) => {
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:var(--bg-card);border:1px solid var(--border-color);transition:all 0.15s">
+            <!-- Drag handle -->
+            <div style="display:flex;flex-direction:column;gap:2px;cursor:grab;color:var(--text-grey);font-size:0.7rem">
+                <button onclick="moveFormField(${i},-1)" style="background:none;border:none;cursor:pointer;padding:0;font-size:0.65rem;color:var(--text-grey)">▲</button>
+                <button onclick="moveFormField(${i},1)" style="background:none;border:none;cursor:pointer;padding:0;font-size:0.65rem;color:var(--text-grey)">▼</button>
+            </div>
+            <!-- Label -->
+            <input type="text" value="${escHtml(f.label)}" onchange="updateFormField(${i},'label',this.value)" 
+                style="flex:1;padding:6px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-main);color:var(--text-main);font-size:0.8rem;font-family:inherit;min-width:100px" placeholder="Nombre">
+            <!-- Type -->
+            <select onchange="updateFormField(${i},'type',this.value)" 
+                style="padding:6px 8px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-main);color:var(--text-main);font-size:0.75rem;font-family:inherit;min-width:100px">
+                ${Object.entries(typeLabels).map(([k, v]) => `<option value="${k}" ${f.type === k ? 'selected' : ''}>${v}</option>`).join('')}
+            </select>
+            <!-- Section -->
+            <select onchange="updateFormField(${i},'section',this.value)" 
+                style="padding:6px 8px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-main);color:var(--text-main);font-size:0.75rem;font-family:inherit;min-width:80px">
+                ${Object.entries(sectionLabels).map(([k, v]) => `<option value="${k}" ${f.section === k ? 'selected' : ''}>${v}</option>`).join('')}
+            </select>
+            <!-- Required -->
+            <label style="display:flex;align-items:center;gap:4px;font-size:0.72rem;color:var(--text-grey);white-space:nowrap;cursor:pointer">
+                <input type="checkbox" ${f.required ? 'checked' : ''} onchange="updateFormField(${i},'required',this.checked)"> Req.
+            </label>
+            <!-- Delete -->
+            <button onclick="removeFormField(${i})" style="background:none;border:none;cursor:pointer;font-size:0.85rem;color:var(--accent-red);padding:4px">✕</button>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+async function saveFormulario() {
+    const nombre = document.getElementById('fb-nombre').value.trim();
+    if (!nombre) {
+        showAlert('Error', 'El nombre del formulario es obligatorio.', '⚠️');
+        return;
+    }
+
+    const editId = document.getElementById('fb-edit-id').value;
+    const payload = {
+        nombre,
+        descripcion: document.getElementById('fb-descripcion').value.trim(),
+        tipo: document.getElementById('fb-tipo').value,
+        campos: formBuilderFields,
+        activo: true,
+        config: {
+            color_primary: document.getElementById('fb-color').value,
+            submit_text: document.getElementById('fb-submit-text').value || 'Enviar',
+            success_message: document.getElementById('fb-success-msg').value || '¡Gracias!'
+        }
+    };
+
+    try {
+        const method = editId ? 'PUT' : 'POST';
+        if (editId) payload.id = editId;
+
+        const res = await fetch('/api/formularios', {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        
+        if (result.success) {
+            showAlert('Guardado', `Formulario "${nombre}" ${editId ? 'actualizado' : 'creado'} correctamente.`, '✅');
+            closeFormBuilder();
+            loadFormularios();
+        } else {
+            showAlert('Error', result.error || 'No se pudo guardar.', '❌');
+        }
+    } catch (err) {
+        showAlert('Error', 'Error de red al guardar.', '❌');
+    }
+}
+
+async function editFormulario(id) {
+    const form = formulariosList.find(f => f.id === id);
+    if (form) {
+        openFormBuilder(form);
+    }
+}
+
+async function toggleFormulario(id, newState) {
+    try {
+        const res = await fetch('/api/formularios', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, activo: newState })
+        });
+        const result = await res.json();
+        if (result.success) {
+            showAlert('Actualizado', `Formulario ${newState ? 'activado' : 'desactivado'}.`, newState ? '▶️' : '⏸️');
+            loadFormularios();
+        }
+    } catch (err) {
+        showAlert('Error', 'No se pudo actualizar.', '❌');
+    }
+}
+
+async function deleteFormulario(id) {
+    if (!confirm('¿Eliminar este formulario y todas sus respuestas?')) return;
+    try {
+        const res = await fetch(`/api/formularios?id=${id}`, { method: 'DELETE' });
+        const result = await res.json();
+        if (result.success) {
+            showAlert('Eliminado', 'Formulario eliminado.', '🗑️');
+            loadFormularios();
+        }
+    } catch (err) {
+        showAlert('Error', 'No se pudo eliminar.', '❌');
+    }
+}
+
+// ── Form Responses ──────────────────────────────────────────
+async function viewFormResponses(id) {
+    const form = formulariosList.find(f => f.id === id);
+    if (!form) return;
+
+    currentResponsesForm = form;
+    document.getElementById('responses-title').textContent = `Respuestas — ${form.nombre}`;
+    document.getElementById('forms-responses-panel').style.display = 'block';
+    document.getElementById('responses-list').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-grey);font-size:0.82rem">⏳ Cargando...</div>';
+
+    try {
+        const res = await fetch(`/api/formularios?id=${id}&respuestas=true`);
+        const data = await res.json();
+
+        const respuestas = data.respuestas || [];
+        document.getElementById('responses-count-badge').textContent = respuestas.length;
+
+        if (respuestas.length === 0) {
+            document.getElementById('responses-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-grey);font-size:0.82rem"><div style="font-size:2rem;margin-bottom:8px;opacity:0.4">📭</div>Aún no hay respuestas para este formulario</div>';
+            return;
+        }
+
+        let html = '';
+        respuestas.forEach((r, i) => {
+            const datos = r.datos || {};
+            const dateStr = r.created_at ? new Date(r.created_at).toLocaleString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+            
+            let fieldsHtml = '';
+            Object.entries(datos).forEach(([k, v]) => {
+                if (!v) return;
+                const label = (form.campos || []).find(c => c.id === k)?.label || k;
+                fieldsHtml += `<div style="display:flex;gap:8px;font-size:0.78rem;padding:3px 0">
+                    <span style="color:var(--text-grey);min-width:120px;font-weight:600">${escHtml(label)}</span>
+                    <span style="color:var(--text-main)">${escHtml(String(v))}</span>
+                </div>`;
+            });
+
+            html += `<div style="padding:14px 18px;border-bottom:1px solid var(--border-color)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <span style="font-weight:700;font-size:0.82rem;color:var(--text-main)">Respuesta #${respuestas.length - i}</span>
+                    <span style="font-size:0.7rem;color:var(--text-grey)">${dateStr}</span>
+                </div>
+                ${fieldsHtml}
+                ${r.ip ? `<div style="font-size:0.68rem;color:var(--text-grey);margin-top:6px">IP: ${r.ip}</div>` : ''}
+            </div>`;
+        });
+
+        document.getElementById('responses-list').innerHTML = html;
+    } catch (err) {
+        document.getElementById('responses-list').innerHTML = '<div style="text-align:center;padding:30px;color:var(--accent-red);font-size:0.82rem">❌ Error al cargar respuestas</div>';
+    }
+}
+
+function closeResponsesPanel() {
+    document.getElementById('forms-responses-panel').style.display = 'none';
+    currentResponsesForm = null;
+}
+
+function exportResponses() {
+    if (!currentResponsesForm) return;
+    // Re-fetch and export as CSV
+    fetch(`/api/formularios?id=${currentResponsesForm.id}&respuestas=true`)
+        .then(r => r.json())
+        .then(data => {
+            const respuestas = data.respuestas || [];
+            if (respuestas.length === 0) { showAlert('Sin datos', 'No hay respuestas para exportar.', '📭'); return; }
+            
+            // Get all unique keys
+            const allKeys = new Set();
+            respuestas.forEach(r => Object.keys(r.datos || {}).forEach(k => allKeys.add(k)));
+            const keys = ['created_at', ...allKeys];
+
+            const campos = currentResponsesForm.campos || [];
+            const headers = keys.map(k => {
+                if (k === 'created_at') return 'Fecha';
+                const campo = campos.find(c => c.id === k);
+                return campo ? campo.label : k;
+            });
+
+            let csv = headers.join(',') + '\n';
+            respuestas.forEach(r => {
+                const row = keys.map(k => {
+                    let val = k === 'created_at' ? (r.created_at || '') : (r.datos?.[k] || '');
+                    return `"${String(val).replace(/"/g, '""')}"`;
+                });
+                csv += row.join(',') + '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `respuestas_${currentResponsesForm.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        })
+        .catch(() => showAlert('Error', 'No se pudo exportar.', '❌'));
+}
+
+// ── Embed/Export ─────────────────────────────────────────────
+function openFormEmbed(id) {
+    const form = formulariosList.find(f => f.id === id);
+    if (!form) return;
+
+    currentEmbedForm = form;
+    const baseUrl = window.location.origin;
+    const formUrl = `${baseUrl}/api/public/form?id=${id}`;
+
+    document.getElementById('embed-form-name').textContent = form.nombre;
+    document.getElementById('embed-link-url').value = formUrl;
+    document.getElementById('embed-link-open').href = formUrl;
+
+    // iframe code
+    document.getElementById('embed-iframe-code').value = `<iframe src="${formUrl}" width="100%" height="700" frameborder="0" style="border:none;border-radius:12px;max-width:640px;margin:0 auto;display:block"></iframe>`;
+
+    // HTML embed code
+    const campos = form.campos || [];
+    const color = form.config?.color_primary || '#0071e3';
+    let htmlCode = `<!-- Formulario: ${escHtml(form.nombre)} -->\n<form id="cerebro-form-${id.slice(0,8)}" action="${baseUrl}/api/public/form" method="POST" style="max-width:640px;margin:0 auto;font-family:system-ui,sans-serif">\n  <input type="hidden" name="formulario_id" value="${id}">\n`;
+    campos.forEach(c => {
+        const req = c.required ? ' required' : '';
+        if (c.type === 'textarea') {
+            htmlCode += `  <div style="margin-bottom:14px"><label style="font-weight:600;font-size:14px;display:block;margin-bottom:4px">${escHtml(c.label)}</label><textarea name="${c.id}" placeholder="${escHtml(c.placeholder || '')}"${req} style="width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:14px" rows="3"></textarea></div>\n`;
+        } else if (c.type === 'select') {
+            htmlCode += `  <div style="margin-bottom:14px"><label style="font-weight:600;font-size:14px;display:block;margin-bottom:4px">${escHtml(c.label)}</label><select name="${c.id}"${req} style="width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;font-size:14px"><option value="">Seleccionar</option></select></div>\n`;
+        } else {
+            htmlCode += `  <div style="margin-bottom:14px"><label style="font-weight:600;font-size:14px;display:block;margin-bottom:4px">${escHtml(c.label)}</label><input type="${c.type}" name="${c.id}" placeholder="${escHtml(c.placeholder || '')}"${req} style="width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;font-size:14px"></div>\n`;
+        }
+    });
+    htmlCode += `  <button type="submit" style="background:${color};color:#fff;border:none;padding:12px 24px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;width:100%">${escHtml(form.config?.submit_text || 'Enviar')}</button>\n</form>`;
+    document.getElementById('embed-html-code').value = htmlCode;
+
+    // Script embed
+    document.getElementById('embed-script-code').value = `<!-- Widget: ${escHtml(form.nombre)} -->\n<div id="cerebro-form-widget-${id.slice(0,8)}"></div>\n<script>\n(function(){\n  var c=document.getElementById("cerebro-form-widget-${id.slice(0,8)}");\n  var f=document.createElement("iframe");\n  f.src="${formUrl}";\n  f.style="width:100%;height:700px;border:none;border-radius:12px";\n  c.appendChild(f);\n})();\n<\/script>`;
+
+    switchEmbedTab('link');
+    document.getElementById('form-embed-modal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeEmbedModal() {
+    document.getElementById('form-embed-modal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function switchEmbedTab(tab) {
+    ['link', 'html', 'iframe', 'script'].forEach(t => {
+        const tabEl = document.getElementById(`embed-tab-${t}`);
+        if (tabEl) tabEl.style.display = t === tab ? 'block' : 'none';
+    });
+    document.querySelectorAll('.embed-tab').forEach(btn => {
+        const isActive = btn.dataset.tab === tab;
+        btn.style.color = isActive ? 'var(--accent-blue)' : 'var(--text-grey)';
+        btn.style.borderBottomColor = isActive ? 'var(--accent-blue)' : 'transparent';
+        btn.classList.toggle('active', isActive);
+    });
+}
+
+function copyEmbedCode(elId) {
+    const el = document.getElementById(elId);
+    if (el) {
+        navigator.clipboard.writeText(el.value).then(() => {
+            showAlert('Copiado', 'Código copiado al portapapeles.', '📋');
+        });
+    }
+}
+
+// Helper used for escaping in formularios
+function escHtml(str) {
+    if (typeof str !== 'string') return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ═══════════════════════════════════════════════════════════
+// ── STORAGE MANAGEMENT ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
 
 async function loadStorageData() {
     try {

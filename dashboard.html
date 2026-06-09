@@ -3032,13 +3032,196 @@
             <div class="dashboard-section" id="sec-config-forms">
                 <div class="section-header">
                     <h1>Formularios</h1>
-                    <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Crear y gestionar formularios de captación</span>
+                    <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Crear, gestionar y embeber formularios de captación</span>
                 </div>
-                <div class="stat-card-glass" style="padding:40px;text-align:center">
-                    <div style="font-size:3rem;margin-bottom:12px">📋</div>
-                    <h3 style="font-size:1.1rem;font-weight:700;color:var(--text-main);margin-bottom:8px">Constructor de Formularios</h3>
-                    <p style="color:var(--text-grey);font-size:0.85rem;max-width:400px;margin:0 auto 20px">Crea formularios personalizados para captar leads desde tu web, landing pages o campañas de email.</p>
-                    <button class="btn-primary" style="padding:10px 24px;font-size:0.85rem" onclick="showAlert('Próximamente','El constructor de formularios estará disponible próximamente.','🚧')">+ Crear Formulario</button>
+
+                <!-- Stats -->
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px" id="forms-stats">
+                    <div class="stat-card-glass" style="text-align:center">
+                        <span class="stat-label">Formularios</span>
+                        <div class="stat-value" style="font-size:1.6rem;margin:6px 0;color:var(--text-main)" id="forms-count">—</div>
+                        <span style="font-size:0.72rem;color:var(--text-grey)">creados</span>
+                    </div>
+                    <div class="stat-card-glass" style="text-align:center">
+                        <span class="stat-label">Activos</span>
+                        <div class="stat-value" style="font-size:1.6rem;margin:6px 0;color:#34c759" id="forms-active-count">—</div>
+                        <span style="font-size:0.72rem;color:var(--text-grey)">publicados</span>
+                    </div>
+                    <div class="stat-card-glass" style="text-align:center">
+                        <span class="stat-label">Respuestas</span>
+                        <div class="stat-value" style="font-size:1.6rem;margin:6px 0;color:#007AFF" id="forms-responses-count">—</div>
+                        <span style="font-size:0.72rem;color:var(--text-grey)">total recibidas</span>
+                    </div>
+                    <div class="stat-card-glass" style="text-align:center">
+                        <span class="stat-label">Hoy</span>
+                        <div class="stat-value" style="font-size:1.6rem;margin:6px 0;color:#ff9500" id="forms-today-count">—</div>
+                        <span style="font-size:0.72rem;color:var(--text-grey)">respuestas hoy</span>
+                    </div>
+                </div>
+
+                <!-- Actions bar -->
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                    <div style="display:flex;gap:8px">
+                        <button class="btn-primary" style="padding:8px 18px;font-size:0.82rem;display:flex;align-items:center;gap:6px" onclick="openFormBuilder()">
+                            ➕ Crear Formulario
+                        </button>
+                        <button class="btn-secondary" style="padding:8px 18px;font-size:0.82rem" onclick="loadFormularios()">
+                            🔄 Actualizar
+                        </button>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <select id="forms-filter" onchange="filterFormularios()" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-main);font-size:0.78rem;font-family:inherit">
+                            <option value="all">Todos</option>
+                            <option value="active">Activos</option>
+                            <option value="inactive">Inactivos</option>
+                            <option value="ficha_cliente">Ficha Cliente</option>
+                            <option value="custom">Personalizados</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Forms list -->
+                <div id="forms-list" style="display:flex;flex-direction:column;gap:12px">
+                    <div style="text-align:center;padding:40px;color:var(--text-grey);font-size:0.85rem">⏳ Cargando formularios...</div>
+                </div>
+
+                <!-- Responses panel (hidden by default) -->
+                <div id="forms-responses-panel" style="display:none;margin-top:20px">
+                    <div style="background:var(--bg-card);border-radius:14px;border:1px solid var(--border-color);overflow:hidden">
+                        <div style="padding:14px 18px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center">
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <button onclick="closeResponsesPanel()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-grey)">←</button>
+                                <span style="font-weight:700;font-size:0.9rem;color:var(--text-main)" id="responses-title">Respuestas</span>
+                                <span style="font-size:0.72rem;color:var(--text-grey);background:var(--bg-hover);padding:2px 8px;border-radius:6px" id="responses-count-badge">0</span>
+                            </div>
+                            <button class="btn-secondary" style="padding:6px 14px;font-size:0.75rem" onclick="exportResponses()">📥 Exportar CSV</button>
+                        </div>
+                        <div id="responses-list" style="max-height:500px;overflow-y:auto">
+                            <div style="text-align:center;padding:30px;color:var(--text-grey);font-size:0.82rem">Selecciona un formulario para ver sus respuestas</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL: Form Builder -->
+            <div id="form-builder-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);overflow-y:auto">
+                <div style="max-width:780px;margin:40px auto;background:var(--bg-card);border-radius:18px;border:1px solid var(--border-color);box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+                    <!-- Header -->
+                    <div style="padding:20px 24px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center">
+                        <div>
+                            <h2 style="font-size:1.1rem;font-weight:800;color:var(--text-main);margin:0" id="form-builder-title">Crear Formulario</h2>
+                            <p style="font-size:0.72rem;color:var(--text-grey);margin:4px 0 0">Configura los campos y opciones de tu formulario</p>
+                        </div>
+                        <button onclick="closeFormBuilder()" style="background:none;border:none;cursor:pointer;font-size:1.4rem;color:var(--text-grey)">✕</button>
+                    </div>
+
+                    <!-- Body -->
+                    <div style="padding:24px">
+                        <input type="hidden" id="fb-edit-id">
+
+                        <!-- Basic info -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+                            <div>
+                                <label style="font-size:0.75rem;font-weight:600;color:var(--text-grey);display:block;margin-bottom:4px">Nombre del formulario *</label>
+                                <input id="fb-nombre" type="text" placeholder="Ej: Formulario de contacto" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-main);color:var(--text-main);font-size:0.85rem;font-family:inherit">
+                            </div>
+                            <div>
+                                <label style="font-size:0.75rem;font-weight:600;color:var(--text-grey);display:block;margin-bottom:4px">Tipo</label>
+                                <select id="fb-tipo" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-main);color:var(--text-main);font-size:0.85rem;font-family:inherit">
+                                    <option value="custom">Personalizado</option>
+                                    <option value="contacto">Contacto</option>
+                                    <option value="captacion">Captación de leads</option>
+                                    <option value="encuesta">Encuesta</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="margin-bottom:20px">
+                            <label style="font-size:0.75rem;font-weight:600;color:var(--text-grey);display:block;margin-bottom:4px">Descripción</label>
+                            <textarea id="fb-descripcion" rows="2" placeholder="Breve descripción del formulario..." style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-main);color:var(--text-main);font-size:0.85rem;font-family:inherit;resize:vertical"></textarea>
+                        </div>
+
+                        <!-- Fields section -->
+                        <div style="margin-bottom:20px">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                                <h3 style="font-size:0.9rem;font-weight:700;color:var(--text-main)">📋 Campos del formulario</h3>
+                                <button onclick="addFormField()" class="btn-secondary" style="padding:6px 14px;font-size:0.75rem">+ Añadir campo</button>
+                            </div>
+                            <div id="fb-fields-list" style="display:flex;flex-direction:column;gap:8px;min-height:60px;padding:8px;border-radius:12px;border:1px dashed var(--border-color);background:rgba(0,0,0,0.02)">
+                                <div style="text-align:center;padding:20px;color:var(--text-grey);font-size:0.8rem">Haz clic en "+ Añadir campo" para empezar</div>
+                            </div>
+                        </div>
+
+                        <!-- Config section -->
+                        <div style="margin-bottom:20px">
+                            <h3 style="font-size:0.9rem;font-weight:700;color:var(--text-main);margin-bottom:10px">⚙️ Configuración</h3>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                                <div>
+                                    <label style="font-size:0.75rem;font-weight:600;color:var(--text-grey);display:block;margin-bottom:4px">Color principal</label>
+                                    <input id="fb-color" type="color" value="#0071e3" style="width:100%;height:40px;border-radius:10px;border:1px solid var(--border-color);cursor:pointer">
+                                </div>
+                                <div>
+                                    <label style="font-size:0.75rem;font-weight:600;color:var(--text-grey);display:block;margin-bottom:4px">Texto del botón</label>
+                                    <input id="fb-submit-text" type="text" value="Enviar" placeholder="Enviar" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-main);color:var(--text-main);font-size:0.85rem;font-family:inherit">
+                                </div>
+                                <div style="grid-column:span 2">
+                                    <label style="font-size:0.75rem;font-weight:600;color:var(--text-grey);display:block;margin-bottom:4px">Mensaje de éxito</label>
+                                    <input id="fb-success-msg" type="text" value="¡Gracias! Tus datos se han enviado correctamente." placeholder="Mensaje tras enviar" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-main);color:var(--text-main);font-size:0.85rem;font-family:inherit">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div style="padding:16px 24px;border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;gap:10px">
+                        <button onclick="closeFormBuilder()" class="btn-secondary" style="padding:10px 20px;font-size:0.85rem">Cancelar</button>
+                        <button onclick="saveFormulario()" class="btn-primary" style="padding:10px 24px;font-size:0.85rem">💾 Guardar formulario</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL: Embed/Export -->
+            <div id="form-embed-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);overflow-y:auto">
+                <div style="max-width:640px;margin:60px auto;background:var(--bg-card);border-radius:18px;border:1px solid var(--border-color);box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+                    <div style="padding:20px 24px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center">
+                        <div>
+                            <h2 style="font-size:1.1rem;font-weight:800;color:var(--text-main);margin:0">🔗 Compartir Formulario</h2>
+                            <p style="font-size:0.72rem;color:var(--text-grey);margin:4px 0 0" id="embed-form-name">—</p>
+                        </div>
+                        <button onclick="closeEmbedModal()" style="background:none;border:none;cursor:pointer;font-size:1.4rem;color:var(--text-grey)">✕</button>
+                    </div>
+                    <!-- Tabs -->
+                    <div style="display:flex;border-bottom:1px solid var(--border-color)">
+                        <button class="embed-tab active" data-tab="link" onclick="switchEmbedTab('link')" style="flex:1;padding:12px;border:none;background:transparent;cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--accent-blue);border-bottom:2px solid var(--accent-blue);font-family:inherit">🔗 Enlace</button>
+                        <button class="embed-tab" data-tab="html" onclick="switchEmbedTab('html')" style="flex:1;padding:12px;border:none;background:transparent;cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--text-grey);border-bottom:2px solid transparent;font-family:inherit">📄 HTML</button>
+                        <button class="embed-tab" data-tab="iframe" onclick="switchEmbedTab('iframe')" style="flex:1;padding:12px;border:none;background:transparent;cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--text-grey);border-bottom:2px solid transparent;font-family:inherit">🖼️ iframe</button>
+                        <button class="embed-tab" data-tab="script" onclick="switchEmbedTab('script')" style="flex:1;padding:12px;border:none;background:transparent;cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--text-grey);border-bottom:2px solid transparent;font-family:inherit">📜 Script</button>
+                    </div>
+                    <!-- Tab content -->
+                    <div style="padding:24px">
+                        <div id="embed-tab-link">
+                            <p style="font-size:0.82rem;color:var(--text-grey);margin-bottom:12px">Enlace público directo al formulario. Compártelo por email, redes sociales o WhatsApp.</p>
+                            <div style="display:flex;gap:8px">
+                                <input id="embed-link-url" type="text" readonly style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-main);color:var(--text-main);font-size:0.85rem;font-family:monospace">
+                                <button onclick="copyEmbedCode('embed-link-url')" class="btn-primary" style="padding:10px 16px;font-size:0.82rem;white-space:nowrap">📋 Copiar</button>
+                            </div>
+                            <a id="embed-link-open" href="#" target="_blank" style="display:inline-block;margin-top:10px;font-size:0.78rem;color:var(--accent-blue);text-decoration:none">↗️ Abrir en nueva pestaña</a>
+                        </div>
+                        <div id="embed-tab-html" style="display:none">
+                            <p style="font-size:0.82rem;color:var(--text-grey);margin-bottom:12px">Copia este código HTML y pégalo en cualquier página web.</p>
+                            <textarea id="embed-html-code" readonly rows="8" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-main);color:var(--text-main);font-size:0.78rem;font-family:monospace;resize:vertical"></textarea>
+                            <button onclick="copyEmbedCode('embed-html-code')" class="btn-primary" style="padding:8px 16px;font-size:0.82rem;margin-top:8px">📋 Copiar código HTML</button>
+                        </div>
+                        <div id="embed-tab-iframe" style="display:none">
+                            <p style="font-size:0.82rem;color:var(--text-grey);margin-bottom:12px">Incrusta el formulario en cualquier web con un iframe. Ajusta width y height según necesites.</p>
+                            <textarea id="embed-iframe-code" readonly rows="3" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-main);color:var(--text-main);font-size:0.78rem;font-family:monospace;resize:vertical"></textarea>
+                            <button onclick="copyEmbedCode('embed-iframe-code')" class="btn-primary" style="padding:8px 16px;font-size:0.82rem;margin-top:8px">📋 Copiar iframe</button>
+                        </div>
+                        <div id="embed-tab-script" style="display:none">
+                            <p style="font-size:0.82rem;color:var(--text-grey);margin-bottom:12px">Inserta este script en tu web para cargar el formulario dinámicamente como widget.</p>
+                            <textarea id="embed-script-code" readonly rows="4" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-main);color:var(--text-main);font-size:0.78rem;font-family:monospace;resize:vertical"></textarea>
+                            <button onclick="copyEmbedCode('embed-script-code')" class="btn-primary" style="padding:8px 16px;font-size:0.82rem;margin-top:8px">📋 Copiar script</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
