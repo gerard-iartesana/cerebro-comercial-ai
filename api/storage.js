@@ -33,25 +33,45 @@ module.exports = async function handler(req, res) {
       otros: { count: 0, size: 0, icon: '📦' }
     };
 
-    // 2. For each bucket, list files
-    for (const bucket of (buckets || [])) {
-      const { data: files, error: filesErr } = await supabase.storage
-        .from(bucket.name)
-        .list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+    // Helper: recursively list all files in a bucket (up to 3 levels deep)
+    async function listAllFiles(bucketName, path = '', depth = 0) {
+      if (depth > 3) return [];
+      const { data: items, error } = await supabase.storage
+        .from(bucketName)
+        .list(path, { limit: 500, sortBy: { column: 'created_at', order: 'desc' } });
 
-      if (filesErr || !files) continue;
+      if (error || !items) return [];
+
+      const results = [];
+      for (const item of items) {
+        if (item.name === '.emptyFolderPlaceholder') continue;
+        const fullPath = path ? `${path}/${item.name}` : item.name;
+
+        // If item has no metadata and no id, it's likely a folder
+        if (item.id === null || (!item.metadata && !item.id)) {
+          // It's a folder — recurse into it
+          const subFiles = await listAllFiles(bucketName, fullPath, depth + 1);
+          results.push(...subFiles);
+        } else {
+          // It's a file
+          results.push({ ...item, _fullPath: fullPath });
+        }
+      }
+      return results;
+    }
+
+    // 2. For each bucket, list files recursively
+    for (const bucket of (buckets || [])) {
+      const files = await listAllFiles(bucket.name);
 
       for (const file of files) {
-        // Skip .emptyFolderPlaceholder
-        if (file.name === '.emptyFolderPlaceholder') continue;
-        
         const ext = (file.name.split('.').pop() || '').toLowerCase();
         const fileSize = file.metadata?.size || 0;
         totalSize += fileSize;
 
         // Categorize
         let category = 'otros';
-        if (bucket.name === 'contratos' || ext === 'pdf' && file.name.toLowerCase().includes('contrato')) {
+        if (bucket.name === 'contratos' || (ext === 'pdf' && file._fullPath.toLowerCase().includes('contrato'))) {
           category = 'contratos';
         } else if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'ico'].includes(ext)) {
           category = 'imagenes';
@@ -64,11 +84,12 @@ module.exports = async function handler(req, res) {
         categories[category].count++;
         categories[category].size += fileSize;
 
-        // Generate public URL
-        const { data: urlData } = supabase.storage.from(bucket.name).getPublicUrl(file.name);
+        // Generate public URL with the full path
+        const { data: urlData } = supabase.storage.from(bucket.name).getPublicUrl(file._fullPath);
 
         allFiles.push({
           name: file.name,
+          path: file._fullPath,
           bucket: bucket.name,
           size: fileSize,
           created_at: file.created_at || file.updated_at || null,

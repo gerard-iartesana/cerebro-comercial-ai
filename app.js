@@ -2123,18 +2123,34 @@ async function loadStorageData() {
             fileList.innerHTML = `<div style="text-align:center;padding:40px 20px"><div style="font-size:2.5rem;margin-bottom:12px;opacity:0.4">📂</div><div style="font-size:0.85rem;color:var(--text-grey);font-weight:500">No hay archivos en Storage</div><div style="font-size:0.72rem;color:var(--text-grey);margin-top:4px">Los contratos firmados se guardarán aquí automáticamente.</div></div>`;
         } else {
             const iconMap = { pdf: '📕', doc: '📘', docx: '📘', xls: '📊', xlsx: '📊', csv: '📊', jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', svg: '🎨', webp: '🖼️', zip: '📦', rar: '📦', txt: '📝' };
+            const catBadges = {
+                contratos: { label: 'Contrato', bg: 'rgba(255,69,58,0.1)', color: '#ff453a' },
+                imagenes: { label: 'Imagen', bg: 'rgba(0,113,227,0.1)', color: '#007AFF' },
+                documentos: { label: 'Documento', bg: 'rgba(255,149,0,0.1)', color: '#ff9500' },
+                adjuntos: { label: 'Adjunto', bg: 'rgba(52,199,89,0.1)', color: '#34c759' },
+                otros: { label: 'Otro', bg: 'rgba(142,142,147,0.1)', color: '#8e8e93' }
+            };
             let html = '';
             files.forEach(f => {
                 const ext = (f.name.split('.').pop() || '').toLowerCase();
                 const icon = iconMap[ext] || '📄';
-                const dateStr = f.created_at ? new Date(f.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-                html += `<div style="display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--border-color)">
-                    <span style="font-size:1.2rem">${icon}</span>
+                const dateStr = f.created_at ? new Date(f.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+                const badge = catBadges[f.category] || catBadges.otros;
+                const pathDisplay = f.path || f.name;
+                html += `<div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border-color);transition:background 0.15s" onmouseenter="this.style.background='var(--bg-hover)'" onmouseleave="this.style.background='transparent'">
+                    <span style="font-size:1.4rem">${icon}</span>
                     <div style="flex:1;min-width:0">
-                        <div style="font-size:0.82rem;font-weight:500;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
-                        <div style="font-size:0.68rem;color:var(--text-grey)">${f.bucket} · ${formatFileSize(f.size)} · ${dateStr}</div>
+                        <div style="font-size:0.82rem;font-weight:600;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
+                        <div style="font-size:0.68rem;color:var(--text-grey);margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                            <span>📁 ${f.bucket}/${pathDisplay}</span>
+                            <span>·</span>
+                            <span>${formatFileSize(f.size)}</span>
+                            <span>·</span>
+                            <span>${dateStr}</span>
+                        </div>
                     </div>
-                    ${f.url ? `<a href="${f.url}" target="_blank" style="color:#007AFF;font-size:0.72rem;font-weight:600;text-decoration:none;white-space:nowrap">⬇️ Ver</a>` : ''}
+                    <span style="padding:2px 8px;border-radius:5px;background:${badge.bg};color:${badge.color};font-size:0.62rem;font-weight:700;white-space:nowrap">${badge.label}</span>
+                    ${f.url ? `<a href="${f.url}" target="_blank" style="color:#007AFF;font-size:0.75rem;font-weight:600;text-decoration:none;white-space:nowrap;padding:4px 10px;border-radius:6px;border:1px solid rgba(0,113,227,0.2);background:rgba(0,113,227,0.04);transition:all 0.15s" onmouseenter="this.style.background='rgba(0,113,227,0.1)'" onmouseleave="this.style.background='rgba(0,113,227,0.04)'">⬇️ Abrir</a>` : ''}
                 </div>`;
             });
             fileList.innerHTML = html;
