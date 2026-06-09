@@ -4591,6 +4591,23 @@ let _allEmailLogs = [];
 let _currentEmailFolder = 'all';
 let _currentViewEmail = null;
 
+const _defaultLabels = [
+    { id: 'importante', name: 'Importante', icon: '🔴', color: '#ff3b30' },
+    { id: 'seguimiento', name: 'Seguimiento', icon: '🟡', color: '#ff9500' },
+    { id: 'respondido', name: 'Respondido', icon: '🟢', color: '#34c759' },
+    { id: 'archivado', name: 'Archivado', icon: '⚫', color: '#8e8e93' },
+];
+
+function _getCustomLabels() {
+    try { return JSON.parse(localStorage.getItem('cc_custom_labels') || '[]'); } catch { return []; }
+}
+function _saveCustomLabels(arr) {
+    localStorage.setItem('cc_custom_labels', JSON.stringify(arr));
+}
+function _getAllLabels() {
+    return [..._defaultLabels, ..._getCustomLabels()];
+}
+
 function _getStarredEmails() {
     try { return JSON.parse(localStorage.getItem('cc_starred_emails') || '[]'); } catch { return []; }
 }
@@ -4604,6 +4621,79 @@ function _setEmailLabel(id, label) {
     const labels = _getEmailLabels();
     if (label) labels[id] = label; else delete labels[id];
     localStorage.setItem('cc_email_labels', JSON.stringify(labels));
+}
+
+function createCustomLabel() {
+    const name = prompt('Nombre de la nueva etiqueta:');
+    if (!name || !name.trim()) return;
+    const icon = prompt('Emoji/icono para la etiqueta (ej: 🔵, 📌, 💼):', '🔵') || '🔵';
+    const customLabels = _getCustomLabels();
+    const id = 'custom_' + name.trim().toLowerCase().replace(/\s+/g, '_') + '_' + Date.now();
+    customLabels.push({ id, name: name.trim(), icon, color: '#007AFF' });
+    _saveCustomLabels(customLabels);
+    refreshLabelSelect();
+    refreshFolderTabs();
+    showAlert('Etiqueta creada', `La etiqueta "${name.trim()}" se ha creado correctamente`, '🏷️');
+}
+
+function deleteCustomLabel(labelId) {
+    const customLabels = _getCustomLabels().filter(l => l.id !== labelId);
+    _saveCustomLabels(customLabels);
+    // Remove label from all emails
+    const emailLabels = _getEmailLabels();
+    Object.keys(emailLabels).forEach(k => { if (emailLabels[k] === labelId) delete emailLabels[k]; });
+    localStorage.setItem('cc_email_labels', JSON.stringify(emailLabels));
+    refreshLabelSelect();
+    refreshFolderTabs();
+    renderEmailList();
+}
+
+function refreshLabelSelect() {
+    const sel = document.getElementById('email-label-select');
+    if (!sel) return;
+    const allLabels = _getAllLabels();
+    const currentVal = sel.value;
+    sel.innerHTML = '<option value="">🏷️ Etiqueta...</option>';
+    allLabels.forEach(l => {
+        sel.innerHTML += `<option value="${l.id}">${l.icon} ${l.name}</option>`;
+    });
+    sel.innerHTML += '<option value="__create__">➕ Crear etiqueta...</option>';
+    sel.value = currentVal;
+}
+
+function refreshFolderTabs() {
+    const container = document.getElementById('email-folder-tabs');
+    if (!container) return;
+    const customLabels = _getCustomLabels();
+    const emailLabels = _getEmailLabels();
+    
+    // Count per label
+    const labelCounts = {};
+    Object.values(emailLabels).forEach(l => { labelCounts[l] = (labelCounts[l] || 0) + 1; });
+    
+    let html = `
+        <button class="email-folder-tab ${_currentEmailFolder === 'all' ? 'active' : ''}" data-folder="all" onclick="switchEmailFolder('all')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);background:${_currentEmailFolder === 'all' ? 'var(--accent-blue)' : 'var(--bg-card)'};color:${_currentEmailFolder === 'all' ? '#fff' : 'var(--text-grey)'};font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">📥 Todos</button>
+        <button class="email-folder-tab ${_currentEmailFolder === 'outreach' ? 'active' : ''}" data-folder="outreach" onclick="switchEmailFolder('outreach')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);background:${_currentEmailFolder === 'outreach' ? 'var(--accent-blue)' : 'var(--bg-card)'};color:${_currentEmailFolder === 'outreach' ? '#fff' : 'var(--text-grey)'};font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">👥 Outreach</button>
+        <button class="email-folder-tab ${_currentEmailFolder === 'proposal' ? 'active' : ''}" data-folder="proposal" onclick="switchEmailFolder('proposal')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);background:${_currentEmailFolder === 'proposal' ? 'var(--accent-blue)' : 'var(--bg-card)'};color:${_currentEmailFolder === 'proposal' ? '#fff' : 'var(--text-grey)'};font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">📄 Propuestas</button>
+        <button class="email-folder-tab ${_currentEmailFolder === 'manual' ? 'active' : ''}" data-folder="manual" onclick="switchEmailFolder('manual')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);background:${_currentEmailFolder === 'manual' ? 'var(--accent-blue)' : 'var(--bg-card)'};color:${_currentEmailFolder === 'manual' ? '#fff' : 'var(--text-grey)'};font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">✉️ Manuales</button>
+        <button class="email-folder-tab ${_currentEmailFolder === 'starred' ? 'active' : ''}" data-folder="starred" onclick="switchEmailFolder('starred')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);background:${_currentEmailFolder === 'starred' ? 'var(--accent-blue)' : 'var(--bg-card)'};color:${_currentEmailFolder === 'starred' ? '#fff' : 'var(--text-grey)'};font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">⭐ Destacados</button>
+    `;
+    
+    // Custom label folders
+    customLabels.forEach(l => {
+        const count = labelCounts[l.id] || 0;
+        html += `<button class="email-folder-tab ${_currentEmailFolder === 'label_' + l.id ? 'active' : ''}" data-folder="label_${l.id}" onclick="switchEmailFolder('label_${l.id}')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);background:${_currentEmailFolder === 'label_' + l.id ? 'var(--accent-blue)' : 'var(--bg-card)'};color:${_currentEmailFolder === 'label_' + l.id ? '#fff' : 'var(--text-grey)'};font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">${l.icon} ${l.name}${count ? ` (${count})` : ''}</button>`;
+    });
+    
+    // Default label folders
+    _defaultLabels.forEach(l => {
+        const count = labelCounts[l.id] || 0;
+        if (count > 0) {
+            html += `<button class="email-folder-tab ${_currentEmailFolder === 'label_' + l.id ? 'active' : ''}" data-folder="label_${l.id}" onclick="switchEmailFolder('label_${l.id}')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);background:${_currentEmailFolder === 'label_' + l.id ? 'var(--accent-blue)' : 'var(--bg-card)'};color:${_currentEmailFolder === 'label_' + l.id ? '#fff' : 'var(--text-grey)'};font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">${l.icon} ${l.name} (${count})</button>`;
+        }
+    });
+    
+    container.innerHTML = html;
 }
 
 async function loadBandejaInbox() {
@@ -4625,6 +4715,8 @@ async function loadBandejaInbox() {
         _allEmailLogs = logs || [];
 
         document.getElementById('email-total-count').textContent = `${_allEmailLogs.length} correos`;
+        refreshLabelSelect();
+        refreshFolderTabs();
         renderEmailList();
     } catch (e) {
         console.error('Email log load error:', e);
@@ -4664,6 +4756,9 @@ function renderEmailList() {
         filtered = filtered.filter(l => l.email_type === 'manual' || l.email_type === 'compose');
     } else if (_currentEmailFolder === 'starred') {
         filtered = filtered.filter(l => starred.includes(l.id));
+    } else if (_currentEmailFolder.startsWith('label_')) {
+        const labelId = _currentEmailFolder.replace('label_', '');
+        filtered = filtered.filter(l => labels[l.id] === labelId);
     }
 
     // Search filter
@@ -4683,7 +4778,9 @@ function renderEmailList() {
         return;
     }
 
-    const labelIcons = { importante: '🔴', seguimiento: '🟡', respondido: '🟢', archivado: '⚫' };
+    const allLabels = _getAllLabels();
+    const labelIcons = {};
+    allLabels.forEach(l => { labelIcons[l.id] = l.icon; });
 
     let html = '';
     filtered.forEach((log, idx) => {
@@ -4797,7 +4894,14 @@ function toggleEmailStar() {
 
 function setEmailLabel(label) {
     if (!_currentViewEmail) return;
+    if (label === '__create__') {
+        createCustomLabel();
+        const sel = document.getElementById('email-label-select');
+        if (sel) sel.value = '';
+        return;
+    }
     _setEmailLabel(_currentViewEmail.id, label);
+    refreshFolderTabs();
     renderEmailList();
 }
 
@@ -5809,28 +5913,56 @@ async function openComposeEmailModal() {
         showAlert('Restringido', 'El usuario Invitado tiene acceso de solo lectura', '🔒');
         return;
     }
-    const select = document.getElementById('compose-email-to');
-    select.innerHTML = '';
-    
-    // Merge leads from outreach + registry, deduplicate by email
-    const allLeads = [...(outreachLeadsList || [])];
-    if (_allLeadsGridData && _allLeadsGridData.length > 0) {
-        const existing = new Set(allLeads.map(l => l.email));
-        _allLeadsGridData.forEach(l => {
-            if (!existing.has(l.email)) allLeads.push(l);
+    try {
+        // Load leads if not loaded yet
+        if (!outreachLeadsList || outreachLeadsList.length === 0) {
+            await fetchOutreachLeadsList();
+        }
+        
+        const select = document.getElementById('compose-email-to');
+        if (!select) { console.error('compose-email-to not found'); return; }
+        select.innerHTML = '';
+        
+        // Merge leads from outreach + registry, deduplicate by email
+        const allLeads = [...(outreachLeadsList || [])];
+        if (typeof _allLeadsGridData !== 'undefined' && _allLeadsGridData && _allLeadsGridData.length > 0) {
+            const existing = new Set(allLeads.map(l => l.email));
+            _allLeadsGridData.forEach(l => {
+                if (l.email && !existing.has(l.email)) allLeads.push(l);
+            });
+        }
+        
+        allLeads.forEach(l => {
+            if (!l.email) return;
+            const opt = document.createElement('option');
+            opt.value = l.email;
+            opt.textContent = `${l.first_name || 'Prospecto'} (${l.company_name || '—'}) - ${l.email}`;
+            select.appendChild(opt);
         });
+        
+        // Always add custom email option
+        const customOpt = document.createElement('option');
+        customOpt.value = '__custom__';
+        customOpt.textContent = '✏️ Escribir otro email...';
+        select.appendChild(customOpt);
+        
+        // Reset custom input
+        const customInput = document.getElementById('compose-custom-email');
+        if (customInput) { customInput.style.display = 'none'; customInput.value = ''; }
+        
+        document.getElementById('compose-email-subject').value = '';
+        document.getElementById('compose-email-body').value = '';
+        
+        // Reset attachments
+        window._composeAttachments = [];
+        const attachList = document.getElementById('compose-attachments-list');
+        if (attachList) attachList.innerHTML = '';
+        
+        document.getElementById('email-compose-modal').style.display = 'flex';
+    } catch(e) {
+        console.error('Error opening compose modal:', e);
+        showAlert('Error', 'No se pudo abrir el compositor de correo: ' + e.message, '❌');
     }
-    
-    allLeads.forEach(l => {
-        const opt = document.createElement('option');
-        opt.value = l.email;
-        opt.textContent = `${l.first_name || 'Prospecto'} (${l.company_name || '—'}) - ${l.email}`;
-        select.appendChild(opt);
-    });
-    
-    document.getElementById('compose-email-subject').value = '';
-    document.getElementById('compose-email-body').value = '';
-    document.getElementById('email-compose-modal').style.display = 'flex';
 }
 
 function closeComposeEmailModal() {
@@ -6355,6 +6487,8 @@ window.filterEmailList = filterEmailList;
 window.selectEmailItem = selectEmailItem;
 window.toggleEmailStar = toggleEmailStar;
 window.setEmailLabel = setEmailLabel;
+window.createCustomLabel = createCustomLabel;
+window.deleteCustomLabel = deleteCustomLabel;
 window.replyToEmail = replyToEmail;
 window.forwardEmail = forwardEmail;
 window.closeComposeEmailModal = closeComposeEmailModal;
