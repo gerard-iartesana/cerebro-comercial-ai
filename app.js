@@ -2099,8 +2099,8 @@ async function loadStorageData() {
         const cats = data.stats?.categories || {};
         const catConfig = {
             contratos: { label: 'Contratos', color: '#ff453a', bgColor: 'rgba(255,69,58,0.1)', icon: '📝' },
+            propuestas: { label: 'Propuestas', color: '#af52de', bgColor: 'rgba(175,82,222,0.1)', icon: '📨' },
             imagenes: { label: 'Imágenes', color: '#007AFF', bgColor: 'rgba(0,113,227,0.1)', icon: '🖼️' },
-            adjuntos: { label: 'Adjuntos', color: '#34c759', bgColor: 'rgba(52,199,89,0.1)', icon: '📎' },
             documentos: { label: 'Documentos', color: '#ff9500', bgColor: 'rgba(255,149,0,0.1)', icon: '📄' },
             otros: { label: 'Otros', color: '#8e8e93', bgColor: 'rgba(142,142,147,0.1)', icon: '📦' }
         };
@@ -2122,35 +2122,58 @@ async function loadStorageData() {
         if (files.length === 0) {
             fileList.innerHTML = `<div style="text-align:center;padding:40px 20px"><div style="font-size:2.5rem;margin-bottom:12px;opacity:0.4">📂</div><div style="font-size:0.85rem;color:var(--text-grey);font-weight:500">No hay archivos en Storage</div><div style="font-size:0.72rem;color:var(--text-grey);margin-top:4px">Los contratos firmados se guardarán aquí automáticamente.</div></div>`;
         } else {
-            const iconMap = { pdf: '📕', doc: '📘', docx: '📘', xls: '📊', xlsx: '📊', csv: '📊', jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', svg: '🎨', webp: '🖼️', zip: '📦', rar: '📦', txt: '📝' };
+            const iconMap = { pdf: '📕', doc: '📘', docx: '📘', xls: '📊', xlsx: '📊', csv: '📊', jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', svg: '🎨', webp: '🖼️', zip: '📦', rar: '📦', txt: '📝', html: '🌐' };
             const catBadges = {
                 contratos: { label: 'Contrato', bg: 'rgba(255,69,58,0.1)', color: '#ff453a' },
+                propuestas: { label: 'Propuesta', bg: 'rgba(175,82,222,0.1)', color: '#af52de' },
                 imagenes: { label: 'Imagen', bg: 'rgba(0,113,227,0.1)', color: '#007AFF' },
                 documentos: { label: 'Documento', bg: 'rgba(255,149,0,0.1)', color: '#ff9500' },
-                adjuntos: { label: 'Adjunto', bg: 'rgba(52,199,89,0.1)', color: '#34c759' },
                 otros: { label: 'Otro', bg: 'rgba(142,142,147,0.1)', color: '#8e8e93' }
             };
             let html = '';
             files.forEach(f => {
                 const ext = (f.name.split('.').pop() || '').toLowerCase();
-                const icon = iconMap[ext] || '📄';
+                let icon = iconMap[ext] || '📄';
+                if (f.source === 'db_contratos') icon = '📝';
+                if (f.source === 'db_propuestas') icon = '📨';
+                
                 const dateStr = f.created_at ? new Date(f.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
                 const badge = catBadges[f.category] || catBadges.otros;
-                const pathDisplay = f.path || f.name;
+                const sourceLabel = f.source === 'db_contratos' ? 'Base de datos' : f.source === 'db_propuestas' ? 'Base de datos' : f.bucket;
+                
+                // Estado badge for DB items
+                let estadoHtml = '';
+                if (f.meta && f.meta.estado_label) {
+                    const isGreen = f.meta.estado_label.includes('Firmado') || f.meta.estado_label.includes('Aceptada');
+                    const isRed = f.meta.estado_label.includes('Rechazada');
+                    const estadoColor = isGreen ? '#34c759' : isRed ? '#ff453a' : '#ff9500';
+                    const estadoBg = isGreen ? 'rgba(52,199,89,0.1)' : isRed ? 'rgba(255,59,48,0.1)' : 'rgba(255,149,0,0.1)';
+                    estadoHtml = `<span style="padding:2px 8px;border-radius:5px;background:${estadoBg};color:${estadoColor};font-size:0.62rem;font-weight:700;white-space:nowrap">${f.meta.estado_label}</span>`;
+                }
+
+                // Action button
+                let actionHtml = '';
+                if (f.url) {
+                    actionHtml = `<a href="${f.url}" target="_blank" style="color:#007AFF;font-size:0.75rem;font-weight:600;text-decoration:none;white-space:nowrap;padding:4px 10px;border-radius:6px;border:1px solid rgba(0,113,227,0.2);background:rgba(0,113,227,0.04);transition:all 0.15s" onmouseenter="this.style.background='rgba(0,113,227,0.1)'" onmouseleave="this.style.background='rgba(0,113,227,0.04)'">⬇️ Abrir</a>`;
+                }
+
                 html += `<div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border-color);transition:background 0.15s" onmouseenter="this.style.background='var(--bg-hover)'" onmouseleave="this.style.background='transparent'">
                     <span style="font-size:1.4rem">${icon}</span>
                     <div style="flex:1;min-width:0">
                         <div style="font-size:0.82rem;font-weight:600;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
-                        <div style="font-size:0.68rem;color:var(--text-grey);margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                            <span>📁 ${f.bucket}/${pathDisplay}</span>
+                        <div style="font-size:0.68rem;color:var(--text-grey);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                            <span>📁 ${sourceLabel}</span>
                             <span>·</span>
                             <span>${formatFileSize(f.size)}</span>
                             <span>·</span>
                             <span>${dateStr}</span>
                         </div>
                     </div>
-                    <span style="padding:2px 8px;border-radius:5px;background:${badge.bg};color:${badge.color};font-size:0.62rem;font-weight:700;white-space:nowrap">${badge.label}</span>
-                    ${f.url ? `<a href="${f.url}" target="_blank" style="color:#007AFF;font-size:0.75rem;font-weight:600;text-decoration:none;white-space:nowrap;padding:4px 10px;border-radius:6px;border:1px solid rgba(0,113,227,0.2);background:rgba(0,113,227,0.04);transition:all 0.15s" onmouseenter="this.style.background='rgba(0,113,227,0.1)'" onmouseleave="this.style.background='rgba(0,113,227,0.04)'">⬇️ Abrir</a>` : ''}
+                    <div style="display:flex;align-items:center;gap:6px">
+                        ${estadoHtml}
+                        <span style="padding:2px 8px;border-radius:5px;background:${badge.bg};color:${badge.color};font-size:0.62rem;font-weight:700;white-space:nowrap">${badge.label}</span>
+                        ${actionHtml}
+                    </div>
                 </div>`;
             });
             fileList.innerHTML = html;
