@@ -197,25 +197,24 @@ async function handleGet(req, res, supabase) {
       .single();
 
     if (fetchErr) {
-      return error(res, `Formulario no encontrado: ${fetchErr.message}`, 404);
+      return json(res, { success: false, error: `Formulario no encontrado: ${fetchErr.message}` }, 404);
     }
 
     // Optionally include responses
+    let respuestasData = [];
     if (respuestas === 'true') {
-      const { data: respuestasData, error: respErr } = await supabase
+      const { data: rData, error: respErr } = await supabase
         .from('formularios_respuestas')
         .select('*')
         .eq('formulario_id', id)
         .order('created_at', { ascending: false });
 
-      if (respErr) {
-        return error(res, `Error al obtener respuestas: ${respErr.message}`, 500);
+      if (!respErr) {
+        respuestasData = rData || [];
       }
-
-      data.respuestas = respuestasData || [];
     }
 
-    return json(res, data);
+    return json(res, { success: true, formulario: data, respuestas: respuestasData });
   }
 
   // ── List all formularios ──────────────────────────────────────────────
@@ -225,10 +224,10 @@ async function handleGet(req, res, supabase) {
     .order('created_at', { ascending: false });
 
   if (listErr) {
-    return error(res, `Error al listar formularios: ${listErr.message}`, 500);
+    return json(res, { success: false, error: `Error al listar formularios: ${listErr.message}` }, 500);
   }
 
-  return json(res, data);
+  return json(res, { success: true, formularios: data || [] });
 }
 
 // ─── POST ────────────────────────────────────────────────────────────────────
@@ -255,10 +254,10 @@ async function handlePost(req, res, supabase) {
     .single();
 
   if (insertErr) {
-    return error(res, `Error al crear formulario: ${insertErr.message}`, 500);
+    return json(res, { success: false, error: `Error al crear formulario: ${insertErr.message}` }, 500);
   }
 
-  return json(res, data, 201);
+  return json(res, { success: true, formulario: data }, 201);
 }
 
 // ─── PUT ─────────────────────────────────────────────────────────────────────
@@ -292,10 +291,10 @@ async function handlePut(req, res, supabase) {
     .single();
 
   if (updateErr) {
-    return error(res, `Error al actualizar formulario: ${updateErr.message}`, 500);
+    return json(res, { success: false, error: `Error al actualizar formulario: ${updateErr.message}` }, 500);
   }
 
-  return json(res, data);
+  return json(res, { success: true, formulario: data });
 }
 
 // ─── DELETE ──────────────────────────────────────────────────────────────────
@@ -318,8 +317,8 @@ async function handleDelete(req, res, supabase) {
     .eq('id', id);
 
   if (deleteErr) {
-    return error(res, `Error al eliminar formulario: ${deleteErr.message}`, 500);
+    return json(res, { success: false, error: `Error al eliminar formulario: ${deleteErr.message}` }, 500);
   }
 
-  return json(res, { ok: true, message: 'Formulario eliminado correctamente' });
+  return json(res, { success: true, message: 'Formulario eliminado correctamente' });
 }
