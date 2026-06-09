@@ -184,6 +184,8 @@ function switchConfigTab(tabName) {
     if (tabName === 'storage') loadStorageData();
     // Auto-load contratos when switching to the contracts tab
     if (tabName === 'contracts') loadContratos();
+    // Auto-load activity log when switching to the actividad tab
+    if (tabName === 'actividad') loadActivityLog();
 }
 
 // ── User Management ──────────────────────────────────────────
@@ -1752,6 +1754,224 @@ function formatFileSize(bytes) {
     const units = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+}
+
+// ── Activity Log (Configuración > Actividad) ──────────────────────
+async function loadActivityLog() {
+    const statsEl = document.getElementById('activity-stats');
+    const timelineEl = document.getElementById('activity-timeline');
+    const footerEl = document.getElementById('activity-footer');
+    if (!timelineEl) return;
+
+    // Show loading
+    timelineEl.innerHTML = '<div style="position:absolute;left:5px;top:0;bottom:0;width:2px;background:var(--border-color)"></div><div style="text-align:center;padding:40px;color:var(--text-grey);font-size:0.85rem;">⏳ Cargando actividad...</div>';
+
+    try {
+        // Fetch all activity sources in parallel
+        const [leadsRes, propEnvRes, presRes, contratosRes] = await Promise.all([
+            _supabase.from('outreach_leads').select('id, first_name, last_name, email, company_name, status, created_at, updated_at').order('created_at', { ascending: false }).limit(200),
+            _supabase.from('propuestas_enviadas').select('id, lead_nombre, lead_email, titulo, estado, enviado_at, created_at').order('created_at', { ascending: false }).limit(100),
+            _supabase.from('presupuestos').select('id, titulo, categoria, created_at, updated_at').order('created_at', { ascending: false }).limit(100),
+            _supabase.from('contratos').select('id, titulo, cliente_nombre, estado, created_at, updated_at').order('created_at', { ascending: false }).limit(50)
+        ]);
+
+        const leads = leadsRes.data || [];
+        const propEnv = propEnvRes.data || [];
+        const pres = presRes.data || [];
+        const contratos = contratosRes.data || [];
+
+        // Build unified events list
+        const events = [];
+
+        // Lead events
+        leads.forEach(l => {
+            events.push({
+                date: l.created_at,
+                icon: '🎯',
+                user: 'sistema',
+                action: 'Crear',
+                actionBg: 'rgba(52,199,89,0.1)',
+                actionColor: '#34c759',
+                desc: `Lead registrado: ${l.first_name || ''} ${l.last_name || ''} ${l.company_name ? '(' + l.company_name + ')' : ''}`.trim(),
+                section: 'Leads',
+                sectionBg: 'rgba(52,199,89,0.1)',
+                sectionColor: '#34c759'
+            });
+            if (l.status === 'cliente') {
+                events.push({
+                    date: l.updated_at || l.created_at,
+                    icon: '✅',
+                    user: 'sistema',
+                    action: 'Convertir',
+                    actionBg: 'rgba(52,199,89,0.1)',
+                    actionColor: '#34c759',
+                    desc: `Lead convertido a cliente: ${l.first_name || ''} ${l.last_name || ''}`,
+                    section: 'Leads',
+                    sectionBg: 'rgba(52,199,89,0.1)',
+                    sectionColor: '#34c759'
+                });
+            }
+        });
+
+        // Propuestas enviadas events
+        propEnv.forEach(pe => {
+            events.push({
+                date: pe.enviado_at || pe.created_at,
+                icon: '📧',
+                user: 'gerard',
+                action: 'Enviar',
+                actionBg: 'rgba(255,69,58,0.1)',
+                actionColor: '#ff453a',
+                desc: `Propuesta enviada a ${pe.lead_nombre || 'lead'}: ${pe.titulo || 'Sin título'}`,
+                section: 'Propuestas',
+                sectionBg: 'rgba(175,82,222,0.1)',
+                sectionColor: '#af52de'
+            });
+            if (pe.estado === 'aceptada') {
+                events.push({
+                    date: pe.created_at, // approximate
+                    icon: '🎉',
+                    user: pe.lead_nombre || 'cliente',
+                    action: 'Aceptar',
+                    actionBg: 'rgba(52,199,89,0.1)',
+                    actionColor: '#34c759',
+                    desc: `Propuesta aceptada por ${pe.lead_nombre || 'cliente'}: ${pe.titulo || ''}`,
+                    section: 'Propuestas',
+                    sectionBg: 'rgba(175,82,222,0.1)',
+                    sectionColor: '#af52de'
+                });
+            }
+        });
+
+        // Presupuestos (templates) events
+        pres.forEach(p => {
+            events.push({
+                date: p.created_at,
+                icon: '📄',
+                user: 'gerard',
+                action: 'Crear',
+                actionBg: 'rgba(0,113,227,0.1)',
+                actionColor: '#007AFF',
+                desc: `Presupuesto creado: ${p.titulo || 'Sin título'}`,
+                section: 'Presupuestos',
+                sectionBg: 'rgba(0,113,227,0.1)',
+                sectionColor: '#007AFF'
+            });
+        });
+
+        // Contratos events
+        contratos.forEach(c => {
+            events.push({
+                date: c.created_at,
+                icon: '📝',
+                user: 'sistema',
+                action: 'Crear',
+                actionBg: 'rgba(255,149,0,0.1)',
+                actionColor: '#ff9500',
+                desc: `Contrato creado: ${c.titulo || 'Sin título'} — ${c.cliente_nombre || ''}`,
+                section: 'Contratos',
+                sectionBg: 'rgba(255,149,0,0.1)',
+                sectionColor: '#ff9500'
+            });
+            if (c.estado === 'firmado') {
+                events.push({
+                    date: c.updated_at || c.created_at,
+                    icon: '✍️',
+                    user: c.cliente_nombre || 'cliente',
+                    action: 'Firmar',
+                    actionBg: 'rgba(52,199,89,0.1)',
+                    actionColor: '#34c759',
+                    desc: `Contrato firmado: ${c.titulo || ''} por ${c.cliente_nombre || ''}`,
+                    section: 'Contratos',
+                    sectionBg: 'rgba(255,149,0,0.1)',
+                    sectionColor: '#ff9500'
+                });
+            }
+        });
+
+        // Sort by date descending
+        events.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // Render stats
+        const statsData = [
+            { icon: '🎯', count: leads.length, label: 'Leads' },
+            { icon: '📄', count: pres.length, label: 'Presupuestos' },
+            { icon: '📧', count: propEnv.length, label: 'Enviadas' },
+            { icon: '✅', count: propEnv.filter(p => p.estado === 'aceptada').length, label: 'Aceptadas' },
+            { icon: '📝', count: contratos.length, label: 'Contratos' },
+            { icon: '✍️', count: contratos.filter(c => c.estado === 'firmado').length, label: 'Firmados' }
+        ];
+
+        if (statsEl) {
+            statsEl.innerHTML = statsData.map(s => `
+                <div style="padding:14px 12px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-card);display:flex;align-items:center;gap:10px">
+                    <span style="font-size:1.1rem">${s.icon}</span>
+                    <div><div style="font-size:1.1rem;font-weight:800;color:var(--text-main)">${s.count}</div><div style="font-size:0.65rem;color:var(--text-grey);font-weight:500">${s.label}</div></div>
+                </div>
+            `).join('');
+        }
+
+        // Group events by date
+        const grouped = {};
+        events.forEach(ev => {
+            const d = new Date(ev.date);
+            const key = d.toISOString().split('T')[0];
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(ev);
+        });
+
+        // Render timeline
+        let html = '<div style="position:absolute;left:5px;top:0;bottom:0;width:2px;background:var(--border-color)"></div>';
+
+        const sortedDays = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+        // Limit to last 30 days for performance
+        const recentDays = sortedDays.slice(0, 30);
+
+        recentDays.forEach(day => {
+            const d = new Date(day + 'T12:00:00');
+            const dayLabel = d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            const capitalLabel = dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1);
+
+            html += `
+                <div style="position:relative;margin-bottom:6px">
+                    <div style="position:absolute;left:-20px;top:4px;width:12px;height:12px;border-radius:50%;background:#007AFF;border:2px solid var(--bg-main);z-index:1"></div>
+                    <h4 style="font-size:0.82rem;font-weight:700;color:var(--text-main);padding:0 0 8px 8px">${capitalLabel}</h4>
+                </div>
+            `;
+
+            grouped[day].forEach(ev => {
+                const time = new Date(ev.date).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                html += `
+                    <div style="position:relative;margin-left:8px;margin-bottom:12px">
+                        <div style="position:absolute;left:-24px;top:14px;width:8px;height:8px;border-radius:50%;background:rgba(0,122,255,0.3);z-index:1"></div>
+                        <div style="padding:12px 16px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-card);display:flex;justify-content:space-between;align-items:flex-start">
+                            <div>
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                                    <span style="font-size:0.85rem">${ev.icon}</span>
+                                    <span style="font-weight:600;font-size:0.82rem;color:var(--text-main)">${ev.user}</span>
+                                    <span style="padding:2px 8px;border-radius:5px;background:${ev.actionBg};color:${ev.actionColor};font-size:0.65rem;font-weight:800;text-transform:uppercase">${ev.action}</span>
+                                </div>
+                                <div style="font-size:0.78rem;color:var(--text-grey);margin-bottom:3px">${ev.desc}</div>
+                                <div style="display:flex;align-items:center;gap:4px"><span style="padding:2px 8px;border-radius:5px;background:${ev.sectionBg};color:${ev.sectionColor};font-size:0.62rem;font-weight:700">${ev.section}</span></div>
+                            </div>
+                            <span style="font-size:0.72rem;color:var(--text-grey);white-space:nowrap;margin-left:12px">${time}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+
+        if (events.length === 0) {
+            html += '<div style="text-align:center;padding:40px;color:var(--text-grey);font-size:0.85rem;">No hay actividad registrada todavía</div>';
+        }
+
+        timelineEl.innerHTML = html;
+        if (footerEl) footerEl.textContent = `Mostrando ${events.length} registros · ${recentDays.length} días · Actualizado: ${new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'})}`;
+
+    } catch (err) {
+        console.error('loadActivityLog error:', err);
+        timelineEl.innerHTML = '<div style="position:absolute;left:5px;top:0;bottom:0;width:2px;background:var(--border-color)"></div><div style="text-align:center;padding:40px;color:var(--accent-red);font-size:0.85rem;">❌ Error al cargar la actividad</div>';
+    }
 }
 
 async function loadStorageData() {

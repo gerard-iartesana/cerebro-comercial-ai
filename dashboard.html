@@ -2761,171 +2761,23 @@
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
                         <div>
                             <h3 style="font-size:1rem;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:8px">📋 Registro de Actividad</h3>
-                            <p style="font-size:0.75rem;color:var(--text-grey);margin:4px 0 0">Quién editó qué y cuándo — Historial completo de acciones</p>
+                            <p style="font-size:0.75rem;color:var(--text-grey);margin:4px 0 0">Historial en tiempo real — se actualiza automáticamente desde la base de datos</p>
                         </div>
-                        <button class="btn-primary" style="padding:8px 18px;font-size:0.8rem;background:linear-gradient(135deg,#34c759,#30d158);display:flex;align-items:center;gap:6px" onclick="showAlert('Actualizado','Registro de actividad actualizado.','✅')">🔄 Actualizar</button>
+                        <button class="btn-primary" style="padding:8px 18px;font-size:0.8rem;background:linear-gradient(135deg,#34c759,#30d158);display:flex;align-items:center;gap:6px" onclick="loadActivityLog()">🔄 Actualizar</button>
                     </div>
 
-                    <!-- Filters row -->
-                    <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap">
-                        <div style="display:flex;align-items:center;gap:6px">
-                            <label style="font-size:0.75rem;color:var(--text-grey);font-weight:600;white-space:nowrap">Sección:</label>
-                            <select class="cfg-input" style="width:auto;min-width:120px;padding:6px 10px;font-size:0.78rem">
-                                <option>Todas</option><option>Leads</option><option>Outreach</option><option>Propuestas</option><option>Emails</option><option>Calendario</option><option>Config</option>
-                            </select>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:6px">
-                            <label style="font-size:0.75rem;color:var(--text-grey);font-weight:600;white-space:nowrap">Usuario:</label>
-                            <select class="cfg-input" style="width:auto;min-width:120px;padding:6px 10px;font-size:0.78rem">
-                                <option>Todos</option><option>Gerard</option><option>Admin</option><option>Cliente</option><option>Invitado</option>
-                            </select>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:6px">
-                            <label style="font-size:0.75rem;color:var(--text-grey);font-weight:600;white-space:nowrap">Período:</label>
-                            <select class="cfg-input" style="width:auto;min-width:130px;padding:6px 10px;font-size:0.78rem">
-                                <option>Último mes</option><option>Última semana</option><option>Últimos 3 meses</option><option>Todo</option>
-                            </select>
-                        </div>
+                    <!-- Stats counters (dynamic) -->
+                    <div id="activity-stats" style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:24px">
+                        <!-- Populated by JS -->
                     </div>
 
-                    <!-- Stats counters -->
-                    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:24px">
-                        <div style="padding:14px 12px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-card);display:flex;align-items:center;gap:10px">
-                            <span style="font-size:1.1rem">📄</span>
-                            <div><div style="font-size:1.1rem;font-weight:800;color:var(--text-main)">23</div><div style="font-size:0.65rem;color:var(--text-grey);font-weight:500">Propuestas</div></div>
-                        </div>
-                        <div style="padding:14px 12px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-card);display:flex;align-items:center;gap:10px">
-                            <span style="font-size:1.1rem">🎯</span>
-                            <div><div style="font-size:1.1rem;font-weight:800;color:var(--text-main)">63</div><div style="font-size:0.65rem;color:var(--text-grey);font-weight:500">Leads</div></div>
-                        </div>
-                        <div style="padding:14px 12px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-card);display:flex;align-items:center;gap:10px">
-                            <span style="font-size:1.1rem">✅</span>
-                            <div><div style="font-size:1.1rem;font-weight:800;color:var(--text-main)">10</div><div style="font-size:0.65rem;color:var(--text-grey);font-weight:500">Tareas</div></div>
-                        </div>
-                        <div style="padding:14px 12px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-card);display:flex;align-items:center;gap:10px">
-                            <span style="font-size:1.1rem">⚙️</span>
-                            <div><div style="font-size:1.1rem;font-weight:800;color:var(--text-main)">2</div><div style="font-size:0.65rem;color:var(--text-grey);font-weight:500">Config</div></div>
-                        </div>
-                        <div style="padding:14px 12px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-card);display:flex;align-items:center;gap:10px">
-                            <span style="font-size:1.1rem">📧</span>
-                            <div><div style="font-size:1.1rem;font-weight:800;color:var(--text-main)">5</div><div style="font-size:0.65rem;color:var(--text-grey);font-weight:500">Emails</div></div>
-                        </div>
-                        <div style="padding:14px 12px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-card);display:flex;align-items:center;gap:10px">
-                            <span style="font-size:1.1rem">📅</span>
-                            <div><div style="font-size:1.1rem;font-weight:800;color:var(--text-main)">1</div><div style="font-size:0.65rem;color:var(--text-grey);font-weight:500">Calendario</div></div>
-                        </div>
-                    </div>
-
-                    <!-- Timeline -->
-                    <div style="position:relative;padding-left:20px">
-                        <!-- Vertical line -->
+                    <!-- Timeline (dynamic) -->
+                    <div id="activity-timeline" style="position:relative;padding-left:20px">
                         <div style="position:absolute;left:5px;top:0;bottom:0;width:2px;background:var(--border-color)"></div>
-
-                        <!-- Date: Martes 3 Junio -->
-                        <div style="position:relative;margin-bottom:6px">
-                            <div style="position:absolute;left:-20px;top:4px;width:12px;height:12px;border-radius:50%;background:#007AFF;border:2px solid var(--bg-main);z-index:1"></div>
-                            <h4 style="font-size:0.82rem;font-weight:700;color:var(--text-main);padding:0 0 8px 8px">Martes, 3 De Junio De 2026</h4>
-                        </div>
-
-                        <!-- Entry -->
-                        <div style="position:relative;margin-left:8px;margin-bottom:16px">
-                            <div style="position:absolute;left:-24px;top:14px;width:8px;height:8px;border-radius:50%;background:rgba(0,122,255,0.3);z-index:1"></div>
-                            <div style="padding:12px 16px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-card);display:flex;justify-content:space-between;align-items:flex-start">
-                                <div>
-                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-                                        <span style="font-size:0.85rem">📁</span>
-                                        <span style="font-weight:600;font-size:0.82rem;color:var(--text-main)">gerard</span>
-                                        <span style="padding:2px 8px;border-radius:5px;background:rgba(0,113,227,0.1);color:#007AFF;font-size:0.65rem;font-weight:800;text-transform:uppercase">Editar</span>
-                                    </div>
-                                    <div style="font-size:0.78rem;color:var(--text-grey);margin-bottom:3px">Ha editado cadena de outreach "Serie Eventos"</div>
-                                    <div style="display:flex;align-items:center;gap:4px"><span style="padding:2px 8px;border-radius:5px;background:rgba(255,149,0,0.1);color:#ff9500;font-size:0.62rem;font-weight:700">Outreach</span></div>
-                                </div>
-                                <span style="font-size:0.72rem;color:var(--text-grey);white-space:nowrap;margin-left:12px">18:15</span>
-                            </div>
-                        </div>
-
-                        <!-- Entry -->
-                        <div style="position:relative;margin-left:8px;margin-bottom:20px">
-                            <div style="position:absolute;left:-24px;top:14px;width:8px;height:8px;border-radius:50%;background:rgba(0,122,255,0.3);z-index:1"></div>
-                            <div style="padding:12px 16px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-card);display:flex;justify-content:space-between;align-items:flex-start">
-                                <div>
-                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-                                        <span style="font-size:0.85rem">📄</span>
-                                        <span style="font-weight:600;font-size:0.82rem;color:var(--text-main)">gerard</span>
-                                        <span style="padding:2px 8px;border-radius:5px;background:rgba(52,199,89,0.1);color:#34c759;font-size:0.65rem;font-weight:800;text-transform:uppercase">Crear</span>
-                                    </div>
-                                    <div style="font-size:0.78rem;color:var(--text-grey);margin-bottom:3px">Propuesta creada: Landing + CRM + Agentes + Adds</div>
-                                    <div style="display:flex;align-items:center;gap:4px"><span style="padding:2px 8px;border-radius:5px;background:rgba(175,82,222,0.1);color:#af52de;font-size:0.62rem;font-weight:700">Propuestas</span></div>
-                                </div>
-                                <span style="font-size:0.72rem;color:var(--text-grey);white-space:nowrap;margin-left:12px">14:23</span>
-                            </div>
-                        </div>
-
-                        <!-- Date: Viernes 30 Mayo -->
-                        <div style="position:relative;margin-bottom:6px">
-                            <div style="position:absolute;left:-20px;top:4px;width:12px;height:12px;border-radius:50%;background:#007AFF;border:2px solid var(--bg-main);z-index:1"></div>
-                            <h4 style="font-size:0.82rem;font-weight:700;color:var(--text-main);padding:0 0 8px 8px">Viernes, 30 De Mayo De 2026</h4>
-                        </div>
-
-                        <!-- Entry -->
-                        <div style="position:relative;margin-left:8px;margin-bottom:16px">
-                            <div style="position:absolute;left:-24px;top:14px;width:8px;height:8px;border-radius:50%;background:rgba(0,122,255,0.3);z-index:1"></div>
-                            <div style="padding:12px 16px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-card);display:flex;justify-content:space-between;align-items:flex-start">
-                                <div>
-                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-                                        <span style="font-size:0.85rem">📧</span>
-                                        <span style="font-weight:600;font-size:0.82rem;color:var(--text-main)">gerard</span>
-                                        <span style="padding:2px 8px;border-radius:5px;background:rgba(255,69,58,0.1);color:#ff453a;font-size:0.65rem;font-weight:800;text-transform:uppercase">Enviar</span>
-                                    </div>
-                                    <div style="font-size:0.78rem;color:var(--text-grey);margin-bottom:3px">Email enviado a Club Baloncesto Menorca (info@cbmenorca.com)</div>
-                                    <div style="display:flex;align-items:center;gap:4px"><span style="padding:2px 8px;border-radius:5px;background:rgba(0,113,227,0.1);color:#007AFF;font-size:0.62rem;font-weight:700">Emails</span></div>
-                                </div>
-                                <span style="font-size:0.72rem;color:var(--text-grey);white-space:nowrap;margin-left:12px">20:01</span>
-                            </div>
-                        </div>
-
-                        <!-- Entry -->
-                        <div style="position:relative;margin-left:8px;margin-bottom:20px">
-                            <div style="position:absolute;left:-24px;top:14px;width:8px;height:8px;border-radius:50%;background:rgba(0,122,255,0.3);z-index:1"></div>
-                            <div style="padding:12px 16px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-card);display:flex;justify-content:space-between;align-items:flex-start">
-                                <div>
-                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-                                        <span style="font-size:0.85rem">📄</span>
-                                        <span style="font-weight:600;font-size:0.82rem;color:var(--text-main)">gerard</span>
-                                        <span style="padding:2px 8px;border-radius:5px;background:rgba(0,113,227,0.1);color:#007AFF;font-size:0.65rem;font-weight:800;text-transform:uppercase">Editar</span>
-                                    </div>
-                                    <div style="font-size:0.78rem;color:var(--text-grey);margin-bottom:3px">Propuesta editada: Sesión Puntual</div>
-                                    <div style="display:flex;align-items:center;gap:4px"><span style="padding:2px 8px;border-radius:5px;background:rgba(175,82,222,0.1);color:#af52de;font-size:0.62rem;font-weight:700">Propuestas</span></div>
-                                </div>
-                                <span style="font-size:0.72rem;color:var(--text-grey);white-space:nowrap;margin-left:12px">09:20</span>
-                            </div>
-                        </div>
-
-                        <!-- Date: Lunes 26 Mayo -->
-                        <div style="position:relative;margin-bottom:6px">
-                            <div style="position:absolute;left:-20px;top:4px;width:12px;height:12px;border-radius:50%;background:#007AFF;border:2px solid var(--bg-main);z-index:1"></div>
-                            <h4 style="font-size:0.82rem;font-weight:700;color:var(--text-main);padding:0 0 8px 8px">Lunes, 26 De Mayo De 2026</h4>
-                        </div>
-
-                        <!-- Entry -->
-                        <div style="position:relative;margin-left:8px;margin-bottom:16px">
-                            <div style="position:absolute;left:-24px;top:14px;width:8px;height:8px;border-radius:50%;background:rgba(0,122,255,0.3);z-index:1"></div>
-                            <div style="padding:12px 16px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-card);display:flex;justify-content:space-between;align-items:flex-start">
-                                <div>
-                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-                                        <span style="font-size:0.85rem">🎯</span>
-                                        <span style="font-weight:600;font-size:0.82rem;color:var(--text-main)">gerard</span>
-                                        <span style="padding:2px 8px;border-radius:5px;background:rgba(52,199,89,0.1);color:#34c759;font-size:0.65rem;font-weight:800;text-transform:uppercase">Crear</span>
-                                    </div>
-                                    <div style="font-size:0.78rem;color:var(--text-grey);margin-bottom:3px">63 leads importados desde Hunter.io — búsqueda "clubs baloncesto"</div>
-                                    <div style="display:flex;align-items:center;gap:4px"><span style="padding:2px 8px;border-radius:5px;background:rgba(52,199,89,0.1);color:#34c759;font-size:0.62rem;font-weight:700">Leads</span></div>
-                                </div>
-                                <span style="font-size:0.72rem;color:var(--text-grey);white-space:nowrap;margin-left:12px">11:45</span>
-                            </div>
-                        </div>
+                        <div style="text-align:center;padding:40px;color:var(--text-grey);font-size:0.85rem;">Cargando actividad...</div>
                     </div>
 
-                    <p style="text-align:center;font-size:0.72rem;color:var(--text-grey);margin-top:8px">Mostrando 5 registros · Último mes</p>
+                    <p id="activity-footer" style="text-align:center;font-size:0.72rem;color:var(--text-grey);margin-top:8px"></p>
                 </div>
 
                 <div class="cfg-panel" id="cfg-sync">
@@ -3844,6 +3696,6 @@
     </div>
 
     <!-- App Scripts -->
-    <script src="app.js?v=20260608e"></script>
+    <script src="app.js?v=20260609a"></script>
 </body>
 </html>
