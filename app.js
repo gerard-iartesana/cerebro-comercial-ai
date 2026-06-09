@@ -4616,8 +4616,6 @@ async function loadBandejaInbox() {
                 subject,
                 body,
                 sent_at,
-                cadena_num,
-                step_num,
                 outreach_leads (email, company_name, first_name)
             `)
             .order('sent_at', { ascending: false })
@@ -4769,7 +4767,7 @@ function viewEmailDetails(log) {
 
     // Full date
     const sentDate = new Date(log.sent_at);
-    document.getElementById('email-view-date').textContent = `📅 Enviado: ${sentDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} a las ${sentDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} · Tipo: ${log.email_type || '—'}${log.cadena_num ? ` · Cadena ${log.cadena_num}, paso ${log.step_num}` : ''}`;
+    document.getElementById('email-view-date').textContent = `📅 Enviado: ${sentDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} a las ${sentDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} · Tipo: ${log.email_type || '—'}`;
 
     // Body
     document.getElementById('email-view-body').innerHTML = log.body || '<span style="color:var(--text-grey)">(Sin contenido)</span>';
