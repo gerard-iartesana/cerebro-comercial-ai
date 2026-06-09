@@ -4587,6 +4587,25 @@ function switchEmailMainTab(tab) {
     }
 }
 
+let _allEmailLogs = [];
+let _currentEmailFolder = 'all';
+let _currentViewEmail = null;
+
+function _getStarredEmails() {
+    try { return JSON.parse(localStorage.getItem('cc_starred_emails') || '[]'); } catch { return []; }
+}
+function _setStarredEmails(arr) {
+    localStorage.setItem('cc_starred_emails', JSON.stringify(arr));
+}
+function _getEmailLabels() {
+    try { return JSON.parse(localStorage.getItem('cc_email_labels') || '{}'); } catch { return {}; }
+}
+function _setEmailLabel(id, label) {
+    const labels = _getEmailLabels();
+    if (label) labels[id] = label; else delete labels[id];
+    localStorage.setItem('cc_email_labels', JSON.stringify(labels));
+}
+
 async function loadBandejaInbox() {
     try {
         const { data: logs, error } = await _supabase
@@ -4597,55 +4616,222 @@ async function loadBandejaInbox() {
                 subject,
                 body,
                 sent_at,
+                cadena_num,
+                step_num,
                 outreach_leads (email, company_name, first_name)
             `)
-            .order('sent_at', { ascending: false });
+            .order('sent_at', { ascending: false })
+            .limit(500);
 
         if (error) throw error;
+        _allEmailLogs = logs || [];
 
-        const listDiv = document.getElementById('email-inbox-list');
-        listDiv.innerHTML = '';
-
-        if (!logs || logs.length === 0) {
-            listDiv.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-grey);font-size:0.8rem">No hay correos registrados</div>';
-            return;
-        }
-
-        logs.forEach((log, idx) => {
-            const item = document.createElement('div');
-            item.className = `email-list-item ${idx === 0 ? 'active' : ''}`;
-            
-            const dateStr = new Date(log.sent_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-            const lead = log.outreach_leads || { email: 'Desconocido', company_name: '—', first_name: 'Prospecto' };
-
-            item.innerHTML = `
-                <h4>${lead.first_name} (${lead.company_name})</h4>
-                <span>${dateStr} · ${log.email_type}</span>
-                <p>${log.subject}</p>
-            `;
-
-            item.onclick = () => {
-                document.querySelectorAll('.email-list-item').forEach(el => el.classList.remove('active'));
-                item.classList.add('active');
-                viewEmailDetails(log);
-            };
-
-            listDiv.appendChild(item);
-        });
-
-        if (logs.length > 0) {
-            viewEmailDetails(logs[0]);
-        }
+        document.getElementById('email-total-count').textContent = `${_allEmailLogs.length} correos`;
+        renderEmailList();
     } catch (e) {
         console.error('Email log load error:', e);
+        document.getElementById('email-inbox-list').innerHTML = '<div style="padding:20px;text-align:center;color:var(--accent-red);font-size:0.8rem">❌ Error al cargar correos</div>';
     }
 }
 
+function switchEmailFolder(folder) {
+    _currentEmailFolder = folder;
+    document.querySelectorAll('.email-folder-tab').forEach(btn => {
+        const isActive = btn.dataset.folder === folder;
+        btn.style.background = isActive ? 'var(--accent-blue)' : 'var(--bg-card)';
+        btn.style.color = isActive ? '#fff' : 'var(--text-grey)';
+        btn.classList.toggle('active', isActive);
+    });
+    renderEmailList();
+}
+
+function filterEmailList() {
+    renderEmailList();
+}
+
+function renderEmailList() {
+    const listDiv = document.getElementById('email-inbox-list');
+    const searchQuery = (document.getElementById('email-search-input')?.value || '').toLowerCase();
+    const starred = _getStarredEmails();
+    const labels = _getEmailLabels();
+
+    let filtered = [..._allEmailLogs];
+
+    // Folder filter
+    if (_currentEmailFolder === 'outreach') {
+        filtered = filtered.filter(l => l.email_type && l.email_type.includes('outreach'));
+    } else if (_currentEmailFolder === 'proposal') {
+        filtered = filtered.filter(l => l.email_type && (l.email_type.includes('proposal') || l.email_type.includes('propuesta')));
+    } else if (_currentEmailFolder === 'manual') {
+        filtered = filtered.filter(l => l.email_type === 'manual' || l.email_type === 'compose');
+    } else if (_currentEmailFolder === 'starred') {
+        filtered = filtered.filter(l => starred.includes(l.id));
+    }
+
+    // Search filter
+    if (searchQuery) {
+        filtered = filtered.filter(l => {
+            const lead = l.outreach_leads || {};
+            const searchStr = `${l.subject || ''} ${lead.email || ''} ${lead.company_name || ''} ${lead.first_name || ''}`.toLowerCase();
+            return searchStr.includes(searchQuery);
+        });
+    }
+
+    if (filtered.length === 0) {
+        listDiv.innerHTML = `<div style="padding:30px;text-align:center;color:var(--text-grey);font-size:0.82rem">
+            <div style="font-size:1.8rem;margin-bottom:8px;opacity:0.4">${_currentEmailFolder === 'starred' ? '⭐' : '📭'}</div>
+            ${_currentEmailFolder === 'starred' ? 'No hay correos destacados' : searchQuery ? 'Sin resultados para la búsqueda' : 'No hay correos en esta carpeta'}
+        </div>`;
+        return;
+    }
+
+    const labelIcons = { importante: '🔴', seguimiento: '🟡', respondido: '🟢', archivado: '⚫' };
+
+    let html = '';
+    filtered.forEach((log, idx) => {
+        const lead = log.outreach_leads || { email: 'Desconocido', company_name: '—', first_name: 'Prospecto' };
+        const isStarred = starred.includes(log.id);
+        const label = labels[log.id] || '';
+        const labelIcon = labelIcons[label] || '';
+
+        // Date formatting
+        const sentDate = new Date(log.sent_at);
+        const now = new Date();
+        const isToday = sentDate.toDateString() === now.toDateString();
+        const isYesterday = sentDate.toDateString() === new Date(now - 86400000).toDateString();
+        let dateStr;
+        if (isToday) {
+            dateStr = sentDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        } else if (isYesterday) {
+            dateStr = 'Ayer ' + sentDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        } else {
+            dateStr = sentDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) + ' ' + sentDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Type badge
+        const typeColor = log.email_type?.includes('outreach') ? '#5856d6' : log.email_type?.includes('proposal') ? '#007AFF' : '#34c759';
+        const typeLabel = log.email_type?.includes('outreach') ? 'Outreach' : log.email_type?.includes('proposal') ? 'Propuesta' : 'Manual';
+
+        html += `<div class="email-list-item ${idx === 0 ? 'active' : ''}" onclick="selectEmailItem(this, ${idx})" data-idx="${idx}"
+            style="padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border-color);transition:background 0.1s;position:relative">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px">
+                <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1">
+                    ${isStarred ? '<span style="font-size:0.7rem">⭐</span>' : ''}
+                    ${labelIcon ? `<span style="font-size:0.6rem">${labelIcon}</span>` : ''}
+                    <span style="font-weight:700;font-size:0.82rem;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(lead.first_name || 'Prospecto')}</span>
+                </div>
+                <span style="font-size:0.65rem;color:var(--text-grey);white-space:nowrap;margin-left:6px">${dateStr}</span>
+            </div>
+            <div style="font-size:0.72rem;color:var(--text-grey);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(lead.company_name || '—')} · ${escHtml(lead.email || '')}</div>
+            <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:0.78rem;color:var(--text-main);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">${escHtml(log.subject || '(sin asunto)')}</span>
+                <span style="padding:1px 6px;border-radius:4px;background:${typeColor}15;color:${typeColor};font-size:0.58rem;font-weight:700;white-space:nowrap">${typeLabel}</span>
+            </div>
+        </div>`;
+    });
+
+    listDiv.innerHTML = html;
+
+    // Auto-select first
+    if (filtered.length > 0) {
+        viewEmailDetails(filtered[0]);
+    }
+}
+
+function selectEmailItem(el, idx) {
+    document.querySelectorAll('.email-list-item').forEach(e => e.classList.remove('active'));
+    el.classList.add('active');
+
+    // Find the actual log from filtered view
+    const searchQuery = (document.getElementById('email-search-input')?.value || '').toLowerCase();
+    const starred = _getStarredEmails();
+    let filtered = [..._allEmailLogs];
+    if (_currentEmailFolder === 'outreach') filtered = filtered.filter(l => l.email_type?.includes('outreach'));
+    else if (_currentEmailFolder === 'proposal') filtered = filtered.filter(l => l.email_type?.includes('proposal') || l.email_type?.includes('propuesta'));
+    else if (_currentEmailFolder === 'manual') filtered = filtered.filter(l => l.email_type === 'manual' || l.email_type === 'compose');
+    else if (_currentEmailFolder === 'starred') filtered = filtered.filter(l => starred.includes(l.id));
+    if (searchQuery) filtered = filtered.filter(l => {
+        const lead = l.outreach_leads || {};
+        return `${l.subject || ''} ${lead.email || ''} ${lead.company_name || ''} ${lead.first_name || ''}`.toLowerCase().includes(searchQuery);
+    });
+
+    if (filtered[idx]) viewEmailDetails(filtered[idx]);
+}
+
 function viewEmailDetails(log) {
+    _currentViewEmail = log;
     const lead = log.outreach_leads || { email: 'Desconocido', company_name: '—', first_name: 'Prospecto' };
-    document.getElementById('email-view-subject').textContent = log.subject;
-    document.getElementById('email-view-from').textContent = `Destinatario: ${lead.first_name} <${lead.email}> · Empresa: ${lead.company_name}`;
-    document.getElementById('email-view-body').innerHTML = log.body;
+    const labels = _getEmailLabels();
+    const starred = _getStarredEmails();
+
+    document.getElementById('email-view-subject').textContent = log.subject || '(sin asunto)';
+    document.getElementById('email-view-from').textContent = `Para: ${lead.first_name || 'Prospecto'} <${lead.email || '—'}> · Empresa: ${lead.company_name || '—'}`;
+
+    // Full date
+    const sentDate = new Date(log.sent_at);
+    document.getElementById('email-view-date').textContent = `📅 Enviado: ${sentDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} a las ${sentDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} · Tipo: ${log.email_type || '—'}${log.cadena_num ? ` · Cadena ${log.cadena_num}, paso ${log.step_num}` : ''}`;
+
+    // Body
+    document.getElementById('email-view-body').innerHTML = log.body || '<span style="color:var(--text-grey)">(Sin contenido)</span>';
+
+    // Show actions
+    document.getElementById('email-view-actions').style.display = 'flex';
+
+    // Star button
+    const isStarred = starred.includes(log.id);
+    document.getElementById('btn-star-email').innerHTML = isStarred ? '⭐ Destacado' : '☆ Destacar';
+
+    // Label select
+    const labelSelect = document.getElementById('email-label-select');
+    if (labelSelect) labelSelect.value = labels[log.id] || '';
+}
+
+function toggleEmailStar() {
+    if (!_currentViewEmail) return;
+    const starred = _getStarredEmails();
+    const id = _currentViewEmail.id;
+    const idx = starred.indexOf(id);
+    if (idx >= 0) starred.splice(idx, 1); else starred.push(id);
+    _setStarredEmails(starred);
+    renderEmailList();
+    viewEmailDetails(_currentViewEmail);
+}
+
+function setEmailLabel(label) {
+    if (!_currentViewEmail) return;
+    _setEmailLabel(_currentViewEmail.id, label);
+    renderEmailList();
+}
+
+function replyToEmail() {
+    if (!_currentViewEmail) return;
+    const lead = _currentViewEmail.outreach_leads || {};
+    openComposeEmailModal();
+    setTimeout(() => {
+        const select = document.getElementById('compose-email-to');
+        if (select && lead.email) {
+            // Try to select matching option
+            for (let opt of select.options) {
+                if (opt.value === lead.email) { select.value = lead.email; break; }
+            }
+        }
+        const subjectEl = document.getElementById('compose-email-subject');
+        if (subjectEl) subjectEl.value = `Re: ${_currentViewEmail.subject || ''}`;
+        const bodyEl = document.getElementById('compose-email-body');
+        if (bodyEl) bodyEl.value = `\n\n--- Mensaje original ---\n${(_currentViewEmail.body || '').replace(/<[^>]+>/g, '')}`;
+    }, 300);
+}
+
+function forwardEmail() {
+    if (!_currentViewEmail) return;
+    openComposeEmailModal();
+    setTimeout(() => {
+        const subjectEl = document.getElementById('compose-email-subject');
+        if (subjectEl) subjectEl.value = `Fwd: ${_currentViewEmail.subject || ''}`;
+        const bodyEl = document.getElementById('compose-email-body');
+        const lead = _currentViewEmail.outreach_leads || {};
+        if (bodyEl) bodyEl.value = `\n\n--- Mensaje reenviado ---\nDe: Para ${lead.first_name || ''} <${lead.email || ''}>\nAsunto: ${_currentViewEmail.subject || ''}\n\n${(_currentViewEmail.body || '').replace(/<[^>]+>/g, '')}`;
+    }, 300);
 }
 
 function switchOutreachSubTab(subTab) {
@@ -6166,6 +6352,13 @@ window.switchProposalCategoryTab = switchProposalCategoryTab;
 window.saveOutreachConfig = saveOutreachConfig;
 window.saveProposalConfig = saveProposalConfig;
 window.openComposeEmailModal = openComposeEmailModal;
+window.switchEmailFolder = switchEmailFolder;
+window.filterEmailList = filterEmailList;
+window.selectEmailItem = selectEmailItem;
+window.toggleEmailStar = toggleEmailStar;
+window.setEmailLabel = setEmailLabel;
+window.replyToEmail = replyToEmail;
+window.forwardEmail = forwardEmail;
 window.closeComposeEmailModal = closeComposeEmailModal;
 window.sendManualEmail = sendManualEmail;
 window.saveOutreachTemplate = saveOutreachTemplate;

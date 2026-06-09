@@ -881,21 +881,54 @@
                 <!-- ==================== TAB 1: BANDEJA DE ENTRADA ==================== -->
                 <div id="email-tab-bandeja" class="email-main-content">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                        <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin: 0;">Bandeja de Correo y Respuestas</h2>
-                        <button class="btn-primary" onclick="openComposeEmailModal()" style="font-size: 0.8rem; padding: 8px 16px;">📝 Redactar Correo</button>
-                    </div>
-                    <div class="email-box-grid" style="display: grid; grid-template-columns: 320px 1fr; gap: 20px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; min-height: 500px;">
-                        <div class="email-list" id="email-inbox-list" style="border-right: 1px solid var(--border-color); max-height: 600px; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
-                            <!-- Populated dynamically -->
-                            <div style="padding:20px;text-align:center;color:var(--text-grey);font-size:0.8rem">No hay correos registrados</div>
+                        <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin: 0;">Bandeja de Correo</h2>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <span style="font-size:0.72rem;color:var(--text-grey);font-weight:600" id="email-total-count">0 correos</span>
+                            <button class="btn-primary" onclick="openComposeEmailModal()" style="font-size: 0.8rem; padding: 8px 16px;">📝 Redactar Correo</button>
                         </div>
-                        <div class="email-reader" style="padding: 24px; max-height: 600px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;">
-                            <div class="email-reader-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
-                                <h2 id="email-view-subject" style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin: 0 0 8px 0;">Selecciona un correo</h2>
-                                <div id="email-view-from" style="font-size: 0.85rem; color: var(--text-grey);">Remitente: —</div>
+                    </div>
+
+                    <!-- Folder Tabs -->
+                    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="email-folder-tabs">
+                        <button class="email-folder-tab active" data-folder="all" onclick="switchEmailFolder('all')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);background:var(--accent-blue);color:#fff;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">📥 Todos</button>
+                        <button class="email-folder-tab" data-folder="outreach" onclick="switchEmailFolder('outreach')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-grey);font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">👥 Outreach</button>
+                        <button class="email-folder-tab" data-folder="proposal" onclick="switchEmailFolder('proposal')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-grey);font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">📄 Propuestas</button>
+                        <button class="email-folder-tab" data-folder="manual" onclick="switchEmailFolder('manual')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-grey);font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">✉️ Manuales</button>
+                        <button class="email-folder-tab" data-folder="starred" onclick="switchEmailFolder('starred')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-grey);font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">⭐ Destacados</button>
+                    </div>
+
+                    <!-- Search -->
+                    <div style="margin-bottom:14px">
+                        <input type="text" id="email-search-input" placeholder="🔍 Buscar por asunto, destinatario o empresa..." oninput="filterEmailList()" style="width:100%;padding:10px 16px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-main);font-size:0.82rem;font-family:inherit">
+                    </div>
+
+                    <div class="email-box-grid" style="display: grid; grid-template-columns: 340px 1fr; gap: 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; min-height: 500px;">
+                        <div class="email-list" id="email-inbox-list" style="border-right: 1px solid var(--border-color); max-height: 600px; overflow-y: auto; padding: 0; display: flex; flex-direction: column; gap: 0;">
+                            <div style="padding:20px;text-align:center;color:var(--text-grey);font-size:0.8rem">⏳ Cargando correos...</div>
+                        </div>
+                        <div class="email-reader" style="padding: 0; max-height: 600px; overflow-y: auto; display: flex; flex-direction: column;">
+                            <!-- Reader header -->
+                            <div style="padding:18px 24px;border-bottom:1px solid var(--border-color)">
+                                <h2 id="email-view-subject" style="font-size: 1.15rem; font-weight: 800; color: var(--text-main); margin: 0 0 8px 0;">Selecciona un correo</h2>
+                                <div id="email-view-from" style="font-size: 0.82rem; color: var(--text-grey);">Remitente: —</div>
+                                <div id="email-view-date" style="font-size: 0.72rem; color: var(--text-grey); margin-top:4px;"></div>
                             </div>
-                            <div class="email-reader-body" id="email-view-body" style="font-size: 0.92rem; line-height: 1.6; color: var(--text-main); white-space: pre-wrap;">
-                                Haga clic en un email de la lista lateral para visualizar su contenido completo y trazas de envío.
+                            <!-- Reader actions -->
+                            <div id="email-view-actions" style="padding:10px 24px;border-bottom:1px solid var(--border-color);display:none;gap:6px;flex-wrap:wrap">
+                                <button onclick="replyToEmail()" class="btn-secondary" style="padding:6px 12px;font-size:0.75rem">↩️ Responder</button>
+                                <button onclick="forwardEmail()" class="btn-secondary" style="padding:6px 12px;font-size:0.75rem">↪️ Reenviar</button>
+                                <button onclick="toggleEmailStar()" id="btn-star-email" class="btn-secondary" style="padding:6px 12px;font-size:0.75rem">⭐ Destacar</button>
+                                <select id="email-label-select" onchange="setEmailLabel(this.value)" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-main);color:var(--text-main);font-size:0.72rem;font-family:inherit">
+                                    <option value="">🏷️ Etiqueta...</option>
+                                    <option value="importante">🔴 Importante</option>
+                                    <option value="seguimiento">🟡 Seguimiento</option>
+                                    <option value="respondido">🟢 Respondido</option>
+                                    <option value="archivado">⚫ Archivado</option>
+                                </select>
+                            </div>
+                            <!-- Reader body -->
+                            <div class="email-reader-body" id="email-view-body" style="padding:24px;font-size: 0.9rem; line-height: 1.7; color: var(--text-main); white-space: pre-wrap;flex:1">
+                                Haga clic en un email de la lista para visualizar su contenido.
                             </div>
                         </div>
                     </div>
