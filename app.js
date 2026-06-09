@@ -1767,18 +1767,26 @@ async function loadActivityLog() {
     timelineEl.innerHTML = '<div style="position:absolute;left:5px;top:0;bottom:0;width:2px;background:var(--border-color)"></div><div style="text-align:center;padding:40px;color:var(--text-grey);font-size:0.85rem;">⏳ Cargando actividad...</div>';
 
     try {
-        // Fetch all activity sources in parallel
-        const [leadsRes, propEnvRes, presRes, contratosRes] = await Promise.all([
+        // Fetch ALL activity sources in parallel
+        const [leadsRes, propEnvRes, presRes, contratosRes, emailLogsRes, meetingsRes, tasksRes, seguimientosRes] = await Promise.all([
             _supabase.from('outreach_leads').select('id, first_name, last_name, email, company_name, status, created_at, updated_at').order('created_at', { ascending: false }).limit(200),
             _supabase.from('propuestas_enviadas').select('id, lead_nombre, lead_email, titulo, estado, enviado_at, created_at').order('created_at', { ascending: false }).limit(100),
             _supabase.from('presupuestos').select('id, titulo, categoria, created_at, updated_at').order('created_at', { ascending: false }).limit(100),
-            _supabase.from('contratos').select('id, titulo, cliente_nombre, estado, created_at, updated_at').order('created_at', { ascending: false }).limit(50)
+            _supabase.from('contratos').select('id, titulo, cliente_nombre, estado, created_at, updated_at').order('created_at', { ascending: false }).limit(50),
+            _supabase.from('outreach_email_logs').select('id, lead_id, lead_name, lead_email, subject, status, cadena_num, step_num, created_at').order('created_at', { ascending: false }).limit(200),
+            _supabase.from('meetings').select('id, title, date, start_time, type, created_at, updated_at').order('created_at', { ascending: false }).limit(100),
+            _supabase.from('tasks').select('id, title, status, created_at, updated_at').order('created_at', { ascending: false }).limit(100),
+            _supabase.from('propuesta_seguimiento').select('id, lead_nombre, lead_email, columna, secuencia_activa, created_at, updated_at').order('created_at', { ascending: false }).limit(100)
         ]);
 
         const leads = leadsRes.data || [];
         const propEnv = propEnvRes.data || [];
         const pres = presRes.data || [];
         const contratos = contratosRes.data || [];
+        const emailLogs = emailLogsRes.data || [];
+        const meetings = meetingsRes.data || [];
+        const tasks = tasksRes.data || [];
+        const segRecords = seguimientosRes.data || [];
 
         // Build unified events list
         const events = [];
@@ -1817,11 +1825,11 @@ async function loadActivityLog() {
         propEnv.forEach(pe => {
             events.push({
                 date: pe.enviado_at || pe.created_at,
-                icon: '📧',
+                icon: '📨',
                 user: 'gerard',
                 action: 'Enviar',
-                actionBg: 'rgba(255,69,58,0.1)',
-                actionColor: '#ff453a',
+                actionBg: 'rgba(175,82,222,0.1)',
+                actionColor: '#af52de',
                 desc: `Propuesta enviada a ${pe.lead_nombre || 'lead'}: ${pe.titulo || 'Sin título'}`,
                 section: 'Propuestas',
                 sectionBg: 'rgba(175,82,222,0.1)',
@@ -1829,7 +1837,7 @@ async function loadActivityLog() {
             });
             if (pe.estado === 'aceptada') {
                 events.push({
-                    date: pe.created_at, // approximate
+                    date: pe.created_at,
                     icon: '🎉',
                     user: pe.lead_nombre || 'cliente',
                     action: 'Aceptar',
@@ -1857,6 +1865,21 @@ async function loadActivityLog() {
                 sectionBg: 'rgba(0,113,227,0.1)',
                 sectionColor: '#007AFF'
             });
+            // Detect edits: if updated_at is significantly different from created_at
+            if (p.updated_at && p.created_at && Math.abs(new Date(p.updated_at) - new Date(p.created_at)) > 60000) {
+                events.push({
+                    date: p.updated_at,
+                    icon: '✏️',
+                    user: 'gerard',
+                    action: 'Editar',
+                    actionBg: 'rgba(0,113,227,0.1)',
+                    actionColor: '#007AFF',
+                    desc: `Presupuesto editado: ${p.titulo || 'Sin título'}`,
+                    section: 'Presupuestos',
+                    sectionBg: 'rgba(0,113,227,0.1)',
+                    sectionColor: '#007AFF'
+                });
+            }
         });
 
         // Contratos events
@@ -1889,17 +1912,103 @@ async function loadActivityLog() {
             }
         });
 
+        // Outreach email logs
+        emailLogs.forEach(e => {
+            const statusLabel = e.status === 'sent' ? 'Enviado' : e.status === 'failed' ? 'Fallido' : e.status || 'Enviado';
+            const statusIcon = e.status === 'failed' ? '❌' : '📧';
+            events.push({
+                date: e.created_at,
+                icon: statusIcon,
+                user: 'sistema',
+                action: statusLabel,
+                actionBg: e.status === 'failed' ? 'rgba(255,59,48,0.1)' : 'rgba(255,69,58,0.1)',
+                actionColor: e.status === 'failed' ? '#ff453a' : '#ff453a',
+                desc: `Email outreach a ${e.lead_name || e.lead_email || 'lead'}: "${e.subject || 'Sin asunto'}"${e.cadena_num ? ' (Cadena ' + e.cadena_num + ', paso ' + (e.step_num || 1) + ')' : ''}`,
+                section: 'Emails',
+                sectionBg: 'rgba(255,69,58,0.1)',
+                sectionColor: '#ff453a'
+            });
+        });
+
+        // Meetings events
+        meetings.forEach(m => {
+            const typeLabels = { meeting: 'Reunión', call: 'Llamada', followup: 'Seguimiento', demo: 'Demo', other: 'Evento' };
+            events.push({
+                date: m.created_at,
+                icon: '📅',
+                user: 'gerard',
+                action: 'Crear',
+                actionBg: 'rgba(88,86,214,0.1)',
+                actionColor: '#5856d6',
+                desc: `${typeLabels[m.type] || 'Evento'} creado: ${m.title || 'Sin título'}${m.date ? ' — ' + new Date(m.date).toLocaleDateString('es-ES', {day:'2-digit', month:'short'}) : ''}`,
+                section: 'Calendario',
+                sectionBg: 'rgba(88,86,214,0.1)',
+                sectionColor: '#5856d6'
+            });
+        });
+
+        // Tasks events
+        tasks.forEach(t => {
+            events.push({
+                date: t.created_at,
+                icon: '☑️',
+                user: 'gerard',
+                action: 'Crear',
+                actionBg: 'rgba(0,199,190,0.1)',
+                actionColor: '#00c7be',
+                desc: `Tarea creada: ${t.title || 'Sin título'}`,
+                section: 'Tareas',
+                sectionBg: 'rgba(0,199,190,0.1)',
+                sectionColor: '#00c7be'
+            });
+            if (t.status === 'done' || t.status === 'completed') {
+                events.push({
+                    date: t.updated_at || t.created_at,
+                    icon: '✅',
+                    user: 'gerard',
+                    action: 'Completar',
+                    actionBg: 'rgba(52,199,89,0.1)',
+                    actionColor: '#34c759',
+                    desc: `Tarea completada: ${t.title || 'Sin título'}`,
+                    section: 'Tareas',
+                    sectionBg: 'rgba(0,199,190,0.1)',
+                    sectionColor: '#00c7be'
+                });
+            }
+        });
+
+        // Seguimiento (kanban) events
+        segRecords.forEach(s => {
+            const colLabels = { enviada: 'Enviada', inmediato: 'Inmediato', mensual: 'Mensual', anual: 'Anual', cliente: 'Es Cliente', perdido: 'Lead Perdido', stop: 'Stop' };
+            if (s.columna && s.columna !== 'enviada') {
+                events.push({
+                    date: s.updated_at || s.created_at,
+                    icon: '🔀',
+                    user: 'gerard',
+                    action: 'Mover',
+                    actionBg: 'rgba(88,86,214,0.1)',
+                    actionColor: '#5856d6',
+                    desc: `Seguimiento de ${s.lead_nombre || 'lead'} movido a columna "${colLabels[s.columna] || s.columna}"${s.secuencia_activa ? ' — secuencia ' + s.secuencia_activa : ''}`,
+                    section: 'Seguimiento',
+                    sectionBg: 'rgba(88,86,214,0.1)',
+                    sectionColor: '#5856d6'
+                });
+            }
+        });
+
         // Sort by date descending
         events.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        // Render stats
+        // Render stats (8 counters in 2 rows of 4)
         const statsData = [
             { icon: '🎯', count: leads.length, label: 'Leads' },
             { icon: '📄', count: pres.length, label: 'Presupuestos' },
-            { icon: '📧', count: propEnv.length, label: 'Enviadas' },
+            { icon: '📨', count: propEnv.length, label: 'Prop. Enviadas' },
             { icon: '✅', count: propEnv.filter(p => p.estado === 'aceptada').length, label: 'Aceptadas' },
+            { icon: '📧', count: emailLogs.length, label: 'Emails Outreach' },
             { icon: '📝', count: contratos.length, label: 'Contratos' },
-            { icon: '✍️', count: contratos.filter(c => c.estado === 'firmado').length, label: 'Firmados' }
+            { icon: '📅', count: meetings.length, label: 'Reuniones' },
+            { icon: '☑️', count: tasks.length, label: 'Tareas' }
         ];
 
         if (statsEl) {
