@@ -11573,8 +11573,31 @@ window.showCreateChatModal = async function() {
     _chatSelectedLeadId = null;
     _chatLeadsCache = [];
     try {
-        const { data } = await _supabase.from('outreach_leads').select('id, nombre, empresa, email, telefono').order('nombre');
-        _chatLeadsCache = data || [];
+        // Load from CRM leads
+        const { data: crmLeads } = await _supabase.from('outreach_leads').select('id, nombre, empresa, email, telefono').order('nombre');
+        // Load from existing chat rooms (manual leads)
+        const { data: chatLeads } = await _supabase.from('chat_rooms').select('lead_id, lead_name, lead_company, lead_email, lead_phone');
+        
+        const merged = [];
+        const seen = new Set();
+        
+        // Add CRM leads first
+        (crmLeads || []).forEach(l => {
+            const key = (l.email || l.nombre || '').toLowerCase();
+            if (key && !seen.has(key)) { seen.add(key); merged.push(l); }
+            else if (!key) merged.push(l);
+        });
+        
+        // Add chat room leads that aren't in CRM
+        (chatLeads || []).forEach(r => {
+            const key = (r.lead_email || r.lead_name || '').toLowerCase();
+            if (!seen.has(key)) {
+                seen.add(key);
+                merged.push({ id: r.lead_id, nombre: r.lead_name, empresa: r.lead_company, email: r.lead_email, telefono: r.lead_phone, _fromChat: true });
+            }
+        });
+        
+        _chatLeadsCache = merged;
     } catch(e) { console.warn('Could not load leads:', e); }
 
     const modal = document.createElement('div');
