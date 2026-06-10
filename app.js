@@ -11574,7 +11574,7 @@ window.showCreateChatModal = async function() {
     _chatLeadsCache = [];
     try {
         // Load from CRM leads (real column names)
-        const { data: crmLeads } = await _supabase.from('outreach_leads').select('id, first_name, last_name, company_name, email').order('first_name');
+        const { data: crmLeads } = await _supabase.from('outreach_leads').select('id, first_name, last_name, company_name, email, phone').order('first_name');
         // Load from existing chat rooms (manual leads)
         const { data: chatLeads } = await _supabase.from('chat_rooms').select('lead_id, lead_name, lead_company, lead_email, lead_phone');
         
@@ -11587,7 +11587,7 @@ window.showCreateChatModal = async function() {
             const key = (l.email || nombre).toLowerCase();
             if (key && !seen.has(key)) {
                 seen.add(key);
-                merged.push({ id: l.id, nombre, empresa: l.company_name || '', email: l.email || '', telefono: '' });
+                merged.push({ id: l.id, nombre, empresa: l.company_name || '', email: l.email || '', telefono: l.phone || '' });
             }
         });
         
