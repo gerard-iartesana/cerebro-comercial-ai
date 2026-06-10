@@ -4671,8 +4671,11 @@ function refreshFolderTabs() {
     const labelCounts = {};
     Object.values(emailLabels).forEach(l => { labelCounts[l] = (labelCounts[l] || 0) + 1; });
     
+    const _receivedUnreadCount = _allEmailLogs.filter(l => l._direction === 'received' && !l._is_read).length;
+    const _receivedBadge = _receivedUnreadCount > 0 ? ` (${_receivedUnreadCount})` : '';
     let html = `
         <button class="email-folder-tab ${_currentEmailFolder === 'all' ? 'active' : ''}" data-folder="all" onclick="switchEmailFolder('all')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);background:${_currentEmailFolder === 'all' ? 'var(--accent-blue)' : 'var(--bg-card)'};color:${_currentEmailFolder === 'all' ? '#fff' : 'var(--text-grey)'};font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">📥 Todos</button>
+        <button class="email-folder-tab ${_currentEmailFolder === 'received' ? 'active' : ''}" data-folder="received" onclick="switchEmailFolder('received')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);background:${_currentEmailFolder === 'received' ? 'var(--accent-blue)' : 'var(--bg-card)'};color:${_currentEmailFolder === 'received' ? '#fff' : 'var(--text-grey)'};font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">📩 Recibidos${_receivedBadge}</button>
         <button class="email-folder-tab ${_currentEmailFolder === 'outreach' ? 'active' : ''}" data-folder="outreach" onclick="switchEmailFolder('outreach')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);background:${_currentEmailFolder === 'outreach' ? 'var(--accent-blue)' : 'var(--bg-card)'};color:${_currentEmailFolder === 'outreach' ? '#fff' : 'var(--text-grey)'};font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">👥 Outreach</button>
         <button class="email-folder-tab ${_currentEmailFolder === 'proposal' ? 'active' : ''}" data-folder="proposal" onclick="switchEmailFolder('proposal')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);background:${_currentEmailFolder === 'proposal' ? 'var(--accent-blue)' : 'var(--bg-card)'};color:${_currentEmailFolder === 'proposal' ? '#fff' : 'var(--text-grey)'};font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">📄 Propuestas</button>
         <button class="email-folder-tab ${_currentEmailFolder === 'manual' ? 'active' : ''}" data-folder="manual" onclick="switchEmailFolder('manual')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);background:${_currentEmailFolder === 'manual' ? 'var(--accent-blue)' : 'var(--bg-card)'};color:${_currentEmailFolder === 'manual' ? '#fff' : 'var(--text-grey)'};font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">✉️ Manuales</button>
@@ -4698,6 +4701,7 @@ function refreshFolderTabs() {
 
 async function loadBandejaInbox() {
     try {
+        // Fetch sent emails
         const { data: logs, error } = await _supabase
             .from('outreach_email_logs')
             .select(`
@@ -4712,9 +4716,45 @@ async function loadBandejaInbox() {
             .limit(500);
 
         if (error) throw error;
-        _allEmailLogs = logs || [];
+        const sentEmails = (logs || []).map(l => ({ ...l, _direction: 'sent' }));
 
-        document.getElementById('email-total-count').textContent = `${_allEmailLogs.length} correos`;
+        // Fetch received email replies
+        let receivedEmails = [];
+        try {
+            const { data: replies, error: repliesError } = await _supabase
+                .from('email_replies')
+                .select('*')
+                .order('received_at', { ascending: false })
+                .limit(500);
+            if (!repliesError && replies) {
+                receivedEmails = replies.map(r => ({
+                    id: r.id,
+                    email_type: 'received',
+                    subject: r.subject || '(sin asunto)',
+                    body: r.body_html || r.body || '',
+                    sent_at: r.received_at,
+                    _direction: 'received',
+                    _is_read: r.is_read,
+                    _reply_id: r.id,
+                    _gmail_message_id: r.gmail_message_id,
+                    _gmail_thread_id: r.gmail_thread_id,
+                    outreach_leads: {
+                        email: r.from_email || '',
+                        company_name: '',
+                        first_name: r.from_name || r.from_email || 'Desconocido'
+                    }
+                }));
+            }
+        } catch (replyErr) {
+            console.warn('Could not fetch email replies:', replyErr);
+        }
+
+        // Merge and sort by date descending
+        _allEmailLogs = [...sentEmails, ...receivedEmails].sort((a, b) => new Date(b.sent_at) - new Date(a.sent_at));
+
+        const receivedCount = receivedEmails.filter(r => !r._is_read).length;
+        const countText = receivedCount > 0 ? `${_allEmailLogs.length} correos · ${receivedCount} sin leer` : `${_allEmailLogs.length} correos`;
+        document.getElementById('email-total-count').textContent = countText;
         refreshLabelSelect();
         refreshFolderTabs();
         renderEmailList();
@@ -4748,7 +4788,9 @@ function renderEmailList() {
     let filtered = [..._allEmailLogs];
 
     // Folder filter
-    if (_currentEmailFolder === 'outreach') {
+    if (_currentEmailFolder === 'received') {
+        filtered = filtered.filter(l => l._direction === 'received');
+    } else if (_currentEmailFolder === 'outreach') {
         filtered = filtered.filter(l => l.email_type && l.email_type.includes('outreach'));
     } else if (_currentEmailFolder === 'proposal') {
         filtered = filtered.filter(l => l.email_type && (l.email_type.includes('proposal') || l.email_type.includes('propuesta')));
@@ -4803,23 +4845,39 @@ function renderEmailList() {
             dateStr = sentDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) + ' ' + sentDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         }
 
-        // Type badge
-        const typeColor = log.email_type?.includes('outreach') ? '#5856d6' : log.email_type?.includes('proposal') ? '#007AFF' : '#34c759';
-        const typeLabel = log.email_type?.includes('outreach') ? 'Outreach' : log.email_type?.includes('proposal') ? 'Propuesta' : 'Manual';
+        // Type badge & direction
+        const isReceived = log._direction === 'received';
+        const directionIcon = isReceived ? '↙️' : '↗️';
+        const directionColor = isReceived ? '#ff9500' : '#8e8e93';
+        const unreadStyle = (isReceived && !log._is_read) ? 'font-weight:800;' : '';
+        let typeColor, typeLabel;
+        if (isReceived) {
+            typeColor = '#ff9500';
+            typeLabel = 'Recibido';
+        } else {
+            typeColor = log.email_type?.includes('outreach') ? '#5856d6' : log.email_type?.includes('proposal') ? '#007AFF' : '#34c759';
+            typeLabel = log.email_type?.includes('outreach') ? 'Outreach' : log.email_type?.includes('proposal') ? 'Propuesta' : 'Manual';
+        }
+        const contactLine = isReceived
+            ? `De: ${escHtml(lead.first_name || 'Desconocido')} &lt;${escHtml(lead.email || '')}&gt;`
+            : `${escHtml(lead.company_name || '—')} · ${escHtml(lead.email || '')}`;
+        const unreadDot = (isReceived && !log._is_read) ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff9500;margin-right:4px;flex-shrink:0"></span>' : '';
 
         html += `<div class="email-list-item ${idx === 0 ? 'active' : ''}" onclick="selectEmailItem(this, ${idx})" data-idx="${idx}"
-            style="padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border-color);transition:background 0.1s;position:relative">
+            style="padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border-color);transition:background 0.1s;position:relative;${isReceived && !log._is_read ? 'background:var(--bg-hover);' : ''}">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px">
                 <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1">
+                    ${unreadDot}
+                    <span style="font-size:0.65rem;color:${directionColor};flex-shrink:0" title="${isReceived ? 'Recibido' : 'Enviado'}">${directionIcon}</span>
                     ${isStarred ? '<span style="font-size:0.7rem">⭐</span>' : ''}
                     ${labelIcon ? `<span style="font-size:0.6rem">${labelIcon}</span>` : ''}
-                    <span style="font-weight:700;font-size:0.82rem;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(lead.first_name || 'Prospecto')}</span>
+                    <span style="${unreadStyle}font-size:0.82rem;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(lead.first_name || 'Prospecto')}</span>
                 </div>
                 <span style="font-size:0.65rem;color:var(--text-grey);white-space:nowrap;margin-left:6px">${dateStr}</span>
             </div>
-            <div style="font-size:0.72rem;color:var(--text-grey);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(lead.company_name || '—')} · ${escHtml(lead.email || '')}</div>
+            <div style="font-size:0.72rem;color:var(--text-grey);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${contactLine}</div>
             <div style="display:flex;align-items:center;gap:6px">
-                <span style="font-size:0.78rem;color:var(--text-main);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">${escHtml(log.subject || '(sin asunto)')}</span>
+                <span style="font-size:0.78rem;color:var(--text-main);${unreadStyle}white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">${escHtml(log.subject || '(sin asunto)')}</span>
                 <span style="padding:1px 6px;border-radius:4px;background:${typeColor}15;color:${typeColor};font-size:0.58rem;font-weight:700;white-space:nowrap">${typeLabel}</span>
             </div>
         </div>`;
@@ -4841,10 +4899,13 @@ function selectEmailItem(el, idx) {
     const searchQuery = (document.getElementById('email-search-input')?.value || '').toLowerCase();
     const starred = _getStarredEmails();
     let filtered = [..._allEmailLogs];
-    if (_currentEmailFolder === 'outreach') filtered = filtered.filter(l => l.email_type?.includes('outreach'));
+    const labels = _getEmailLabels();
+    if (_currentEmailFolder === 'received') filtered = filtered.filter(l => l._direction === 'received');
+    else if (_currentEmailFolder === 'outreach') filtered = filtered.filter(l => l.email_type?.includes('outreach'));
     else if (_currentEmailFolder === 'proposal') filtered = filtered.filter(l => l.email_type?.includes('proposal') || l.email_type?.includes('propuesta'));
     else if (_currentEmailFolder === 'manual') filtered = filtered.filter(l => l.email_type === 'manual' || l.email_type === 'compose');
     else if (_currentEmailFolder === 'starred') filtered = filtered.filter(l => starred.includes(l.id));
+    else if (_currentEmailFolder.startsWith('label_')) { const labelId = _currentEmailFolder.replace('label_', ''); filtered = filtered.filter(l => labels[l.id] === labelId); }
     if (searchQuery) filtered = filtered.filter(l => {
         const lead = l.outreach_leads || {};
         return `${l.subject || ''} ${lead.email || ''} ${lead.company_name || ''} ${lead.first_name || ''}`.toLowerCase().includes(searchQuery);
@@ -4858,13 +4919,23 @@ function viewEmailDetails(log) {
     const lead = log.outreach_leads || { email: 'Desconocido', company_name: '—', first_name: 'Prospecto' };
     const labels = _getEmailLabels();
     const starred = _getStarredEmails();
+    const isReceived = log._direction === 'received';
 
     document.getElementById('email-view-subject').textContent = log.subject || '(sin asunto)';
-    document.getElementById('email-view-from').textContent = `Para: ${lead.first_name || 'Prospecto'} <${lead.email || '—'}> · Empresa: ${lead.company_name || '—'}`;
+
+    if (isReceived) {
+        document.getElementById('email-view-from').textContent = `↙️ De: ${lead.first_name || 'Desconocido'} <${lead.email || '—'}>`;
+    } else {
+        document.getElementById('email-view-from').textContent = `↗️ Para: ${lead.first_name || 'Prospecto'} <${lead.email || '—'}> · Empresa: ${lead.company_name || '—'}`;
+    }
 
     // Full date
     const sentDate = new Date(log.sent_at);
-    document.getElementById('email-view-date').textContent = `📅 Enviado: ${sentDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} a las ${sentDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} · Tipo: ${log.email_type || '—'}`;
+    if (isReceived) {
+        document.getElementById('email-view-date').textContent = `📅 Recibido: ${sentDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} a las ${sentDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+    } else {
+        document.getElementById('email-view-date').textContent = `📅 Enviado: ${sentDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} a las ${sentDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} · Tipo: ${log.email_type || '—'}`;
+    }
 
     // Body
     document.getElementById('email-view-body').innerHTML = log.body || '<span style="color:var(--text-grey)">(Sin contenido)</span>';
@@ -4879,6 +4950,20 @@ function viewEmailDetails(log) {
     // Label select
     const labelSelect = document.getElementById('email-label-select');
     if (labelSelect) labelSelect.value = labels[log.id] || '';
+
+    // Mark received email as read
+    if (isReceived && !log._is_read && log._reply_id) {
+        log._is_read = true;
+        _supabase.from('email_replies').update({ is_read: true }).eq('id', log._reply_id)
+            .then(() => {
+                // Update unread count in folder tabs
+                refreshFolderTabs();
+                const receivedCount = _allEmailLogs.filter(r => r._direction === 'received' && !r._is_read).length;
+                const countText = receivedCount > 0 ? `${_allEmailLogs.length} correos · ${receivedCount} sin leer` : `${_allEmailLogs.length} correos`;
+                document.getElementById('email-total-count').textContent = countText;
+            })
+            .catch(err => console.warn('Error marking email as read:', err));
+    }
 }
 
 function toggleEmailStar() {
