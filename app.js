@@ -11566,12 +11566,15 @@ window.handleChatFileUpload = async function(inputEl) {
 };
 
 // --- Modal Nuevo Chat ---
+let _chatLeadsCache = [];
+let _chatSelectedLeadId = null;
+
 window.showCreateChatModal = async function() {
-    // Load leads from outreach_leads
-    let leads = [];
+    _chatSelectedLeadId = null;
+    _chatLeadsCache = [];
     try {
-        const { data } = await _supabase.from('outreach_leads').select('id, nombre, empresa, email').order('nombre');
-        leads = data || [];
+        const { data } = await _supabase.from('outreach_leads').select('id, nombre, empresa, email, telefono').order('nombre');
+        _chatLeadsCache = data || [];
     } catch(e) { console.warn('Could not load leads:', e); }
 
     const modal = document.createElement('div');
@@ -11584,14 +11587,13 @@ window.showCreateChatModal = async function() {
                 <button class="modal-close" onclick="document.getElementById('create-chat-modal').remove()">✕</button>
             </div>
             <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
-                ${leads.length > 0 ? `<div>
-                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Seleccionar Lead del CRM</label>
-                    <select id="new-chat-lead-select" class="modal-input" onchange="fillChatFromLead(this)" style="width:100%">
-                        <option value="">-- Selecciona un lead --</option>
-                        ${leads.map(l => `<option value="${l.id}" data-name="${l.nombre||''}" data-company="${l.empresa||''}" data-email="${l.email||''}">${l.nombre || l.email} · ${l.empresa || ''}</option>`).join('')}
-                    </select>
+                <div style="position:relative">
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">🔍 Buscar Lead en el CRM</label>
+                    <input type="text" id="new-chat-search" class="modal-input" placeholder="Escribe nombre, empresa o email..." style="width:100%" oninput="filterChatLeadSearch(this.value)" onfocus="filterChatLeadSearch(this.value)" autocomplete="off">
+                    <div id="new-chat-lead-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:12px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.3);margin-top:4px"></div>
                 </div>
-                <div style="text-align:center;font-size:0.75rem;color:var(--text-grey);font-weight:600">-- o escribe los datos --</div>` : ''}
+                <div id="new-chat-selected-badge" style="display:none;background:rgba(10,132,255,0.1);border:1px solid rgba(10,132,255,0.2);border-radius:10px;padding:8px 12px;font-size:0.78rem;color:var(--accent);font-weight:600;display:flex;align-items:center;justify-content:space-between">
+                </div>
                 <div>
                     <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Nombre *</label>
                     <input type="text" id="new-chat-name" class="modal-input" placeholder="Nombre del lead" style="width:100%">
@@ -11606,20 +11608,82 @@ window.showCreateChatModal = async function() {
                         <input type="text" id="new-chat-email" class="modal-input" placeholder="email@ejemplo.com" style="width:100%">
                     </div>
                 </div>
+                <div>
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">📱 Teléfono / Móvil</label>
+                    <input type="tel" id="new-chat-phone" class="modal-input" placeholder="+34 600 000 000" style="width:100%">
+                </div>
                 <button class="btn-primary" onclick="createChatRoom()" style="width:100%;padding:12px;border-radius:12px;font-weight:700;font-size:0.88rem;margin-top:6px">Crear Chat</button>
             </div>
         </div>
     `;
     document.body.appendChild(modal);
     modal.style.display = 'flex';
+
+    // Close dropdown on outside click
+    document.getElementById('new-chat-search')?.addEventListener('blur', () => {
+        setTimeout(() => { const r = document.getElementById('new-chat-lead-results'); if(r) r.style.display='none'; }, 200);
+    });
 };
 
-window.fillChatFromLead = function(select) {
-    const opt = select.selectedOptions[0];
-    if (!opt || !opt.value) return;
-    document.getElementById('new-chat-name').value = opt.dataset.name || '';
-    document.getElementById('new-chat-company').value = opt.dataset.company || '';
-    document.getElementById('new-chat-email').value = opt.dataset.email || '';
+window.filterChatLeadSearch = function(query) {
+    const container = document.getElementById('new-chat-lead-results');
+    if (!container) return;
+    const q = query.toLowerCase().trim();
+    if (!q) { container.style.display = 'none'; return; }
+
+    const filtered = _chatLeadsCache.filter(l =>
+        (l.nombre || '').toLowerCase().includes(q) ||
+        (l.empresa || '').toLowerCase().includes(q) ||
+        (l.email || '').toLowerCase().includes(q)
+    ).slice(0, 8);
+
+    if (!filtered.length) {
+        container.innerHTML = '<div style="padding:12px 16px;font-size:0.8rem;color:var(--text-grey)">Sin resultados</div>';
+        container.style.display = 'block';
+        return;
+    }
+
+    container.innerHTML = filtered.map(l => `
+        <div onclick="selectChatLead('${l.id}')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background 0.15s;border-bottom:1px solid var(--border-color)" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+            <div style="width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.75rem">${(l.nombre||'?')[0].toUpperCase()}</div>
+            <div style="flex:1;min-width:0">
+                <div style="font-size:0.82rem;font-weight:700;color:var(--text-main)">${l.nombre || 'Sin nombre'}</div>
+                <div style="font-size:0.7rem;color:var(--text-grey)">${l.empresa || ''} ${l.email ? '· ' + l.email : ''}</div>
+            </div>
+        </div>
+    `).join('');
+    container.style.display = 'block';
+};
+
+window.selectChatLead = function(leadId) {
+    const lead = _chatLeadsCache.find(l => l.id === leadId);
+    if (!lead) return;
+    _chatSelectedLeadId = leadId;
+
+    // Fill fields
+    document.getElementById('new-chat-name').value = lead.nombre || '';
+    document.getElementById('new-chat-company').value = lead.empresa || '';
+    document.getElementById('new-chat-email').value = lead.email || '';
+    document.getElementById('new-chat-phone').value = lead.telefono || '';
+
+    // Show selected badge
+    const badge = document.getElementById('new-chat-selected-badge');
+    if (badge) {
+        badge.style.display = 'flex';
+        badge.innerHTML = `<span>✅ Lead seleccionado: <strong>${lead.nombre}</strong></span><button onclick="clearChatLeadSelection()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.8rem;font-weight:700">✕</button>`;
+    }
+
+    // Hide dropdown and clear search
+    const results = document.getElementById('new-chat-lead-results');
+    if (results) results.style.display = 'none';
+    const search = document.getElementById('new-chat-search');
+    if (search) search.value = '';
+};
+
+window.clearChatLeadSelection = function() {
+    _chatSelectedLeadId = null;
+    const badge = document.getElementById('new-chat-selected-badge');
+    if (badge) badge.style.display = 'none';
 };
 
 window.createChatRoom = async function() {
@@ -11627,18 +11691,17 @@ window.createChatRoom = async function() {
     if (!name) { showNotification('El nombre es obligatorio', 'error'); return; }
     const company = document.getElementById('new-chat-company')?.value.trim() || '';
     const email = document.getElementById('new-chat-email')?.value.trim() || '';
-    const leadSelect = document.getElementById('new-chat-lead-select');
-    const leadSelectVal = leadSelect?.value;
-    const leadId = (leadSelectVal && leadSelectVal.length > 10) ? leadSelectVal : null;
+    const phone = document.getElementById('new-chat-phone')?.value.trim() || '';
 
     try {
         const user = (await _supabase.auth.getUser()).data.user;
         const { data, error } = await _supabase.from('chat_rooms').insert({
             user_id: user.id,
-            lead_id: leadId,
+            lead_id: _chatSelectedLeadId || null,
             lead_name: name,
             lead_company: company,
-            lead_email: email
+            lead_email: email,
+            lead_phone: phone
         }).select().single();
         if (error) throw error;
 
