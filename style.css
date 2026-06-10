@@ -1746,7 +1746,7 @@ body.role-guest td button {
 }
 @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
 .modal-box {
-    background: white;
+    background: var(--bg-secondary);
     border-radius: 20px;
     width: 90%; max-width: 560px;
     max-height: 90vh;

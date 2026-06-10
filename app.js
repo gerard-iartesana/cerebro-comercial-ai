@@ -11578,19 +11578,20 @@ window.showCreateChatModal = async function() {
     modal.className = 'modal-overlay';
     modal.id = 'create-chat-modal';
     modal.innerHTML = `
-        <div class="modal-content" style="max-width:480px">
+        <div class="modal-box" style="max-width:480px">
             <div class="modal-header">
                 <h2 style="font-size:1.1rem;font-weight:800">💬 Nuevo Chat con Lead</h2>
-                <button class="modal-close-btn" onclick="document.getElementById('create-chat-modal').remove()">✕</button>
+                <button class="modal-close" onclick="document.getElementById('create-chat-modal').remove()">✕</button>
             </div>
-            <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:14px">
-                <div>
-                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Seleccionar Lead existente</label>
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+                ${leads.length > 0 ? `<div>
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Seleccionar Lead del CRM</label>
                     <select id="new-chat-lead-select" class="modal-input" onchange="fillChatFromLead(this)" style="width:100%">
-                        <option value="">-- O introduce datos manualmente --</option>
+                        <option value="">-- Selecciona un lead --</option>
                         ${leads.map(l => `<option value="${l.id}" data-name="${l.nombre||''}" data-company="${l.empresa||''}" data-email="${l.email||''}">${l.nombre || l.email} · ${l.empresa || ''}</option>`).join('')}
                     </select>
                 </div>
+                <div style="text-align:center;font-size:0.75rem;color:var(--text-grey);font-weight:600">-- o escribe los datos --</div>` : ''}
                 <div>
                     <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Nombre *</label>
                     <input type="text" id="new-chat-name" class="modal-input" placeholder="Nombre del lead" style="width:100%">
@@ -11627,7 +11628,8 @@ window.createChatRoom = async function() {
     const company = document.getElementById('new-chat-company')?.value.trim() || '';
     const email = document.getElementById('new-chat-email')?.value.trim() || '';
     const leadSelect = document.getElementById('new-chat-lead-select');
-    const leadId = leadSelect?.value || null;
+    const leadSelectVal = leadSelect?.value;
+    const leadId = (leadSelectVal && leadSelectVal.length > 10) ? leadSelectVal : null;
 
     try {
         const user = (await _supabase.auth.getUser()).data.user;
@@ -11677,10 +11679,10 @@ window.scheduleChatMessageModal = function() {
     now.setMinutes(now.getMinutes() + 30);
     const defaultDt = now.toISOString().slice(0,16);
     modal.innerHTML = `
-        <div class="modal-content" style="max-width:440px">
+        <div class="modal-box" style="max-width:440px">
             <div class="modal-header">
                 <h2 style="font-size:1.1rem;font-weight:800">⏰ Programar Mensaje</h2>
-                <button class="modal-close-btn" onclick="document.getElementById('schedule-chat-modal').remove()">✕</button>
+                <button class="modal-close" onclick="document.getElementById('schedule-chat-modal').remove()">✕</button>
             </div>
             <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:14px">
                 <div>
