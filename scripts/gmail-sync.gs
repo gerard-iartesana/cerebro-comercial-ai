@@ -12,7 +12,7 @@
 
 // ── CONFIGURACIÓN ──────────────────────
 const SUPABASE_URL = 'https://lmozoetpehmdxxremtqn.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxtb3pvZXRwZWhtZHh4cmVtdHFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNTA2NDUsImV4cCI6MjA5NTgyNjY0NX0.1xkCCw7q9CDvVbqGfMtb0wcl7lHWlKQ8U';  // Tu anon key
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxtb3pvZXRwZWhtZHh4cmVtdHFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNTA2NDUsImV4cCI6MjA5NTgyNjY0NX0.1xkCCw7q9CDvVbqGswCeFwXpgYfMtb0wcl7lHWlKQ8U';
 
 // Emails que envías TÚ (para excluirlos de las "respuestas")
 const MY_EMAILS = [
@@ -32,48 +32,64 @@ const MAX_THREADS = 50;
 function syncGmailReplies() {
   console.log('🔄 Iniciando sincronización de Gmail...');
   
+  // 1. Primero cargar TODOS los emails de leads conocidos desde Supabase
+  const knownLeadEmails = fetchAllLeadEmails();
+  if (knownLeadEmails.length === 0) {
+    console.log('⚠️ No hay leads en la base de datos. Nada que sincronizar.');
+    return;
+  }
+  console.log(`👥 ${knownLeadEmails.length} leads conocidos cargados`);
+  
   const label = getOrCreateLabel(LABEL_SYNCED);
   
-  // Buscar emails recibidos en los últimos 2 días que NO tengan la etiqueta CRM_Synced
+  // 2. Buscar emails recibidos en los últimos 2 días que NO tengan la etiqueta CRM_Synced
   const query = `is:inbox newer_than:2d -label:${LABEL_SYNCED} -from:me`;
   const threads = GmailApp.search(query, 0, MAX_THREADS);
   
   console.log(`📨 Encontrados ${threads.length} hilos nuevos`);
   
   let synced = 0;
+  let skipped = 0;
   let errors = 0;
+  
+  // Crear un Set para búsqueda rápida
+  const leadEmailSet = new Set(knownLeadEmails.map(e => e.email.toLowerCase()));
+  const leadEmailToId = {};
+  knownLeadEmails.forEach(e => { leadEmailToId[e.email.toLowerCase()] = e.id; });
   
   for (const thread of threads) {
     try {
       const messages = thread.getMessages();
+      let threadHasLeadReply = false;
       
       for (const msg of messages) {
         const fromEmail = extractEmail(msg.getFrom());
+        const fromLower = fromEmail.toLowerCase();
         
         // Saltar si es un email enviado por mí
-        if (MY_EMAILS.some(e => fromEmail.toLowerCase() === e.toLowerCase())) continue;
+        if (MY_EMAILS.some(e => fromLower === e.toLowerCase())) continue;
         
-        // Saltar si ya tiene la etiqueta (por seguridad)
-        if (thread.getLabels().some(l => l.getName() === LABEL_SYNCED)) continue;
+        // ✅ SOLO sincronizar si el remitente es un lead conocido
+        if (!leadEmailSet.has(fromLower)) {
+          continue; // No es un lead → ignorar
+        }
+        
+        threadHasLeadReply = true;
         
         const payload = {
           from_email: fromEmail,
           from_name: extractName(msg.getFrom()),
           to_email: extractEmail(msg.getTo()),
           subject: msg.getSubject(),
-          body: msg.getPlainBody().substring(0, 50000),  // Limitar tamaño
+          body: msg.getPlainBody().substring(0, 50000),
           body_html: msg.getBody().substring(0, 100000),
           received_at: msg.getDate().toISOString(),
           gmail_message_id: msg.getId(),
           gmail_thread_id: thread.getId(),
-          is_read: !msg.isUnread()
+          is_read: !msg.isUnread(),
+          lead_id: leadEmailToId[fromLower] || null
         };
         
-        // Intentar hacer match con un lead existente
-        const leadId = findLeadByEmail(fromEmail);
-        if (leadId) payload.lead_id = leadId;
-        
-        // Enviar a Supabase
         const success = upsertToSupabase('email_replies', payload);
         if (success) {
           synced++;
@@ -82,7 +98,9 @@ function syncGmailReplies() {
         }
       }
       
-      // Marcar el hilo como sincronizado
+      if (!threadHasLeadReply) skipped++;
+      
+      // Marcar el hilo como procesado (para no revisarlo de nuevo)
       thread.addLabel(label);
       
     } catch (e) {
@@ -91,10 +109,35 @@ function syncGmailReplies() {
     }
   }
   
-  console.log(`✅ Sincronización completada: ${synced} emails nuevos, ${errors} errores`);
+  console.log(`✅ Sincronización completada: ${synced} respuestas de leads, ${skipped} hilos ignorados (no son leads), ${errors} errores`);
 }
 
 // ── FUNCIONES AUXILIARES ──────────────────
+
+function fetchAllLeadEmails() {
+  try {
+    const response = UrlFetchApp.fetch(
+      `${SUPABASE_URL}/rest/v1/outreach_leads?select=id,email&email=not.is.null`,
+      {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+        },
+        muteHttpExceptions: true
+      }
+    );
+    
+    const code = response.getResponseCode();
+    if (code === 200) {
+      const results = JSON.parse(response.getContentText());
+      return results.filter(r => r.email && r.email.trim());
+    }
+  } catch (e) {
+    console.error(`❌ Error cargando leads: ${e.message}`);
+  }
+  return [];
+}
 
 function upsertToSupabase(table, data) {
   try {
