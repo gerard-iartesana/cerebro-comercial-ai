@@ -3131,6 +3131,7 @@ document.querySelectorAll('.sidebar-nav-item[data-section]').forEach(btn => {
         if (btn.dataset.section === 'proposals') loadProposalsModule();
         if (btn.dataset.section === 'contracts') loadContratos();
         if (btn.dataset.section === 'config-forms') loadFormularios();
+        if (btn.dataset.section === 'app-chat') loadChatRooms();
     });
 });
 
@@ -11312,37 +11313,462 @@ ${p.contenido_ia ? `<div class="ai nb"><div class="st">📋 DETALLE</div><div cl
 }
 
 
-window.sendAppChatMessage = function() {
-    const input = document.getElementById('app-chat-input');
+// ============================================
+// CHAT CON LEADS - Funciones completas
+// ============================================
+
+let _chatCurrentRoom = null;
+let _chatSubscription = null;
+let _chatRoomsCache = [];
+
+// --- Cargar lista de salas ---
+window.loadChatRooms = async function() {
+    try {
+        const { data, error } = await _supabase
+            .from('chat_rooms')
+            .select('*')
+            .order('last_message_at', { ascending: false });
+        if (error) throw error;
+        _chatRoomsCache = data || [];
+        renderChatRoomsList(_chatRoomsCache);
+        loadScheduledMessages();
+    } catch(e) {
+        console.error('Error loading chat rooms:', e);
+    }
+};
+
+function renderChatRoomsList(rooms) {
+    const container = document.getElementById('chat-rooms-list');
+    if (!container) return;
+    if (!rooms.length) {
+        container.innerHTML = `<div style="text-align:center;padding:60px 20px">
+            <div style="font-size:2.5rem;margin-bottom:12px;opacity:0.3">💬</div>
+            <div style="font-size:0.82rem;color:var(--text-grey)">No hay chats activos</div>
+            <div style="font-size:0.72rem;color:var(--text-grey);margin-top:4px">Crea uno con "+ Nuevo Chat"</div>
+        </div>`;
+        return;
+    }
+    container.innerHTML = rooms.map(r => {
+        const initial = (r.lead_name || '?')[0].toUpperCase();
+        const colors = ['#007AFF','#FF9500','#34C759','#AF52DE','#FF3B30','#5AC8FA','#FF2D55'];
+        const color = colors[r.lead_name.charCodeAt(0) % colors.length];
+        const isActive = _chatCurrentRoom && _chatCurrentRoom.id === r.id;
+        const time = r.last_message_at ? new Date(r.last_message_at).toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'}) : '';
+        return `<div onclick="openChatRoom('${r.id}')" style="display:flex;gap:10px;padding:10px 12px;border-radius:12px;cursor:pointer;transition:all 0.15s;align-items:center;margin-bottom:4px;${isActive ? 'background:var(--accent-glow);border:1px solid rgba(10,132,255,0.2)' : 'border:1px solid transparent'}" onmouseover="if(!this.style.background.includes('accent'))this.style.background='rgba(255,255,255,0.04)'" onmouseout="if(!this.style.background.includes('accent'))this.style.background='transparent'">
+            <div style="width:38px;height:38px;min-width:38px;border-radius:50%;background:${color};color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem">${initial}</div>
+            <div style="flex:1;min-width:0">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <span style="font-size:0.82rem;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.lead_name}</span>
+                    <span style="font-size:0.65rem;color:var(--text-grey);flex-shrink:0;margin-left:6px">${time}</span>
+                </div>
+                <div style="font-size:0.72rem;color:var(--text-grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.lead_company || r.lead_email || ''}</div>
+            </div>
+            ${r.unread_count > 0 ? `<div style="min-width:20px;height:20px;border-radius:50%;background:#FF3B30;color:white;font-size:0.65rem;font-weight:700;display:flex;align-items:center;justify-content:center">${r.unread_count}</div>` : ''}
+        </div>`;
+    }).join('');
+}
+
+// --- Filtrar chats ---
+window.filterChatRooms = function(query) {
+    const q = query.toLowerCase();
+    const filtered = _chatRoomsCache.filter(r => 
+        (r.lead_name || '').toLowerCase().includes(q) ||
+        (r.lead_company || '').toLowerCase().includes(q) ||
+        (r.lead_email || '').toLowerCase().includes(q)
+    );
+    renderChatRoomsList(filtered);
+};
+
+// --- Abrir sala ---
+window.openChatRoom = async function(roomId) {
+    const room = _chatRoomsCache.find(r => r.id === roomId);
+    if (!room) return;
+    _chatCurrentRoom = room;
+
+    // Show header & input bar
+    const header = document.getElementById('chat-active-header');
+    const inputBar = document.getElementById('chat-input-bar');
+    if (header) header.style.display = 'flex';
+    if (inputBar) inputBar.style.display = 'flex';
+
+    // Update header info
+    const initial = (room.lead_name || '?')[0].toUpperCase();
+    const colors = ['#007AFF','#FF9500','#34C759','#AF52DE','#FF3B30','#5AC8FA','#FF2D55'];
+    const color = colors[room.lead_name.charCodeAt(0) % colors.length];
+    const avatar = document.getElementById('chat-active-avatar');
+    if (avatar) { avatar.textContent = initial; avatar.style.background = color; }
+    const nameEl = document.getElementById('chat-active-name');
+    if (nameEl) nameEl.textContent = room.lead_name;
+    const compEl = document.getElementById('chat-active-company');
+    if (compEl) compEl.textContent = room.lead_company || room.lead_email || '';
+
+    // Re-render room list to show active state
+    renderChatRoomsList(_chatRoomsCache);
+
+    // Load messages
+    try {
+        const { data, error } = await _supabase
+            .from('chat_messages')
+            .select('*')
+            .eq('room_id', roomId)
+            .order('created_at', { ascending: true });
+        if (error) throw error;
+        renderChatMessages(data || []);
+
+        // Mark as read
+        await _supabase.from('chat_rooms').update({ unread_count: 0 }).eq('id', roomId);
+        room.unread_count = 0;
+        renderChatRoomsList(_chatRoomsCache);
+    } catch(e) {
+        console.error('Error loading messages:', e);
+    }
+
+    // Subscribe to realtime
+    subscribeToChatRoom(roomId);
+
+    // Focus input
+    const input = document.getElementById('chat-msg-input');
+    if (input) setTimeout(() => input.focus(), 100);
+};
+
+function renderChatMessages(messages) {
+    const container = document.getElementById('chat-messages-container');
+    if (!container) return;
+    const emptyState = document.getElementById('chat-empty-state');
+
+    if (!messages.length) {
+        container.innerHTML = '';
+        if (emptyState) container.appendChild(emptyState);
+        emptyState.style.display = 'flex';
+        emptyState.querySelector('div:nth-child(2)').textContent = 'Sin mensajes aún';
+        emptyState.querySelector('div:nth-child(3)').textContent = 'Envía el primer mensaje a este lead';
+        return;
+    }
+    if (emptyState) emptyState.style.display = 'none';
+
+    container.innerHTML = messages.map(m => {
+        const isAdmin = m.sender_type === 'admin';
+        const time = new Date(m.created_at).toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'});
+        const date = new Date(m.created_at).toLocaleDateString('es-ES', {day:'2-digit',month:'short'});
+        const bubbleBg = isAdmin ? 'var(--accent)' : 'var(--bg-secondary)';
+        const bubbleColor = isAdmin ? '#ffffff' : 'var(--text-main)';
+        const bubbleBorder = isAdmin ? 'transparent' : 'var(--card-border)';
+        const align = isAdmin ? 'flex-end' : 'flex-start';
+
+        let fileHtml = '';
+        if (m.file_url) {
+            const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.file_name || '');
+            fileHtml = isImg 
+                ? `<img src="${m.file_url}" alt="${m.file_name}" style="max-width:260px;border-radius:10px;margin-top:6px;cursor:pointer" onclick="window.open('${m.file_url}','_blank')">`
+                : `<a href="${m.file_url}" target="_blank" style="display:inline-flex;gap:4px;align-items:center;margin-top:6px;font-size:0.78rem;color:${isAdmin?'#ffffff':'var(--accent)'};text-decoration:underline">📄 ${m.file_name || 'Archivo'}</a>`;
+        }
+
+        return `<div style="display:flex;flex-direction:column;align-items:${align};gap:2px">
+            <div style="font-size:0.65rem;color:var(--text-grey);margin-bottom:2px;padding:0 4px">${m.sender_name || (isAdmin ? 'Tú' : _chatCurrentRoom?.lead_name || 'Lead')} · ${date} ${time}</div>
+            <div style="max-width:70%;padding:10px 14px;border-radius:14px;background:${bubbleBg};color:${bubbleColor};border:1px solid ${bubbleBorder};font-size:0.86rem;line-height:1.45;word-break:break-word">
+                ${m.content || ''}${fileHtml}
+            </div>
+        </div>`;
+    }).join('');
+
+    container.scrollTop = container.scrollHeight;
+}
+
+// --- Realtime subscription ---
+function subscribeToChatRoom(roomId) {
+    if (_chatSubscription) {
+        _supabase.removeChannel(_chatSubscription);
+        _chatSubscription = null;
+    }
+    _chatSubscription = _supabase
+        .channel('chat-room-' + roomId)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, payload => {
+            const container = document.getElementById('chat-messages-container');
+            if (!container) return;
+            const m = payload.new;
+            const isAdmin = m.sender_type === 'admin';
+            const time = new Date(m.created_at).toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'});
+            const date = new Date(m.created_at).toLocaleDateString('es-ES', {day:'2-digit',month:'short'});
+            const bubbleBg = isAdmin ? 'var(--accent)' : 'var(--bg-secondary)';
+            const bubbleColor = isAdmin ? '#ffffff' : 'var(--text-main)';
+            const bubbleBorder = isAdmin ? 'transparent' : 'var(--card-border)';
+            const align = isAdmin ? 'flex-end' : 'flex-start';
+            const emptyState = document.getElementById('chat-empty-state');
+            if (emptyState) emptyState.style.display = 'none';
+
+            const div = document.createElement('div');
+            div.style.cssText = `display:flex;flex-direction:column;align-items:${align};gap:2px`;
+            div.innerHTML = `
+                <div style="font-size:0.65rem;color:var(--text-grey);margin-bottom:2px;padding:0 4px">${m.sender_name || (isAdmin ? 'Tú' : _chatCurrentRoom?.lead_name || 'Lead')} · ${date} ${time}</div>
+                <div style="max-width:70%;padding:10px 14px;border-radius:14px;background:${bubbleBg};color:${bubbleColor};border:1px solid ${bubbleBorder};font-size:0.86rem;line-height:1.45;word-break:break-word">${m.content || ''}</div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        })
+        .subscribe();
+}
+
+// --- Enviar mensaje desde dashboard ---
+window.sendDashboardChatMsg = async function() {
+    if (!_chatCurrentRoom) return;
+    const input = document.getElementById('chat-msg-input');
     if (!input) return;
     const msg = input.value.trim();
     if (!msg) return;
     input.value = '';
-    
-    const container = document.getElementById('app-chat-messages');
-    if (!container) return;
-    const time = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-    
-    const userDiv = document.createElement('div');
-    userDiv.style.display = 'flex';
-    userDiv.style.gap = '12px';
-    userDiv.style.alignItems = 'flex-start';
-    userDiv.innerHTML = `
-        <div style="width:36px; height:36px; border-radius:50%; background:var(--accent-purple); color:white; display:flex; align-items:center; justify-content: center; font-weight:700; font-size:0.85rem">G</div>
-        <div>
-            <div style="display:flex; align-items:center; gap:8px">
-                <span style="font-weight:600; font-size:0.85rem; color:var(--text-main)">Gerard</span>
-                <span style="font-size:0.7rem; color:var(--text-grey)">${time}</span>
+
+    try {
+        const { error } = await _supabase.from('chat_messages').insert({
+            room_id: _chatCurrentRoom.id,
+            sender_type: 'admin',
+            sender_name: 'Gerard',
+            content: msg
+        });
+        if (error) throw error;
+
+        // Update room
+        await _supabase.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', _chatCurrentRoom.id);
+        _chatCurrentRoom.last_message_at = new Date().toISOString();
+        renderChatRoomsList(_chatRoomsCache);
+    } catch(e) {
+        console.error('Error sending message:', e);
+        showNotification('Error al enviar mensaje', 'error');
+    }
+};
+
+// --- Adjuntar archivo ---
+window.handleChatFileUpload = async function(inputEl) {
+    if (!_chatCurrentRoom || !inputEl.files.length) return;
+    const file = inputEl.files[0];
+    if (file.size > 10 * 1024 * 1024) { showNotification('Archivo máx 10MB', 'error'); return; }
+
+    try {
+        const path = `chat/${_chatCurrentRoom.id}/${Date.now()}_${file.name}`;
+        const { error: upErr } = await _supabase.storage.from('archivos').upload(path, file);
+        if (upErr) throw upErr;
+        const { data: urlData } = _supabase.storage.from('archivos').getPublicUrl(path);
+
+        await _supabase.from('chat_messages').insert({
+            room_id: _chatCurrentRoom.id,
+            sender_type: 'admin',
+            sender_name: 'Gerard',
+            content: `📎 ${file.name}`,
+            file_url: urlData.publicUrl,
+            file_name: file.name
+        });
+        await _supabase.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', _chatCurrentRoom.id);
+        showNotification('Archivo enviado', 'success');
+    } catch(e) {
+        console.error('Error uploading file:', e);
+        showNotification('Error al subir archivo', 'error');
+    }
+    inputEl.value = '';
+};
+
+// --- Modal Nuevo Chat ---
+window.showCreateChatModal = async function() {
+    // Load leads from outreach_leads
+    let leads = [];
+    try {
+        const { data } = await _supabase.from('outreach_leads').select('id, nombre, empresa, email').order('nombre');
+        leads = data || [];
+    } catch(e) { console.warn('Could not load leads:', e); }
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'create-chat-modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width:480px">
+            <div class="modal-header">
+                <h2 style="font-size:1.1rem;font-weight:800">💬 Nuevo Chat con Lead</h2>
+                <button class="modal-close-btn" onclick="document.getElementById('create-chat-modal').remove()">✕</button>
             </div>
-            <p style="font-size:0.88rem; color:var(--text-main); margin-top:4px; background:var(--bg-secondary); padding:10px 14px; border-radius:12px; border:1px solid var(--card-border); max-width:500px">
-                ${msg}
-            </p>
+            <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:14px">
+                <div>
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Seleccionar Lead existente</label>
+                    <select id="new-chat-lead-select" class="modal-input" onchange="fillChatFromLead(this)" style="width:100%">
+                        <option value="">-- O introduce datos manualmente --</option>
+                        ${leads.map(l => `<option value="${l.id}" data-name="${l.nombre||''}" data-company="${l.empresa||''}" data-email="${l.email||''}">${l.nombre || l.email} · ${l.empresa || ''}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Nombre *</label>
+                    <input type="text" id="new-chat-name" class="modal-input" placeholder="Nombre del lead" style="width:100%">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <div>
+                        <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Empresa</label>
+                        <input type="text" id="new-chat-company" class="modal-input" placeholder="Empresa" style="width:100%">
+                    </div>
+                    <div>
+                        <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Email</label>
+                        <input type="text" id="new-chat-email" class="modal-input" placeholder="email@ejemplo.com" style="width:100%">
+                    </div>
+                </div>
+                <button class="btn-primary" onclick="createChatRoom()" style="width:100%;padding:12px;border-radius:12px;font-weight:700;font-size:0.88rem;margin-top:6px">Crear Chat</button>
+            </div>
         </div>
     `;
-    container.appendChild(userDiv);
-    container.scrollTop = container.scrollHeight;
-    
-    logToSystemSupport(`[Chat App] Enviado mensaje de chat interno: "${msg}"`);
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+};
+
+window.fillChatFromLead = function(select) {
+    const opt = select.selectedOptions[0];
+    if (!opt || !opt.value) return;
+    document.getElementById('new-chat-name').value = opt.dataset.name || '';
+    document.getElementById('new-chat-company').value = opt.dataset.company || '';
+    document.getElementById('new-chat-email').value = opt.dataset.email || '';
+};
+
+window.createChatRoom = async function() {
+    const name = document.getElementById('new-chat-name')?.value.trim();
+    if (!name) { showNotification('El nombre es obligatorio', 'error'); return; }
+    const company = document.getElementById('new-chat-company')?.value.trim() || '';
+    const email = document.getElementById('new-chat-email')?.value.trim() || '';
+    const leadSelect = document.getElementById('new-chat-lead-select');
+    const leadId = leadSelect?.value || null;
+
+    try {
+        const user = (await _supabase.auth.getUser()).data.user;
+        const { data, error } = await _supabase.from('chat_rooms').insert({
+            user_id: user.id,
+            lead_id: leadId,
+            lead_name: name,
+            lead_company: company,
+            lead_email: email
+        }).select().single();
+        if (error) throw error;
+
+        document.getElementById('create-chat-modal')?.remove();
+        showNotification(`Chat con ${name} creado`, 'success');
+        await loadChatRooms();
+        openChatRoom(data.id);
+    } catch(e) {
+        console.error('Error creating chat:', e);
+        showNotification('Error al crear chat', 'error');
+    }
+};
+
+// --- Copiar link de acceso ---
+window.copyChatLink = function() {
+    if (!_chatCurrentRoom) return;
+    const url = `${window.location.origin}/chat?token=${_chatCurrentRoom.link_token}`;
+    navigator.clipboard.writeText(url).then(() => {
+        showNotification('Link copiado al portapapeles', 'success');
+    }).catch(() => {
+        prompt('Copia este link:', url);
+    });
+};
+
+// --- Enviar recordatorio (placeholder) ---
+window.sendChatReminder = function() {
+    if (!_chatCurrentRoom) return;
+    showNotification(`Recordatorio enviado a ${_chatCurrentRoom.lead_name}`, 'success');
+};
+
+// --- Modal Programar Mensaje ---
+window.scheduleChatMessageModal = function() {
+    if (!_chatCurrentRoom) return;
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'schedule-chat-modal';
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 30);
+    const defaultDt = now.toISOString().slice(0,16);
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width:440px">
+            <div class="modal-header">
+                <h2 style="font-size:1.1rem;font-weight:800">⏰ Programar Mensaje</h2>
+                <button class="modal-close-btn" onclick="document.getElementById('schedule-chat-modal').remove()">✕</button>
+            </div>
+            <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:14px">
+                <div>
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Para: ${_chatCurrentRoom.lead_name}</label>
+                </div>
+                <div>
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Mensaje</label>
+                    <textarea id="sched-msg-content" class="modal-input" rows="3" placeholder="Escribe el mensaje..." style="width:100%;resize:vertical"></textarea>
+                </div>
+                <div>
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Fecha y hora de envío</label>
+                    <input type="datetime-local" id="sched-msg-datetime" class="modal-input" value="${defaultDt}" style="width:100%">
+                </div>
+                <button class="btn-primary" onclick="saveScheduledMessage()" style="width:100%;padding:12px;border-radius:12px;font-weight:700">Programar Envío</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+};
+
+window.saveScheduledMessage = async function() {
+    const content = document.getElementById('sched-msg-content')?.value.trim();
+    const dt = document.getElementById('sched-msg-datetime')?.value;
+    if (!content || !dt || !_chatCurrentRoom) { showNotification('Rellena todos los campos', 'error'); return; }
+
+    try {
+        const user = (await _supabase.auth.getUser()).data.user;
+        const { error } = await _supabase.from('chat_scheduled_messages').insert({
+            room_id: _chatCurrentRoom.id,
+            user_id: user.id,
+            content: content,
+            scheduled_at: new Date(dt).toISOString()
+        });
+        if (error) throw error;
+        document.getElementById('schedule-chat-modal')?.remove();
+        showNotification('Mensaje programado', 'success');
+        loadScheduledMessages();
+    } catch(e) {
+        console.error('Error scheduling message:', e);
+        showNotification('Error al programar', 'error');
+    }
+};
+
+// --- Cargar mensajes programados ---
+async function loadScheduledMessages() {
+    const container = document.getElementById('chat-scheduled-list');
+    if (!container) return;
+    try {
+        const { data, error } = await _supabase
+            .from('chat_scheduled_messages')
+            .select('*, chat_rooms(lead_name)')
+            .eq('status', 'pending')
+            .order('scheduled_at', { ascending: true });
+        if (error) throw error;
+        if (!data || !data.length) {
+            container.innerHTML = '<div style="text-align:center;padding:20px;font-size:0.8rem;color:var(--text-grey)">No hay mensajes programados</div>';
+            return;
+        }
+        container.innerHTML = data.map(s => {
+            const dt = new Date(s.scheduled_at);
+            const dateStr = dt.toLocaleDateString('es-ES', {day:'2-digit',month:'short'});
+            const timeStr = dt.toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'});
+            const leadName = s.chat_rooms?.lead_name || 'Lead';
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border-color);gap:12px">
+                <div style="flex:1;min-width:0">
+                    <div style="font-size:0.82rem;font-weight:700;color:var(--text-main)">${leadName}</div>
+                    <div style="font-size:0.75rem;color:var(--text-grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.content}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                    <span style="font-size:0.72rem;color:var(--accent);font-weight:600">${dateStr} ${timeStr}</span>
+                    <button onclick="cancelScheduledMsg('${s.id}')" style="background:rgba(255,59,48,0.1);color:#FF3B30;border:1px solid rgba(255,59,48,0.15);border-radius:6px;padding:4px 8px;font-size:0.7rem;cursor:pointer;font-weight:600">Cancelar</button>
+                </div>
+            </div>`;
+        }).join('');
+    } catch(e) {
+        console.error('Error loading scheduled:', e);
+    }
+}
+
+window.cancelScheduledMsg = async function(id) {
+    try {
+        await _supabase.from('chat_scheduled_messages').update({ status: 'cancelled' }).eq('id', id);
+        showNotification('Mensaje cancelado', 'success');
+        loadScheduledMessages();
+    } catch(e) {
+        showNotification('Error al cancelar', 'error');
+    }
 };
 
 // --- Collapsible Sidebar Menu ---
