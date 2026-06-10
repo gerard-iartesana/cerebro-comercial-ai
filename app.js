@@ -11573,19 +11573,22 @@ window.showCreateChatModal = async function() {
     _chatSelectedLeadId = null;
     _chatLeadsCache = [];
     try {
-        // Load from CRM leads
-        const { data: crmLeads } = await _supabase.from('outreach_leads').select('id, nombre, empresa, email, telefono').order('nombre');
+        // Load from CRM leads (real column names)
+        const { data: crmLeads } = await _supabase.from('outreach_leads').select('id, first_name, last_name, company_name, email').order('first_name');
         // Load from existing chat rooms (manual leads)
         const { data: chatLeads } = await _supabase.from('chat_rooms').select('lead_id, lead_name, lead_company, lead_email, lead_phone');
         
         const merged = [];
         const seen = new Set();
         
-        // Add CRM leads first
+        // Add CRM leads first (normalize field names)
         (crmLeads || []).forEach(l => {
-            const key = (l.email || l.nombre || '').toLowerCase();
-            if (key && !seen.has(key)) { seen.add(key); merged.push(l); }
-            else if (!key) merged.push(l);
+            const nombre = [l.first_name, l.last_name].filter(Boolean).join(' ') || '';
+            const key = (l.email || nombre).toLowerCase();
+            if (key && !seen.has(key)) {
+                seen.add(key);
+                merged.push({ id: l.id, nombre, empresa: l.company_name || '', email: l.email || '', telefono: '' });
+            }
         });
         
         // Add chat room leads that aren't in CRM
@@ -11593,7 +11596,7 @@ window.showCreateChatModal = async function() {
             const key = (r.lead_email || r.lead_name || '').toLowerCase();
             if (!seen.has(key)) {
                 seen.add(key);
-                merged.push({ id: r.lead_id, nombre: r.lead_name, empresa: r.lead_company, email: r.lead_email, telefono: r.lead_phone, _fromChat: true });
+                merged.push({ id: r.lead_id, nombre: r.lead_name, empresa: r.lead_company, email: r.lead_email, telefono: r.lead_phone || '', _fromChat: true });
             }
         });
         
