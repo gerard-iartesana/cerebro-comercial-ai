@@ -1826,7 +1826,7 @@
                         </div>
 
                         <!-- Kanban Board -->
-                        <div class="pres-kanban-board" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; overflow-x: auto; width: 100%;">
+                        <div class="pres-kanban-board" style="display: grid; grid-template-columns: repeat(7, minmax(160px, 1fr)); gap: 12px; overflow-x: auto; width: 100%; padding-bottom: 8px;">
                             <!-- Columns populated in app.js -->
                             <!-- Column 1: Propuesta enviada -->
                             <div class="pres-kanban-column" id="seg-col-enviada" ondragover="allowDropSegCard(event)" ondrop="handleDropSegCard(event, 'enviada')">

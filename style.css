@@ -2964,9 +2964,12 @@ body.role-guest td button {
 
 /* Kanban Board Seguimiento */
 .pres-kanban-board {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(150px, 1fr));
     gap: 12px;
     width: 100%;
+    overflow-x: auto;
+    padding-bottom: 8px;
 }
 .pres-kanban-column {
     background: rgba(255, 255, 255, 0.02);
@@ -2977,8 +2980,7 @@ body.role-guest td button {
     transition: all 0.2s ease;
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-width: 200px;
+    min-width: 0;
 }
 .pres-kanban-column .column-header {
     display: flex;
