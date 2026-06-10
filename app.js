@@ -5919,7 +5919,10 @@ async function openComposeEmailModal() {
     const modal = document.getElementById('email-compose-modal');
     if (!modal) { console.error('[Compose] Modal not found'); return; }
     modal.style.display = 'flex';
-    console.log('[Compose] Modal opened');
+    // Force reflow then add active class for CSS transition
+    void modal.offsetWidth;
+    modal.classList.add('active');
+    console.log('[Compose] Modal opened with active class');
     
     try {
         const select = document.getElementById('compose-email-to');
@@ -5984,8 +5987,9 @@ async function openComposeEmailModal() {
 
 function closeComposeEmailModal() {
     const m = document.getElementById('email-compose-modal');
+    if (!m) return;
     m.classList.remove('active');
-    m.style.display = 'none';
+    setTimeout(() => { m.style.display = 'none'; }, 300);
 }
 
 async function sendManualEmail() {
