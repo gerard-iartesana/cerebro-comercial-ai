@@ -7796,6 +7796,10 @@ function _onGCalAuthSuccess(tokenResponse) {
     updateGCalButton(true);
     showGCalStatus('✅ Google Calendar conectado', '#34c759');
     loadGCalEvents();
+    
+    // Start auto-refresh to keep token alive
+    const clientId = getGCalClientId();
+    if (clientId) _startGCalAutoRefresh(clientId);
 }
 
 function updateGCalButton(connected) {
@@ -7995,6 +7999,8 @@ async function syncMeetingToGCal(id) {
 }
 
 let _gcalRestoreAttempted = false;
+let _gcalRefreshInterval = null;
+
 function tryRestoreGCalSession() {
     if (_gcalConnected || _gcalRestoreAttempted) return;
     _gcalRestoreAttempted = true;
@@ -8006,6 +8012,7 @@ function tryRestoreGCalSession() {
     const storedToken = localStorage.getItem('gf_gcal_token');
     const storedExpiry = parseInt(localStorage.getItem('gf_gcal_token_expiry') || '0');
 
+    // If token is still valid, use it directly
     if (storedToken && storedExpiry > Date.now()) {
         _gcalToken = storedToken;
         _gcalConnected = true;
@@ -8014,25 +8021,48 @@ function tryRestoreGCalSession() {
         setTimeout(() => {
             if (document.getElementById('meetings-list')) loadGCalEvents();
         }, 800);
+        _startGCalAutoRefresh(clientId);
         return;
     }
 
+    // Token expired — try silent renewal (no popup)
+    _silentGCalRefresh(clientId);
+}
+
+function _silentGCalRefresh(clientId) {
     try {
         const tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: clientId,
             scope: GCAL_SCOPES,
             callback: function(tokenResponse) {
                 if (tokenResponse.error) {
+                    console.warn('[GCal] Silent refresh failed:', tokenResponse.error);
                     _showGCalReconnectBtn();
                     return;
                 }
+                console.log('[GCal] Token renovado silenciosamente');
                 _onGCalAuthSuccess(tokenResponse);
+                _startGCalAutoRefresh(clientId);
             }
         });
+        // prompt: '' = silent renewal if user already granted consent
         tokenClient.requestAccessToken({ prompt: '' });
     } catch(e) {
+        console.warn('[GCal] Silent refresh error:', e);
         _showGCalReconnectBtn();
     }
+}
+
+function _startGCalAutoRefresh(clientId) {
+    // Clear existing interval if any
+    if (_gcalRefreshInterval) clearInterval(_gcalRefreshInterval);
+    
+    // Refresh token every 45 minutes (tokens last 60 min)
+    _gcalRefreshInterval = setInterval(() => {
+        console.log('[GCal] Auto-renovando token...');
+        _gcalRestoreAttempted = false;
+        _silentGCalRefresh(clientId);
+    }, 45 * 60 * 1000);
 }
 
 function _showGCalReconnectBtn() {
