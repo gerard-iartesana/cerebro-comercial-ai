@@ -1,5 +1,5 @@
 // Chat Service Worker - Network First (always fresh content)
-const CACHE_VERSION = 'chat-v6';
+const CACHE_VERSION = 'chat-v7';
 
 self.addEventListener('install', event => {
     self.skipWaiting();

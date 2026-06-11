@@ -391,27 +391,6 @@
 <!-- Chat App (hidden until loaded) -->
 <div id="chat-app" style="display:none;flex-direction:column;height:100dvh">
 
-    <!-- PWA Install banner -->
-    <div class="pwa-banner" id="pwa-banner">
-        <div class="pwa-icon">💬</div>
-        <div class="pwa-text">
-            <div class="pwa-title">Instalar Chat</div>
-            <div class="pwa-subtitle">Accede rápido desde tu pantalla de inicio</div>
-        </div>
-        <button class="pwa-btn" id="pwa-install-btn">Instalar</button>
-        <button class="pwa-close" id="pwa-close-btn">✕</button>
-    </div>
-
-    <!-- iOS Install banner -->
-    <div class="pwa-banner" id="ios-banner" style="display:none">
-        <div class="pwa-icon">📱</div>
-        <div class="pwa-text">
-            <div class="pwa-title">Instalar en iPhone</div>
-            <div class="pwa-subtitle">Pulsa <strong style="color:var(--text-main)">⬆️ Compartir</strong> → <strong style="color:var(--text-main)">"Añadir a pantalla de inicio"</strong></div>
-        </div>
-        <button class="pwa-close" onclick="document.getElementById('ios-banner').style.display='none'">✕</button>
-    </div>
-
     <!-- Header -->
     <div class="chat-header">
         <div class="avatar" id="chat-avatar">G</div>
@@ -511,16 +490,15 @@ function showError() {
 
 // ===== INSTALL BANNER =====
 function showInstallBanner() {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-    
     if (isStandalone) return; // Already installed
     
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     if (isIOS) {
-        // iOS doesn't support beforeinstallprompt — show manual instructions
-        document.getElementById('ios-banner').style.display = 'flex';
+        // iOS: show Apple modal with instructions after delay
+        setTimeout(() => showInstallModal(), 2000);
     }
-    // Android/Chrome banner handled by beforeinstallprompt event below
+    // Android/Chrome: handled by beforeinstallprompt event
 }
 
 // ===== LOAD MESSAGES =====
@@ -796,23 +774,12 @@ function registerServiceWorker() {
     }
 }
 
-// Android/Chrome install prompt
+// Android/Chrome install prompt → show Apple modal
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    document.getElementById('pwa-banner').style.display = 'flex';
-});
-
-document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    deferredPrompt = null;
-    document.getElementById('pwa-banner').style.display = 'none';
-});
-
-document.getElementById('pwa-close-btn')?.addEventListener('click', () => {
-    document.getElementById('pwa-banner').style.display = 'none';
+    // Auto-show Apple modal after a short delay
+    setTimeout(() => showInstallModal(), 1500);
 });
 
 // ===== INSTALL MODAL (Apple style) =====
