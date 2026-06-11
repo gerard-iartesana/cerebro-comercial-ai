@@ -11759,22 +11759,63 @@ window.copyChatLink = function() {
     });
 };
 
-// --- Enviar recordatorio al lead ---
-window.sendChatReminder = async function() {
+// --- Enviar recordatorio al lead (con modal editable) ---
+window.sendChatReminder = function() {
     if (!_chatCurrentRoom) return;
     const leadName = _chatCurrentRoom.lead_name || 'Lead';
-    const reminderMsg = `👋 Hola ${leadName}, te escribo para hacer seguimiento. ¿Has tenido oportunidad de revisar nuestro último mensaje? Estoy disponible para cualquier duda. ¡Gracias!`;
-    
+    const templates = [
+        `👋 Hola ${leadName}, te escribo para hacer seguimiento. ¿Has tenido oportunidad de revisar nuestro último mensaje? Estoy disponible para cualquier duda. ¡Gracias!`,
+        `📋 Hola ${leadName}, quería recordarte que estamos pendientes de tu respuesta. Si necesitas más información, no dudes en escribirme.`,
+        `🕐 Hola ${leadName}, solo un pequeño recordatorio. Me encantaría poder avanzar contigo. ¿Cuándo te viene bien?`,
+        `💡 ${leadName}, te dejo un recordatorio amigable. Estamos preparados para empezar cuando tú lo estés. ¿Hablamos?`
+    ];
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'reminder-modal';
+    modal.innerHTML = `
+        <div class="modal-box" style="max-width:480px">
+            <div class="modal-header">
+                <h2 style="font-size:1.1rem;font-weight:800">🔔 Enviar Recordatorio</h2>
+                <button class="modal-close" onclick="document.getElementById('reminder-modal').remove()">✕</button>
+            </div>
+            <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:14px">
+                <div>
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Para: ${leadName}</label>
+                </div>
+                <div>
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:8px;display:block">Plantillas rápidas</label>
+                    <div style="display:flex;flex-direction:column;gap:6px" id="reminder-templates">
+                        ${templates.map((t, i) => `
+                            <button onclick="document.getElementById('reminder-text').value=this.dataset.msg" data-msg="${t.replace(/"/g,'&quot;')}" style="text-align:left;padding:10px 12px;border-radius:10px;border:1px solid var(--card-border);background:var(--bg-main);color:var(--text-main);font-size:0.78rem;cursor:pointer;line-height:1.4;font-family:inherit;transition:all 0.15s" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='var(--card-border)'">${t.substring(0, 80)}...</button>
+                        `).join('')}
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Mensaje (editable)</label>
+                    <textarea id="reminder-text" class="modal-input" rows="4" style="width:100%;resize:vertical">${templates[0]}</textarea>
+                </div>
+                <button class="btn-primary" onclick="sendReminderNow()" style="width:100%;padding:12px;border-radius:12px;font-weight:700">🔔 Enviar Recordatorio Ahora</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+};
+
+window.sendReminderNow = async function() {
+    const content = document.getElementById('reminder-text')?.value.trim();
+    if (!content || !_chatCurrentRoom) return;
     try {
         await _supabase.from('chat_messages').insert({
             room_id: _chatCurrentRoom.id,
             sender_type: 'admin',
             sender_name: 'Gerard',
-            content: reminderMsg,
+            content: content,
             is_reminder: true
         });
         await _supabase.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', _chatCurrentRoom.id);
-        showToast(`Recordatorio enviado a ${leadName}`);
+        document.getElementById('reminder-modal')?.remove();
+        showToast(`Recordatorio enviado a ${_chatCurrentRoom.lead_name}`);
     } catch(e) {
         console.error('Error sending reminder:', e);
         showToast('Error al enviar recordatorio', true);
@@ -11784,6 +11825,13 @@ window.sendChatReminder = async function() {
 // --- Modal Programar Mensaje ---
 window.scheduleChatMessageModal = function() {
     if (!_chatCurrentRoom) return;
+    const leadName = _chatCurrentRoom.lead_name || 'Lead';
+    const templates = [
+        `Buenos días ${leadName}, ¿cómo va todo? Quería hacer un seguimiento rápido.`,
+        `Hola ${leadName}, te recuerdo que tenemos pendiente confirmar los detalles. ¿Puedes revisarlo?`,
+        `${leadName}, te envío un recordatorio amigable. Estamos listos para empezar cuando tú digas.`,
+        `Hola ${leadName}, ¿has podido revisar la propuesta que te envié? Quedo a la espera.`
+    ];
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.id = 'schedule-chat-modal';
@@ -11791,14 +11839,22 @@ window.scheduleChatMessageModal = function() {
     now.setMinutes(now.getMinutes() + 30);
     const defaultDt = now.toISOString().slice(0,16);
     modal.innerHTML = `
-        <div class="modal-box" style="max-width:440px">
+        <div class="modal-box" style="max-width:480px">
             <div class="modal-header">
                 <h2 style="font-size:1.1rem;font-weight:800">⏰ Programar Mensaje</h2>
                 <button class="modal-close" onclick="document.getElementById('schedule-chat-modal').remove()">✕</button>
             </div>
             <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:14px">
                 <div>
-                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Para: ${_chatCurrentRoom.lead_name}</label>
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Para: ${leadName}</label>
+                </div>
+                <div>
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:8px;display:block">Plantillas rápidas</label>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px">
+                        ${templates.map((t, i) => `
+                            <button onclick="document.getElementById('sched-msg-content').value=this.dataset.msg" data-msg="${t.replace(/"/g,'&quot;')}" style="padding:6px 12px;border-radius:8px;border:1px solid var(--card-border);background:var(--bg-main);color:var(--text-main);font-size:0.72rem;cursor:pointer;font-family:inherit;transition:all 0.15s;white-space:nowrap" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='var(--card-border)'">${t.substring(0, 40)}...</button>
+                        `).join('')}
+                    </div>
                 </div>
                 <div>
                     <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Mensaje</label>
@@ -11829,7 +11885,7 @@ window.saveScheduledMessage = async function() {
         });
         if (error) throw error;
         document.getElementById('schedule-chat-modal')?.remove();
-        showToast('Mensaje programado');
+        showToast('Mensaje programado ✅');
         loadScheduledMessages();
     } catch(e) {
         console.error('Error scheduling message:', e);
@@ -11837,41 +11893,87 @@ window.saveScheduledMessage = async function() {
     }
 };
 
-// --- Cargar mensajes programados ---
+// --- Cargar mensajes programados (con filtro de estado) ---
+let _scheduledMessagesCache = [];
 async function loadScheduledMessages() {
     const container = document.getElementById('chat-scheduled-list');
     if (!container) return;
+    const statusFilter = document.getElementById('sched-filter-status')?.value || 'pending';
     try {
-        const { data, error } = await _supabase
+        let query = _supabase
             .from('chat_scheduled_messages')
             .select('*, chat_rooms(lead_name)')
-            .eq('status', 'pending')
-            .order('scheduled_at', { ascending: true });
-        if (error) throw error;
-        if (!data || !data.length) {
-            container.innerHTML = '<div style="text-align:center;padding:20px;font-size:0.8rem;color:var(--text-grey)">No hay mensajes programados</div>';
-            return;
+            .order('scheduled_at', { ascending: false });
+        
+        if (statusFilter !== 'all') {
+            query = query.eq('status', statusFilter);
         }
-        container.innerHTML = data.map(s => {
-            const dt = new Date(s.scheduled_at);
-            const dateStr = dt.toLocaleDateString('es-ES', {day:'2-digit',month:'short'});
-            const timeStr = dt.toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'});
-            const leadName = s.chat_rooms?.lead_name || 'Lead';
-            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border-color);gap:12px">
-                <div style="flex:1;min-width:0">
-                    <div style="font-size:0.82rem;font-weight:700;color:var(--text-main)">${leadName}</div>
-                    <div style="font-size:0.75rem;color:var(--text-grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.content}</div>
-                </div>
-                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-                    <span style="font-size:0.72rem;color:var(--accent);font-weight:600">${dateStr} ${timeStr}</span>
-                    <button onclick="cancelScheduledMsg('${s.id}')" style="background:rgba(255,59,48,0.1);color:#FF3B30;border:1px solid rgba(255,59,48,0.15);border-radius:6px;padding:4px 8px;font-size:0.7rem;cursor:pointer;font-weight:600">Cancelar</button>
-                </div>
-            </div>`;
-        }).join('');
+        
+        const { data, error } = await query;
+        if (error) throw error;
+        _scheduledMessagesCache = data || [];
+        renderScheduledMessages(_scheduledMessagesCache);
     } catch(e) {
         console.error('Error loading scheduled:', e);
     }
 }
+
+function renderScheduledMessages(data) {
+    const container = document.getElementById('chat-scheduled-list');
+    if (!container) return;
+    
+    if (!data || !data.length) {
+        container.innerHTML = '<div style="text-align:center;padding:20px;font-size:0.8rem;color:var(--text-grey)">No hay mensajes en esta categoría</div>';
+        return;
+    }
+    
+    container.innerHTML = data.map(s => {
+        const dt = new Date(s.scheduled_at);
+        const dateStr = dt.toLocaleDateString('es-ES', {day:'2-digit',month:'short',year:'numeric'});
+        const timeStr = dt.toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'});
+        const leadName = s.chat_rooms?.lead_name || 'Lead';
+        
+        const statusColors = {
+            pending: { bg: 'rgba(255,149,0,0.1)', color: '#FF9500', label: '⏳ Pendiente' },
+            sent: { bg: 'rgba(52,199,89,0.1)', color: '#34C759', label: '✅ Enviado' },
+            cancelled: { bg: 'rgba(255,59,48,0.1)', color: '#FF3B30', label: '❌ Cancelado' }
+        };
+        const st = statusColors[s.status] || statusColors.pending;
+        
+        let actions = '';
+        if (s.status === 'pending') {
+            actions = `<button onclick="cancelScheduledMsg('${s.id}')" style="background:rgba(255,59,48,0.1);color:#FF3B30;border:1px solid rgba(255,59,48,0.15);border-radius:6px;padding:4px 8px;font-size:0.68rem;cursor:pointer;font-weight:600">Cancelar</button>`;
+        }
+        
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border-color);gap:12px">
+            <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+                    <span style="font-size:0.82rem;font-weight:700;color:var(--text-main)">${leadName}</span>
+                    <span style="font-size:0.65rem;padding:2px 8px;border-radius:6px;background:${st.bg};color:${st.color};font-weight:700">${st.label}</span>
+                </div>
+                <div style="font-size:0.75rem;color:var(--text-grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:350px">${s.content}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                <span style="font-size:0.72rem;color:var(--text-grey);font-weight:500">${dateStr} ${timeStr}</span>
+                ${actions}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+window.filterScheduledMessages = function() {
+    const search = document.getElementById('sched-search')?.value.trim().toLowerCase() || '';
+    if (!search) {
+        renderScheduledMessages(_scheduledMessagesCache);
+        return;
+    }
+    const filtered = _scheduledMessagesCache.filter(s => {
+        const leadName = (s.chat_rooms?.lead_name || '').toLowerCase();
+        const content = (s.content || '').toLowerCase();
+        return leadName.includes(search) || content.includes(search);
+    });
+    renderScheduledMessages(filtered);
+};
 
 window.cancelScheduledMsg = async function(id) {
     try {
@@ -11882,6 +11984,45 @@ window.cancelScheduledMsg = async function(id) {
         showToast('Error al cancelar', true);
     }
 };
+
+// --- Emoji Picker ---
+const EMOJIS = ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','🫤','😟','🙁','☹️','😮','😯','😲','😳','🥺','🥹','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾','👋','🤚','🖐️','✋','🖖','🫱','🫲','🫳','🫴','👌','🤌','🤏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','🫵','👍','👎','✊','👊','🤛','🤜','👏','🙌','🫶','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄','🫦','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','💕','💞','💓','💗','💖','💘','💝','⭐','🌟','✨','⚡','🔥','💯','🎉','🎊','🏆','🥇','🥈','🥉','📌','💼','📊','📈','📉','💰','💵','💎','🔑','🛠️','⚙️','📱','💻','📧','📞','🕐','🕑','🕒','🕓','📅','✅','❌','⚠️','❓','❗','💡','🎯','🚀','✈️','🌍','🏠','🏢'];
+
+window.toggleEmojiPicker = function() {
+    const picker = document.getElementById('emoji-picker');
+    if (!picker) return;
+    const isVisible = picker.style.display !== 'none';
+    picker.style.display = isVisible ? 'none' : 'block';
+    
+    if (!isVisible && !picker.dataset.loaded) {
+        const grid = document.getElementById('emoji-grid');
+        grid.innerHTML = EMOJIS.map(e => 
+            `<span style="cursor:pointer;padding:3px;border-radius:4px;transition:background 0.15s;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='rgba(0,0,0,0.08)'" onmouseout="this.style.background=''" onclick="insertEmoji('${e}')">${e}</span>`
+        ).join('');
+        picker.dataset.loaded = 'true';
+    }
+};
+
+window.insertEmoji = function(emoji) {
+    const input = document.getElementById('chat-msg-input');
+    if (!input) return;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    input.value = input.value.substring(0, start) + emoji + input.value.substring(end);
+    input.focus();
+    input.selectionStart = input.selectionEnd = start + emoji.length;
+    document.getElementById('emoji-picker').style.display = 'none';
+};
+
+// Close emoji picker on click outside
+document.addEventListener('click', function(e) {
+    const picker = document.getElementById('emoji-picker');
+    if (picker && picker.style.display !== 'none') {
+        if (!e.target.closest('#emoji-picker') && !e.target.closest('[onclick*="toggleEmojiPicker"]')) {
+            picker.style.display = 'none';
+        }
+    }
+});
 
 // --- Collapsible Sidebar Menu ---
 window.toggleSidebarGroup = function(groupId) {
