@@ -11532,7 +11532,7 @@ window.sendDashboardChatMsg = async function() {
         renderChatRoomsList(_chatRoomsCache);
     } catch(e) {
         console.error('Error sending message:', e);
-        showNotification('Error al enviar mensaje', 'error');
+        showToast('Error al enviar mensaje', true);
     }
 };
 
@@ -11540,7 +11540,7 @@ window.sendDashboardChatMsg = async function() {
 window.handleChatFileUpload = async function(inputEl) {
     if (!_chatCurrentRoom || !inputEl.files.length) return;
     const file = inputEl.files[0];
-    if (file.size > 10 * 1024 * 1024) { showNotification('Archivo máx 10MB', 'error'); return; }
+    if (file.size > 10 * 1024 * 1024) { showToast('Archivo máx 10MB', true); return; }
 
     try {
         const path = `chat/${_chatCurrentRoom.id}/${Date.now()}_${file.name}`;
@@ -11557,10 +11557,10 @@ window.handleChatFileUpload = async function(inputEl) {
             file_name: file.name
         });
         await _supabase.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', _chatCurrentRoom.id);
-        showNotification('Archivo enviado', 'success');
+        showToast('Archivo enviado');
     } catch(e) {
         console.error('Error uploading file:', e);
-        showNotification('Error al subir archivo', 'error');
+        showToast('Error al subir archivo', true);
     }
     inputEl.value = '';
 };
@@ -11714,13 +11714,13 @@ window.clearChatLeadSelection = function() {
 
 window.createChatRoom = async function() {
     const name = document.getElementById('new-chat-name')?.value.trim();
-    if (!name) { showNotification('El nombre es obligatorio', 'error'); return; }
+    if (!name) { showToast('El nombre es obligatorio', true); return; }
     const company = document.getElementById('new-chat-company')?.value.trim() || '';
     const email = document.getElementById('new-chat-email')?.value.trim() || '';
 
     try {
         const user = (await _supabase.auth.getUser()).data.user;
-        if (!user) { showNotification('No hay sesión activa', 'error'); return; }
+        if (!user) { showToast('No hay sesión activa', true); return; }
 
         const insertData = {
             user_id: user.id,
@@ -11743,12 +11743,12 @@ window.createChatRoom = async function() {
 
         console.log('[Chat] Room created:', data);
         document.getElementById('create-chat-modal')?.remove();
-        showNotification(`Chat con ${name} creado`, 'success');
+        showToast(`Chat con ${name} creado`);
         await loadChatRooms();
         openChatRoom(data.id);
     } catch(e) {
         console.error('[Chat] Error creating chat:', e.message || e);
-        showNotification('Error: ' + (e.message || 'No se pudo crear'), 'error');
+        showToast('Error: ' + (e.message || 'No se pudo crear'), true);
     }
 };
 
@@ -11757,7 +11757,7 @@ window.copyChatLink = function() {
     if (!_chatCurrentRoom) return;
     const url = `${window.location.origin}/chat?token=${_chatCurrentRoom.link_token}`;
     navigator.clipboard.writeText(url).then(() => {
-        showNotification('Link copiado al portapapeles', 'success');
+        showToast('Link copiado al portapapeles');
     }).catch(() => {
         prompt('Copia este link:', url);
     });
@@ -11766,7 +11766,7 @@ window.copyChatLink = function() {
 // --- Enviar recordatorio (placeholder) ---
 window.sendChatReminder = function() {
     if (!_chatCurrentRoom) return;
-    showNotification(`Recordatorio enviado a ${_chatCurrentRoom.lead_name}`, 'success');
+    showToast(`Recordatorio enviado a ${_chatCurrentRoom.lead_name}`);
 };
 
 // --- Modal Programar Mensaje ---
@@ -11807,7 +11807,7 @@ window.scheduleChatMessageModal = function() {
 window.saveScheduledMessage = async function() {
     const content = document.getElementById('sched-msg-content')?.value.trim();
     const dt = document.getElementById('sched-msg-datetime')?.value;
-    if (!content || !dt || !_chatCurrentRoom) { showNotification('Rellena todos los campos', 'error'); return; }
+    if (!content || !dt || !_chatCurrentRoom) { showToast('Rellena todos los campos', true); return; }
 
     try {
         const user = (await _supabase.auth.getUser()).data.user;
@@ -11819,11 +11819,11 @@ window.saveScheduledMessage = async function() {
         });
         if (error) throw error;
         document.getElementById('schedule-chat-modal')?.remove();
-        showNotification('Mensaje programado', 'success');
+        showToast('Mensaje programado');
         loadScheduledMessages();
     } catch(e) {
         console.error('Error scheduling message:', e);
-        showNotification('Error al programar', 'error');
+        showToast('Error al programar', true);
     }
 };
 
@@ -11866,10 +11866,10 @@ async function loadScheduledMessages() {
 window.cancelScheduledMsg = async function(id) {
     try {
         await _supabase.from('chat_scheduled_messages').update({ status: 'cancelled' }).eq('id', id);
-        showNotification('Mensaje cancelado', 'success');
+        showToast('Mensaje cancelado');
         loadScheduledMessages();
     } catch(e) {
-        showNotification('Error al cancelar', 'error');
+        showToast('Error al cancelar', true);
     }
 };
 
