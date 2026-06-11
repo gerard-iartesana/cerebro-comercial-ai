@@ -451,20 +451,32 @@ let currentRoom = null;
 let subscription = null;
 let deferredPrompt = null;
 
+// ===== TOKEN HELPERS =====
+function setCookie(name, value, days) {
+    const d = new Date();
+    d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+    document.cookie = `${name}=${value};expires=${d.toUTCString()};path=/;SameSite=Lax`;
+}
+function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? match[2] : null;
+}
+
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
     const params = new URLSearchParams(window.location.search);
-    // Try URL token first, then localStorage (for PWA)
+    // Triple fallback: URL → cookie → localStorage
     let token = params.get('token') || params.get('t');
     
     if (token) {
-        // Save token for PWA reinstalls
+        // Save token everywhere for PWA reinstalls
         localStorage.setItem('chat_token', token);
+        setCookie('chat_token', token, 365); // 1 year
     } else {
-        // PWA opened without token — recover from localStorage
-        token = localStorage.getItem('chat_token');
+        // PWA opened without token — recover from cookie first (iOS), then localStorage
+        token = getCookie('chat_token') || localStorage.getItem('chat_token');
     }
 
     if (!token) return showError();
