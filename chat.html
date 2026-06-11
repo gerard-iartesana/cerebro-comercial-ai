@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Chat — iadebarrio</title>
-    <link rel="manifest" href="/manifest-chat.json">
+    <link rel="manifest" id="manifest-link" href="/manifest-chat.json">
     <meta name="theme-color" content="#0a0a0f">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -451,6 +451,28 @@ let currentRoom = null;
 let subscription = null;
 let deferredPrompt = null;
 
+// ===== DYNAMIC MANIFEST (so PWA opens with token) =====
+function setDynamicManifest(token) {
+    const manifest = {
+        name: "Chat — iadebarrio",
+        short_name: "Chat",
+        description: "Chat en tiempo real con iadebarrio",
+        start_url: `/chat.html?token=${token}`,
+        display: "standalone",
+        background_color: "#0a0a0f",
+        theme_color: "#0a0a0f",
+        icons: [{
+            src: "https://cdn-icons-png.flaticon.com/512/4712/4712035.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any maskable"
+        }]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    document.getElementById('manifest-link').setAttribute('href', url);
+}
+
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', init);
 
@@ -468,6 +490,9 @@ async function init() {
     }
 
     if (!token) return showError();
+    
+    // Dynamic manifest with token so PWA always opens correctly
+    setDynamicManifest(token);
 
     try {
         const { data: room, error } = await sb

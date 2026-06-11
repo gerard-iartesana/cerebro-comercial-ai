@@ -2,7 +2,7 @@
   "name": "Chat — iadebarrio",
   "short_name": "Chat",
   "description": "Chat en tiempo real con iadebarrio",
-  "start_url": "/chat",
+  "start_url": "/chat.html",
   "display": "standalone",
   "background_color": "#0a0a0f",
   "theme_color": "#0a0a0f",
