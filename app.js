@@ -11759,10 +11759,26 @@ window.copyChatLink = function() {
     });
 };
 
-// --- Enviar recordatorio (placeholder) ---
-window.sendChatReminder = function() {
+// --- Enviar recordatorio al lead ---
+window.sendChatReminder = async function() {
     if (!_chatCurrentRoom) return;
-    showToast(`Recordatorio enviado a ${_chatCurrentRoom.lead_name}`);
+    const leadName = _chatCurrentRoom.lead_name || 'Lead';
+    const reminderMsg = `👋 Hola ${leadName}, te escribo para hacer seguimiento. ¿Has tenido oportunidad de revisar nuestro último mensaje? Estoy disponible para cualquier duda. ¡Gracias!`;
+    
+    try {
+        await _supabase.from('chat_messages').insert({
+            room_id: _chatCurrentRoom.id,
+            sender_type: 'admin',
+            sender_name: 'Gerard',
+            content: reminderMsg,
+            is_reminder: true
+        });
+        await _supabase.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', _chatCurrentRoom.id);
+        showToast(`Recordatorio enviado a ${leadName}`);
+    } catch(e) {
+        console.error('Error sending reminder:', e);
+        showToast('Error al enviar recordatorio', true);
+    }
 };
 
 // --- Modal Programar Mensaje ---
