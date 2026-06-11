@@ -211,6 +211,77 @@
         }
         .emoji-grid span:hover { background: rgba(255,255,255,0.08); }
 
+        /* --- Install modal (Apple style) --- */
+        .install-modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000; padding: 20px;
+        }
+        .install-modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            max-width: 380px; width: 100%;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            animation: modalSlideIn 0.3s ease;
+        }
+        @keyframes modalSlideIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .install-modal-header {
+            padding: 20px 20px 12px;
+            text-align: center;
+        }
+        .install-modal-header .modal-icon {
+            width: 56px; height: 56px; border-radius: 14px;
+            background: linear-gradient(135deg, #6c5ce7, #a855f7);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.6rem; margin: 0 auto 12px;
+        }
+        .install-modal-header h3 { font-size: 1.05rem; font-weight: 700; }
+        .install-modal-header p { font-size: 0.78rem; color: var(--text-grey); margin-top: 4px; }
+        .install-steps {
+            padding: 0 20px 20px;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .install-step {
+            display: flex; align-items: flex-start; gap: 12px;
+            padding: 12px; border-radius: 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--card-border);
+        }
+        .install-step .step-num {
+            width: 24px; height: 24px; border-radius: 50%;
+            background: var(--accent); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem; font-weight: 800; flex-shrink: 0;
+        }
+        .install-step .step-text {
+            font-size: 0.8rem; line-height: 1.5; color: var(--text-main);
+        }
+        .install-step .step-text strong { color: #fff; }
+        .install-modal-close {
+            display: block; width: calc(100% - 40px); margin: 0 20px 20px;
+            padding: 12px; border-radius: 12px;
+            background: var(--bg-tertiary); border: 1px solid var(--card-border);
+            color: var(--text-main); font-size: 0.85rem; font-weight: 700;
+            cursor: pointer; font-family: inherit; text-align: center;
+            transition: all 0.2s;
+        }
+        .install-modal-close:hover { background: var(--accent); border-color: var(--accent); }
+
+        /* --- Header install btn --- */
+        .header-install-btn {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: var(--bg-tertiary); border: 1px solid var(--card-border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; cursor: pointer; transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .header-install-btn:hover { background: var(--accent); border-color: var(--accent); }
+
         /* --- Loading screen --- */
         .loading-screen {
             position: fixed; inset: 0;
@@ -337,6 +408,7 @@
             <div class="name">Gerard — iadebarrio</div>
             <div class="status"><span class="dot"></span> En línea</div>
         </div>
+        <button class="header-install-btn" onclick="showInstallModal()" title="Instalar app">📲</button>
     </div>
 
     <!-- Messages -->
@@ -550,7 +622,8 @@ const EMOJI_CATEGORIES = {
 };
 let currentEmojiTab = '😊';
 
-function toggleEmojiPicker() {
+function toggleEmojiPicker(e) {
+    if (e) e.stopPropagation();
     const picker = document.getElementById('emoji-picker');
     const isVisible = picker.style.display !== 'none';
     picker.style.display = isVisible ? 'none' : 'block';
@@ -570,11 +643,11 @@ function renderEmojiTab(cat) {
         picker.insertBefore(tabsEl, grid);
     }
     tabsEl.innerHTML = Object.keys(EMOJI_CATEGORIES).map(k =>
-        `<span onclick="renderEmojiTab('${k}')" style="cursor:pointer;padding:4px 6px;border-radius:6px;font-size:1.1rem;flex-shrink:0;${k===cat?'background:var(--accent-glow)':''}">${k}</span>`
+        `<span onclick="event.stopPropagation();renderEmojiTab('${k}')" style="cursor:pointer;padding:4px 6px;border-radius:6px;font-size:1.1rem;flex-shrink:0;${k===cat?'background:var(--accent-glow)':''}">${k}</span>`
     ).join('');
     
     grid.innerHTML = (EMOJI_CATEGORIES[cat] || []).map(e => 
-        `<span onclick="insertEmoji('${e}')">${e}</span>`
+        `<span onclick="event.stopPropagation();insertEmoji('${e}')">${e}</span>`
     ).join('');
 }
 
@@ -666,6 +739,100 @@ document.getElementById('pwa-install-btn')?.addEventListener('click', async () =
 document.getElementById('pwa-close-btn')?.addEventListener('click', () => {
     document.getElementById('pwa-banner').style.display = 'none';
 });
+
+// ===== INSTALL MODAL (Apple style) =====
+function showInstallModal() {
+    // Detect platform
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua);
+    const isAndroid = /Android/.test(ua);
+    const isMac = /Macintosh|Mac OS/.test(ua) && !isIOS;
+    const isWindows = /Windows/.test(ua);
+    
+    let platformName = 'tu dispositivo';
+    let platformIcon = '📲';
+    let steps = [];
+    
+    if (isIOS) {
+        platformName = 'iPhone / iPad';
+        platformIcon = '🍎';
+        steps = [
+            { num: '1', text: 'Pulsa el botón <strong>⬆️ Compartir</strong> en la barra inferior de Safari' },
+            { num: '2', text: 'Desliza hacia abajo y toca <strong>"Añadir a pantalla de inicio"</strong>' },
+            { num: '3', text: 'Pulsa <strong>"Añadir"</strong> en la esquina superior derecha' }
+        ];
+    } else if (isAndroid) {
+        platformName = 'Android';
+        platformIcon = '🤖';
+        steps = [
+            { num: '1', text: 'Pulsa el botón <strong>⋮ Menú</strong> (tres puntos) arriba a la derecha' },
+            { num: '2', text: 'Selecciona <strong>"Instalar aplicación"</strong> o <strong>"Añadir a pantalla de inicio"</strong>' },
+            { num: '3', text: 'Confirma pulsando <strong>"Instalar"</strong>' }
+        ];
+    } else if (isMac) {
+        platformName = 'Mac';
+        platformIcon = '💻';
+        steps = [
+            { num: '1', text: 'En <strong>Chrome</strong>: Haz clic en el icono <strong>⬇️ instalar</strong> en la barra de direcciones' },
+            { num: '2', text: 'En <strong>Safari</strong>: Ve a <strong>Archivo → Añadir al Dock</strong>' },
+            { num: '3', text: 'Confirma la instalación haciendo clic en <strong>"Instalar"</strong>' }
+        ];
+    } else if (isWindows) {
+        platformName = 'Windows';
+        platformIcon = '🪟';
+        steps = [
+            { num: '1', text: 'En <strong>Chrome/Edge</strong>: Haz clic en el icono <strong>⬇️ instalar</strong> en la barra de direcciones' },
+            { num: '2', text: 'También puedes ir a <strong>⋮ Menú → Instalar Chat</strong>' },
+            { num: '3', text: 'Confirma haciendo clic en <strong>"Instalar"</strong>' }
+        ];
+    } else {
+        steps = [
+            { num: '1', text: 'Abre esta página en <strong>Chrome</strong> o <strong>Edge</strong>' },
+            { num: '2', text: 'Busca el icono de <strong>instalar</strong> en la barra de direcciones' },
+            { num: '3', text: 'Pulsa <strong>"Instalar"</strong> para añadirlo como app' }
+        ];
+    }
+    
+    // If we have the native prompt, offer direct install
+    const directInstallBtn = deferredPrompt 
+        ? `<button onclick="directPWAInstall()" style="display:block;width:calc(100% - 40px);margin:0 20px 10px;padding:12px;border-radius:12px;background:var(--accent);border:none;color:#fff;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s">⚡ Instalar directamente</button>`
+        : '';
+    
+    const modal = document.createElement('div');
+    modal.className = 'install-modal-overlay';
+    modal.id = 'install-modal';
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+    modal.innerHTML = `
+        <div class="install-modal">
+            <div class="install-modal-header">
+                <div class="modal-icon">${platformIcon}</div>
+                <h3>Instalar Chat en ${platformName}</h3>
+                <p>Accede al chat al instante desde tu pantalla de inicio</p>
+            </div>
+            <div class="install-steps">
+                ${steps.map(s => `
+                    <div class="install-step">
+                        <div class="step-num">${s.num}</div>
+                        <div class="step-text">${s.text}</div>
+                    </div>
+                `).join('')}
+            </div>
+            ${directInstallBtn}
+            <button class="install-modal-close" onclick="document.getElementById('install-modal').remove()">Entendido</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function directPWAInstall() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => {
+        deferredPrompt = null;
+        document.getElementById('install-modal')?.remove();
+        document.getElementById('pwa-banner').style.display = 'none';
+    });
+}
 </script>
 </body>
 </html>

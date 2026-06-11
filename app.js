@@ -11759,21 +11759,33 @@ window.copyChatLink = function() {
     });
 };
 
-// --- Enviar recordatorio al lead (con modal editable) ---
+// --- Enviar recordatorio al lead (con modal editable + plantillas custom) ---
+const _defaultReminderTemplates = [
+    '👋 Hola {name}, te escribo para hacer seguimiento. ¿Has tenido oportunidad de revisar nuestro último mensaje? Estoy disponible para cualquier duda. ¡Gracias!',
+    '📋 Hola {name}, quería recordarte que estamos pendientes de tu respuesta. Si necesitas más información, no dudes en escribirme.',
+    '🕐 Hola {name}, solo un pequeño recordatorio. Me encantaría poder avanzar contigo. ¿Cuándo te viene bien?',
+    '💡 {name}, te dejo un recordatorio amigable. Estamos preparados para empezar cuando tú lo estés. ¿Hablamos?'
+];
+
+function getCustomReminderTemplates() {
+    try { return JSON.parse(localStorage.getItem('cc_reminder_templates') || '[]'); } catch { return []; }
+}
+function saveCustomReminderTemplates(arr) {
+    localStorage.setItem('cc_reminder_templates', JSON.stringify(arr));
+}
+
 window.sendChatReminder = function() {
     if (!_chatCurrentRoom) return;
     const leadName = _chatCurrentRoom.lead_name || 'Lead';
-    const templates = [
-        `👋 Hola ${leadName}, te escribo para hacer seguimiento. ¿Has tenido oportunidad de revisar nuestro último mensaje? Estoy disponible para cualquier duda. ¡Gracias!`,
-        `📋 Hola ${leadName}, quería recordarte que estamos pendientes de tu respuesta. Si necesitas más información, no dudes en escribirme.`,
-        `🕐 Hola ${leadName}, solo un pequeño recordatorio. Me encantaría poder avanzar contigo. ¿Cuándo te viene bien?`,
-        `💡 ${leadName}, te dejo un recordatorio amigable. Estamos preparados para empezar cuando tú lo estés. ¿Hablamos?`
-    ];
+    const customTemplates = getCustomReminderTemplates();
+    const allTemplates = [..._defaultReminderTemplates, ...customTemplates];
+    const resolved = allTemplates.map(t => t.replace(/\{name\}/g, leadName));
+    
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.id = 'reminder-modal';
     modal.innerHTML = `
-        <div class="modal-box" style="max-width:480px">
+        <div class="modal-box" style="max-width:500px">
             <div class="modal-header">
                 <h2 style="font-size:1.1rem;font-weight:800">🔔 Enviar Recordatorio</h2>
                 <button class="modal-close" onclick="document.getElementById('reminder-modal').remove()">✕</button>
@@ -11783,23 +11795,55 @@ window.sendChatReminder = function() {
                     <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Para: ${leadName}</label>
                 </div>
                 <div>
-                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:8px;display:block">Plantillas rápidas</label>
-                    <div style="display:flex;flex-direction:column;gap:6px" id="reminder-templates">
-                        ${templates.map((t, i) => `
-                            <button onclick="document.getElementById('reminder-text').value=this.dataset.msg" data-msg="${t.replace(/"/g,'&quot;')}" style="text-align:left;padding:10px 12px;border-radius:10px;border:1px solid var(--card-border);background:var(--bg-main);color:var(--text-main);font-size:0.78rem;cursor:pointer;line-height:1.4;font-family:inherit;transition:all 0.15s" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='var(--card-border)'">${t.substring(0, 80)}...</button>
-                        `).join('')}
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:8px;display:block">Plantillas</label>
+                    <div style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto" id="reminder-templates-list">
+                        ${resolved.map((t, i) => {
+                            const isCustom = i >= _defaultReminderTemplates.length;
+                            const deleteBtn = isCustom ? `<button onclick="event.stopPropagation();deleteReminderTemplate(${i - _defaultReminderTemplates.length})" style="position:absolute;top:6px;right:6px;background:rgba(255,59,48,0.15);color:#FF3B30;border:none;border-radius:6px;padding:2px 6px;font-size:0.65rem;cursor:pointer;font-weight:700">✕</button>` : '';
+                            return `<button onclick="document.getElementById('reminder-text').value=this.dataset.msg" data-msg="${t.replace(/"/g,'&quot;')}" style="position:relative;text-align:left;padding:10px 12px;${isCustom?'padding-right:30px;':''}border-radius:10px;border:1px solid var(--card-border);background:var(--bg-main);color:var(--text-main);font-size:0.76rem;cursor:pointer;line-height:1.4;font-family:inherit;transition:border-color 0.15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--card-border)'">${t.length > 85 ? t.substring(0,85)+'...' : t}${deleteBtn}</button>`;
+                        }).join('')}
                     </div>
                 </div>
                 <div>
                     <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Mensaje (editable)</label>
-                    <textarea id="reminder-text" class="modal-input" rows="4" style="width:100%;resize:vertical">${templates[0]}</textarea>
+                    <textarea id="reminder-text" class="modal-input" rows="4" style="width:100%;resize:vertical">${resolved[0]}</textarea>
                 </div>
-                <button class="btn-primary" onclick="sendReminderNow()" style="width:100%;padding:12px;border-radius:12px;font-weight:700">🔔 Enviar Recordatorio Ahora</button>
+                <div style="display:flex;gap:8px">
+                    <button class="btn-primary" onclick="sendReminderNow()" style="flex:1;padding:12px;border-radius:12px;font-weight:700">🔔 Enviar Ahora</button>
+                    <button onclick="saveAsReminderTemplate()" style="padding:12px 16px;border-radius:12px;border:1px solid var(--card-border);background:var(--bg-main);color:var(--text-main);font-size:0.82rem;cursor:pointer;font-weight:700;font-family:inherit;transition:all 0.15s" title="Guardar como plantilla">💾 Guardar</button>
+                </div>
             </div>
         </div>
     `;
     document.body.appendChild(modal);
     modal.style.display = 'flex';
+};
+
+window.saveAsReminderTemplate = function() {
+    const text = document.getElementById('reminder-text')?.value.trim();
+    if (!text) { showToast('Escribe un mensaje primero', true); return; }
+    // Replace lead name with {name} for reuse
+    const leadName = _chatCurrentRoom?.lead_name || 'Lead';
+    const template = text.replace(new RegExp(leadName, 'g'), '{name}');
+    const customs = getCustomReminderTemplates();
+    if (customs.includes(template) || _defaultReminderTemplates.includes(template)) {
+        showToast('Esta plantilla ya existe'); return;
+    }
+    customs.push(template);
+    saveCustomReminderTemplates(customs);
+    showToast('Plantilla guardada ✅');
+    // Refresh modal
+    document.getElementById('reminder-modal')?.remove();
+    window.sendChatReminder();
+};
+
+window.deleteReminderTemplate = function(index) {
+    const customs = getCustomReminderTemplates();
+    customs.splice(index, 1);
+    saveCustomReminderTemplates(customs);
+    showToast('Plantilla eliminada');
+    document.getElementById('reminder-modal')?.remove();
+    window.sendChatReminder();
 };
 
 window.sendReminderNow = async function() {
@@ -11997,7 +12041,8 @@ const EMOJI_CATEGORIES = {
 };
 let _currentEmojiTab = '😊';
 
-window.toggleEmojiPicker = function() {
+window.toggleEmojiPicker = function(e) {
+    if (e) e.stopPropagation();
     const picker = document.getElementById('emoji-picker');
     if (!picker) return;
     const isVisible = picker.style.display !== 'none';
@@ -12008,7 +12053,8 @@ window.toggleEmojiPicker = function() {
     }
 };
 
-window.renderEmojiCategory = function(cat) {
+window.renderEmojiCategory = function(cat, e) {
+    if (e) e.stopPropagation();
     _currentEmojiTab = cat;
     const picker = document.getElementById('emoji-picker');
     const grid = document.getElementById('emoji-grid');
@@ -12023,13 +12069,13 @@ window.renderEmojiCategory = function(cat) {
         picker.insertBefore(tabsEl, grid);
     }
     tabsEl.innerHTML = Object.keys(EMOJI_CATEGORIES).map(k =>
-        `<span onclick="renderEmojiCategory('${k}')" style="cursor:pointer;padding:4px 6px;border-radius:6px;font-size:1.1rem;flex-shrink:0;transition:background 0.15s;${k===cat?'background:var(--accent-glow, rgba(108,92,231,0.25))':''}" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='${k===cat?'var(--accent-glow, rgba(108,92,231,0.25))':''}'">${k}</span>`
+        `<span onclick="event.stopPropagation();renderEmojiCategory('${k}')" style="cursor:pointer;padding:4px 6px;border-radius:6px;font-size:1.1rem;flex-shrink:0;transition:background 0.15s;${k===cat?'background:var(--accent-glow, rgba(108,92,231,0.25))':''}">${k}</span>`
     ).join('');
     
     // Render emojis
     const emojis = EMOJI_CATEGORIES[cat] || [];
     grid.innerHTML = emojis.map(e => 
-        `<span style="cursor:pointer;padding:3px;border-radius:4px;transition:background 0.15s;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background=''" onclick="insertEmoji('${e}')">${e}</span>`
+        `<span style="cursor:pointer;padding:4px;border-radius:6px;transition:background 0.15s;display:flex;align-items:center;justify-content:center;font-size:1.3rem" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background=''" onclick="event.stopPropagation();insertEmoji('${e}')">${e}</span>`
     ).join('');
 };
 
