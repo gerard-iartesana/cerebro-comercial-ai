@@ -1,51 +1,39 @@
-// Service Worker for Chat PWA
-const CACHE_NAME = 'chat-v1';
-const ASSETS = ['/chat'];
+// Chat Service Worker - Network First (always fresh content)
+const CACHE_VERSION = 'chat-v3';
 
-self.addEventListener('install', (e) => {
-    e.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
-    );
+self.addEventListener('install', event => {
     self.skipWaiting();
 });
 
-self.addEventListener('activate', (e) => {
-    e.waitUntil(self.clients.claim());
-});
-
-self.addEventListener('fetch', (e) => {
-    // Network-first strategy for API/realtime, cache-first for assets
-    if (e.request.url.includes('supabase') || e.request.url.includes('/api/')) {
-        return;
-    }
-    e.respondWith(
-        fetch(e.request).catch(() => caches.match(e.request))
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        caches.keys().then(keys =>
+            Promise.all(keys.filter(k => k !== CACHE_VERSION).map(k => caches.delete(k)))
+        ).then(() => self.clients.claim())
     );
 });
 
-// Handle push notifications
-self.addEventListener('push', (e) => {
-    const data = e.data?.json() || {};
-    const title = data.title || 'Nuevo mensaje';
-    const options = {
-        body: data.body || 'Tienes un nuevo mensaje en el chat',
-        icon: 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png',
-        badge: 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png',
-        vibrate: [100, 50, 100],
-        data: { url: data.url || '/chat' }
-    };
-    e.waitUntil(self.registration.showNotification(title, options));
-});
+// Network-first strategy: always try network, fall back to cache
+self.addEventListener('fetch', event => {
+    // Skip non-GET and chrome-extension requests
+    if (event.request.method !== 'GET') return;
+    if (event.request.url.startsWith('chrome-extension://')) return;
 
-self.addEventListener('notificationclick', (e) => {
-    e.notification.close();
-    const url = e.notification.data?.url || '/chat';
-    e.waitUntil(
-        clients.matchAll({ type: 'window' }).then(windowClients => {
-            for (const client of windowClients) {
-                if (client.url.includes('/chat') && 'focus' in client) return client.focus();
-            }
-            return clients.openWindow(url);
-        })
+    event.respondWith(
+        fetch(event.request)
+            .then(response => {
+                // Cache successful responses
+                if (response.ok) {
+                    const clone = response.clone();
+                    caches.open(CACHE_VERSION).then(cache => {
+                        cache.put(event.request, clone);
+                    });
+                }
+                return response;
+            })
+            .catch(() => {
+                // Offline: try cache
+                return caches.match(event.request);
+            })
     );
 });
