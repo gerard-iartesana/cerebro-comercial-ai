@@ -11717,32 +11717,38 @@ window.createChatRoom = async function() {
     if (!name) { showNotification('El nombre es obligatorio', 'error'); return; }
     const company = document.getElementById('new-chat-company')?.value.trim() || '';
     const email = document.getElementById('new-chat-email')?.value.trim() || '';
-    const phone = document.getElementById('new-chat-phone')?.value.trim() || '';
 
     try {
         const user = (await _supabase.auth.getUser()).data.user;
+        if (!user) { showNotification('No hay sesión activa', 'error'); return; }
+
         const insertData = {
             user_id: user.id,
-            lead_id: _chatSelectedLeadId || null,
             lead_name: name,
             lead_company: company,
             lead_email: email
         };
-
-        // Try with lead_phone first, fallback without it
-        let result = await _supabase.from('chat_rooms').insert({ ...insertData, lead_phone: phone }).select().single();
-        if (result.error) {
-            result = await _supabase.from('chat_rooms').insert(insertData).select().single();
+        // Only add lead_id if it's a valid UUID
+        if (_chatSelectedLeadId && _chatSelectedLeadId.length > 10) {
+            insertData.lead_id = _chatSelectedLeadId;
         }
-        if (result.error) throw result.error;
 
+        console.log('[Chat] Creating room with:', insertData);
+        const { data, error } = await _supabase.from('chat_rooms').insert(insertData).select().single();
+        
+        if (error) {
+            console.error('[Chat] Insert error:', error);
+            throw error;
+        }
+
+        console.log('[Chat] Room created:', data);
         document.getElementById('create-chat-modal')?.remove();
         showNotification(`Chat con ${name} creado`, 'success');
         await loadChatRooms();
-        openChatRoom(result.data.id);
+        openChatRoom(data.id);
     } catch(e) {
-        console.error('Error creating chat:', e);
-        showNotification('Error al crear chat', 'error');
+        console.error('[Chat] Error creating chat:', e.message || e);
+        showNotification('Error: ' + (e.message || 'No se pudo crear'), 'error');
     }
 };
 
