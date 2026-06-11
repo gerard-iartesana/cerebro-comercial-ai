@@ -11866,15 +11866,27 @@ window.sendReminderNow = async function() {
 };
 
 // --- Modal Programar Mensaje ---
+const _defaultSchedTemplates = [
+    'Buenos días {name}, ¿cómo va todo? Quería hacer un seguimiento rápido.',
+    'Hola {name}, te recuerdo que tenemos pendiente confirmar los detalles. ¿Puedes revisarlo?',
+    '{name}, te envío un recordatorio amigable. Estamos listos para empezar cuando tú digas.',
+    'Hola {name}, ¿has podido revisar la propuesta que te envié? Quedo a la espera.'
+];
+
+function getCustomSchedTemplates() {
+    try { return JSON.parse(localStorage.getItem('cc_sched_templates') || '[]'); } catch { return []; }
+}
+function saveCustomSchedTemplates(arr) {
+    localStorage.setItem('cc_sched_templates', JSON.stringify(arr));
+}
+
 window.scheduleChatMessageModal = function() {
     if (!_chatCurrentRoom) return;
     const leadName = _chatCurrentRoom.lead_name || 'Lead';
-    const templates = [
-        `Buenos días ${leadName}, ¿cómo va todo? Quería hacer un seguimiento rápido.`,
-        `Hola ${leadName}, te recuerdo que tenemos pendiente confirmar los detalles. ¿Puedes revisarlo?`,
-        `${leadName}, te envío un recordatorio amigable. Estamos listos para empezar cuando tú digas.`,
-        `Hola ${leadName}, ¿has podido revisar la propuesta que te envié? Quedo a la espera.`
-    ];
+    const customTpls = getCustomSchedTemplates();
+    const allTpls = [..._defaultSchedTemplates, ...customTpls];
+    const resolved = allTpls.map(t => t.replace(/\{name\}/g, leadName));
+
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.id = 'schedule-chat-modal';
@@ -11882,7 +11894,7 @@ window.scheduleChatMessageModal = function() {
     now.setMinutes(now.getMinutes() + 30);
     const defaultDt = now.toISOString().slice(0,16);
     modal.innerHTML = `
-        <div class="modal-box" style="max-width:480px">
+        <div class="modal-box" style="max-width:500px">
             <div class="modal-header">
                 <h2 style="font-size:1.1rem;font-weight:800">⏰ Programar Mensaje</h2>
                 <button class="modal-close" onclick="document.getElementById('schedule-chat-modal').remove()">✕</button>
@@ -11892,11 +11904,13 @@ window.scheduleChatMessageModal = function() {
                     <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Para: ${leadName}</label>
                 </div>
                 <div>
-                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:8px;display:block">Plantillas rápidas</label>
-                    <div style="display:flex;flex-wrap:wrap;gap:6px">
-                        ${templates.map((t, i) => `
-                            <button onclick="document.getElementById('sched-msg-content').value=this.dataset.msg" data-msg="${t.replace(/"/g,'&quot;')}" style="padding:6px 12px;border-radius:8px;border:1px solid var(--card-border);background:var(--bg-main);color:var(--text-main);font-size:0.72rem;cursor:pointer;font-family:inherit;transition:all 0.15s;white-space:nowrap" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='var(--card-border)'">${t.substring(0, 40)}...</button>
-                        `).join('')}
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:8px;display:block">Plantillas</label>
+                    <div style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto" id="sched-templates-list">
+                        ${resolved.map((t, i) => {
+                            const isCustom = i >= _defaultSchedTemplates.length;
+                            const deleteBtn = isCustom ? `<button onclick="event.stopPropagation();deleteSchedTemplate(${i - _defaultSchedTemplates.length})" style="position:absolute;top:6px;right:6px;background:rgba(255,59,48,0.15);color:#FF3B30;border:none;border-radius:6px;padding:2px 6px;font-size:0.65rem;cursor:pointer;font-weight:700">✕</button>` : '';
+                            return `<button onclick="document.getElementById('sched-msg-content').value=this.dataset.msg" data-msg="${t.replace(/"/g,'&quot;')}" style="position:relative;text-align:left;padding:10px 12px;${isCustom?'padding-right:30px;':''}border-radius:10px;border:1px solid var(--card-border);background:var(--bg-main);color:var(--text-main);font-size:0.76rem;cursor:pointer;line-height:1.4;font-family:inherit;transition:border-color 0.15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--card-border)'">${t.length > 70 ? t.substring(0,70)+'...' : t}${deleteBtn}</button>`;
+                        }).join('')}
                     </div>
                 </div>
                 <div>
@@ -11907,12 +11921,40 @@ window.scheduleChatMessageModal = function() {
                     <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Fecha y hora de envío</label>
                     <input type="datetime-local" id="sched-msg-datetime" class="modal-input" value="${defaultDt}" style="width:100%">
                 </div>
-                <button class="btn-primary" onclick="saveScheduledMessage()" style="width:100%;padding:12px;border-radius:12px;font-weight:700">Programar Envío</button>
+                <div style="display:flex;gap:8px">
+                    <button class="btn-primary" onclick="saveScheduledMessage()" style="flex:1;padding:12px;border-radius:12px;font-weight:700">⏰ Programar Envío</button>
+                    <button onclick="saveAsSchedTemplate()" style="padding:12px 16px;border-radius:12px;border:1px solid var(--card-border);background:var(--bg-main);color:var(--text-main);font-size:0.82rem;cursor:pointer;font-weight:700;font-family:inherit;transition:all 0.15s" title="Guardar como plantilla">💾 Guardar</button>
+                </div>
             </div>
         </div>
     `;
     document.body.appendChild(modal);
     modal.style.display = 'flex';
+};
+
+window.saveAsSchedTemplate = function() {
+    const text = document.getElementById('sched-msg-content')?.value.trim();
+    if (!text) { showToast('Escribe un mensaje primero', true); return; }
+    const leadName = _chatCurrentRoom?.lead_name || 'Lead';
+    const template = text.replace(new RegExp(leadName, 'g'), '{name}');
+    const customs = getCustomSchedTemplates();
+    if (customs.includes(template) || _defaultSchedTemplates.includes(template)) {
+        showToast('Esta plantilla ya existe'); return;
+    }
+    customs.push(template);
+    saveCustomSchedTemplates(customs);
+    showToast('Plantilla guardada ✅');
+    document.getElementById('schedule-chat-modal')?.remove();
+    window.scheduleChatMessageModal();
+};
+
+window.deleteSchedTemplate = function(index) {
+    const customs = getCustomSchedTemplates();
+    customs.splice(index, 1);
+    saveCustomSchedTemplates(customs);
+    showToast('Plantilla eliminada');
+    document.getElementById('schedule-chat-modal')?.remove();
+    window.scheduleChatMessageModal();
 };
 
 window.saveScheduledMessage = async function() {
