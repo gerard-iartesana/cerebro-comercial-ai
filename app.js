@@ -11719,11 +11719,7 @@ window.createChatRoom = async function() {
     const email = document.getElementById('new-chat-email')?.value.trim() || '';
 
     try {
-        const user = (await _supabase.auth.getUser()).data.user;
-        if (!user) { showToast('No hay sesión activa', true); return; }
-
         const insertData = {
-            user_id: user.id,
             lead_name: name,
             lead_company: company,
             lead_email: email
@@ -11810,10 +11806,8 @@ window.saveScheduledMessage = async function() {
     if (!content || !dt || !_chatCurrentRoom) { showToast('Rellena todos los campos', true); return; }
 
     try {
-        const user = (await _supabase.auth.getUser()).data.user;
         const { error } = await _supabase.from('chat_scheduled_messages').insert({
             room_id: _chatCurrentRoom.id,
-            user_id: user.id,
             content: content,
             scheduled_at: new Date(dt).toISOString()
         });
