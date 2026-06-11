@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chat — iadebarrio</title>
+    <link rel="manifest" href="/manifest-chat.json">
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/4712/4712035.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #16161e;
+            --bg-tertiary: #1e1e2a;
+            --accent: #6c5ce7;
+            --accent-glow: rgba(108, 92, 231, 0.25);
+            --text-main: #e8e6f0;
+            --text-grey: #8b8a97;
+            --card-border: rgba(255,255,255,0.06);
+            --bubble-admin: linear-gradient(135deg, #6c5ce7, #a855f7);
+            --bubble-lead: #1e1e2a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-main);
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        .chat-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--card-border);
+            flex-shrink: 0;
+        }
+        .chat-header .avatar {
+            width: 42px; height: 42px;
+            border-radius: 50%;
+            background: var(--accent);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 1.1rem; color: #fff;
+            flex-shrink: 0;
+        }
+        .chat-header .info { flex: 1; min-width: 0; }
+        .chat-header .info .name {
+            font-weight: 700; font-size: 1rem;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .chat-header .info .status {
+            font-size: 0.72rem; color: var(--text-grey);
+            display: flex; align-items: center; gap: 5px;
+        }
+        .chat-header .info .status .dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: #2ecc71; display: inline-block;
+        }
+
+        /* --- Messages area --- */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            scroll-behavior: smooth;
+        }
+        .chat-messages::-webkit-scrollbar { width: 4px; }
+        .chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+
+        .msg-wrapper {
+            display: flex; flex-direction: column; gap: 2px;
+            max-width: 82%;
+        }
+        .msg-wrapper.admin { align-self: flex-start; }
+        .msg-wrapper.lead { align-self: flex-end; }
+
+        .msg-meta {
+            font-size: 0.62rem; color: var(--text-grey);
+            padding: 0 6px;
+        }
+        .msg-wrapper.lead .msg-meta { text-align: right; }
+
+        .msg-bubble {
+            padding: 10px 14px;
+            border-radius: 16px;
+            font-size: 0.88rem;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+        .msg-wrapper.admin .msg-bubble {
+            background: var(--bubble-lead);
+            color: var(--text-main);
+            border: 1px solid var(--card-border);
+            border-bottom-left-radius: 4px;
+        }
+        .msg-wrapper.lead .msg-bubble {
+            background: var(--bubble-admin);
+            color: #ffffff;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-bubble img {
+            max-width: 100%; border-radius: 10px; margin-top: 6px; cursor: pointer;
+        }
+        .msg-bubble a {
+            color: inherit; text-decoration: underline; font-size: 0.8rem;
+        }
+
+        /* --- Date separator --- */
+        .date-separator {
+            text-align: center; font-size: 0.68rem; color: var(--text-grey);
+            padding: 12px 0 4px;
+        }
+
+        /* --- Empty state --- */
+        .empty-state {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            flex-direction: column; gap: 12px; opacity: 0.4;
+        }
+        .empty-state span { font-size: 2.5rem; }
+        .empty-state p { font-size: 0.85rem; color: var(--text-grey); }
+
+        /* --- Input bar --- */
+        .chat-input-bar {
+            display: flex; align-items: center; gap: 8px;
+            padding: 12px 14px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--card-border);
+            flex-shrink: 0;
+        }
+        .chat-input-bar input[type="text"] {
+            flex: 1; background: var(--bg-tertiary);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 11px 16px;
+            color: var(--text-main);
+            font-size: 0.88rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .chat-input-bar input[type="text"]:focus {
+            border-color: var(--accent);
+        }
+        .chat-input-bar input[type="text"]::placeholder { color: var(--text-grey); }
+
+        .chat-input-bar .btn-icon {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .btn-attach {
+            background: var(--bg-tertiary);
+            color: var(--text-grey);
+        }
+        .btn-attach:hover { background: var(--bg-primary); color: var(--text-main); }
+
+        .btn-send {
+            background: var(--accent);
+            color: #fff;
+        }
+        .btn-send:hover { filter: brightness(1.15); transform: scale(1.05); }
+        .btn-send:active { transform: scale(0.95); }
+
+        /* --- Loading screen --- */
+        .loading-screen {
+            position: fixed; inset: 0;
+            background: var(--bg-primary);
+            display: flex; align-items: center; justify-content: center;
+            flex-direction: column; gap: 16px; z-index: 999;
+        }
+        .loading-screen .spinner {
+            width: 36px; height: 36px;
+            border: 3px solid var(--card-border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-screen p { font-size: 0.85rem; color: var(--text-grey); }
+
+        /* --- Error screen --- */
+        .error-screen {
+            position: fixed; inset: 0;
+            background: var(--bg-primary);
+            display: flex; align-items: center; justify-content: center;
+            flex-direction: column; gap: 16px; z-index: 999;
+        }
+        .error-screen span { font-size: 3rem; }
+        .error-screen h2 { font-size: 1.2rem; font-weight: 700; }
+        .error-screen p { font-size: 0.85rem; color: var(--text-grey); max-width: 300px; text-align: center; line-height: 1.5; }
+
+        /* --- PWA install banner --- */
+        .pwa-banner {
+            display: none;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, rgba(108,92,231,0.15), rgba(168,85,247,0.1));
+            border-bottom: 1px solid var(--card-border);
+            font-size: 0.78rem;
+            color: var(--text-grey);
+            align-items: center; gap: 10px;
+            flex-shrink: 0;
+        }
+        .pwa-banner .pwa-btn {
+            margin-left: auto;
+            background: var(--accent);
+            color: #fff; border: none;
+            padding: 6px 14px; border-radius: 8px;
+            font-size: 0.75rem; font-weight: 600;
+            cursor: pointer;
+        }
+        .pwa-banner .pwa-close {
+            background: none; border: none; color: var(--text-grey);
+            cursor: pointer; font-size: 1.1rem; padding: 0 4px;
+        }
+
+        /* --- Responsive --- */
+        @media (min-width: 600px) {
+            body {
+                max-width: 480px;
+                margin: 0 auto;
+                border-left: 1px solid var(--card-border);
+                border-right: 1px solid var(--card-border);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loading-screen" id="loading-screen">
+    <div class="spinner"></div>
+    <p>Conectando al chat...</p>
+</div>
+
+<!-- Error -->
+<div class="error-screen" id="error-screen" style="display:none">
+    <span>🔒</span>
+    <h2>Enlace no válido</h2>
+    <p>Este enlace de chat no existe o ha expirado. Contacta con nosotros para obtener un nuevo acceso.</p>
+</div>
+
+<!-- Chat App (hidden until loaded) -->
+<div id="chat-app" style="display:none;flex-direction:column;height:100dvh">
+
+    <!-- PWA Install banner -->
+    <div class="pwa-banner" id="pwa-banner">
+        📱 Instala esta app en tu pantalla de inicio
+        <button class="pwa-btn" id="pwa-install-btn">Instalar</button>
+        <button class="pwa-close" id="pwa-close-btn">✕</button>
+    </div>
+
+    <!-- Header -->
+    <div class="chat-header">
+        <div class="avatar" id="chat-avatar">G</div>
+        <div class="info">
+            <div class="name">Gerard — iadebarrio</div>
+            <div class="status"><span class="dot"></span> En línea</div>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="chat-messages" id="chat-messages"></div>
+
+    <!-- Input -->
+    <div class="chat-input-bar">
+        <button class="btn-icon btn-attach" onclick="document.getElementById('file-input').click()" title="Adjuntar archivo">📎</button>
+        <input type="file" id="file-input" style="display:none" onchange="handleFileUpload(this)">
+        <input type="text" id="msg-input" placeholder="Escribe un mensaje..." autocomplete="off"
+            onkeydown="if(event.key==='Enter')sendMessage()">
+        <button class="btn-icon btn-send" onclick="sendMessage()" title="Enviar">➤</button>
+    </div>
+</div>
+
+<script>
+// ===== CONFIG =====
+const SUPABASE_URL = 'https://lmozoetpehmdxxremtqn.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxtb3pvZXRwZWhtZHh4cmVtdHFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNTA2NDUsImV4cCI6MjA5NTgyNjY0NX0.1xkCCw7q9CDvVbqGswCeFwXpgYfMtb0wcl7lHWlKQ8U';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentRoom = null;
+let subscription = null;
+let deferredPrompt = null;
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', init);
+
+async function init() {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token') || params.get('t');
+
+    if (!token) return showError();
+
+    try {
+        // Find room by link_token
+        const { data: room, error } = await sb
+            .from('chat_rooms')
+            .select('*')
+            .eq('link_token', token)
+            .single();
+
+        if (error || !room) return showError();
+
+        currentRoom = room;
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('chat-app').style.display = 'flex';
+
+        await loadMessages();
+        subscribeToMessages();
+        registerServiceWorker();
+    } catch(e) {
+        console.error('Init error:', e);
+        showError();
+    }
+}
+
+function showError() {
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('error-screen').style.display = 'flex';
+}
+
+// ===== LOAD MESSAGES =====
+async function loadMessages() {
+    const container = document.getElementById('chat-messages');
+    const { data: messages, error } = await sb
+        .from('chat_messages')
+        .select('*')
+        .eq('room_id', currentRoom.id)
+        .order('created_at', { ascending: true });
+
+    if (error || !messages?.length) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <span>👋</span>
+                <p>¡Hola! Este es el inicio de tu conversación.</p>
+            </div>`;
+        return;
+    }
+
+    renderMessages(messages);
+}
+
+function renderMessages(messages) {
+    const container = document.getElementById('chat-messages');
+    let lastDate = '';
+    let html = '';
+
+    messages.forEach(m => {
+        const d = new Date(m.created_at);
+        const dateStr = d.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+        if (dateStr !== lastDate) {
+            html += `<div class="date-separator">${dateStr}</div>`;
+            lastDate = dateStr;
+        }
+
+        const isAdmin = m.sender_type === 'admin';
+        const cls = isAdmin ? 'admin' : 'lead';
+        const time = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        const senderName = m.sender_name || (isAdmin ? 'Gerard' : currentRoom.lead_name || 'Tú');
+
+        let fileHtml = '';
+        if (m.file_url) {
+            const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.file_name || '');
+            fileHtml = isImg
+                ? `<img src="${m.file_url}" alt="${m.file_name}" onclick="window.open('${m.file_url}','_blank')">`
+                : `<a href="${m.file_url}" target="_blank">📄 ${m.file_name || 'Archivo'}</a>`;
+        }
+
+        html += `
+            <div class="msg-wrapper ${cls}">
+                <div class="msg-meta">${senderName} · ${time}</div>
+                <div class="msg-bubble">${m.content || ''}${fileHtml}</div>
+            </div>`;
+    });
+
+    container.innerHTML = html;
+    requestAnimationFrame(() => container.scrollTop = container.scrollHeight);
+}
+
+// ===== SEND MESSAGE =====
+async function sendMessage() {
+    const input = document.getElementById('msg-input');
+    const text = input.value.trim();
+    if (!text || !currentRoom) return;
+
+    input.value = '';
+    input.focus();
+
+    try {
+        await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'lead',
+            sender_name: currentRoom.lead_name || 'Lead',
+            content: text
+        });
+        await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+    } catch(e) {
+        console.error('Send error:', e);
+    }
+}
+
+// ===== FILE UPLOAD =====
+async function handleFileUpload(inputEl) {
+    if (!currentRoom || !inputEl.files.length) return;
+    const file = inputEl.files[0];
+    if (file.size > 10 * 1024 * 1024) { alert('El archivo no puede superar 10MB'); return; }
+
+    try {
+        const path = `chat/${currentRoom.id}/${Date.now()}_${file.name}`;
+        const { data: upload, error: upErr } = await sb.storage.from('chat-files').upload(path, file);
+        if (upErr) throw upErr;
+
+        const { data: urlData } = sb.storage.from('chat-files').getPublicUrl(path);
+
+        await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'lead',
+            sender_name: currentRoom.lead_name || 'Lead',
+            content: '',
+            file_url: urlData.publicUrl,
+            file_name: file.name
+        });
+        await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+    } catch(e) {
+        console.error('Upload error:', e);
+        alert('Error al subir archivo');
+    }
+    inputEl.value = '';
+}
+
+// ===== REALTIME =====
+function subscribeToMessages() {
+    subscription = sb
+        .channel('lead-chat-' + currentRoom.id)
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'chat_messages',
+            filter: `room_id=eq.${currentRoom.id}`
+        }, payload => {
+            const m = payload.new;
+            const container = document.getElementById('chat-messages');
+
+            // Remove empty state
+            const empty = container.querySelector('.empty-state');
+            if (empty) empty.remove();
+
+            const isAdmin = m.sender_type === 'admin';
+            const cls = isAdmin ? 'admin' : 'lead';
+            const time = new Date(m.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            const senderName = m.sender_name || (isAdmin ? 'Gerard' : currentRoom.lead_name || 'Tú');
+
+            let fileHtml = '';
+            if (m.file_url) {
+                const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.file_name || '');
+                fileHtml = isImg
+                    ? `<img src="${m.file_url}" alt="${m.file_name}" onclick="window.open('${m.file_url}','_blank')">`
+                    : `<a href="${m.file_url}" target="_blank">📄 ${m.file_name || 'Archivo'}</a>`;
+            }
+
+            const div = document.createElement('div');
+            div.className = `msg-wrapper ${cls}`;
+            div.innerHTML = `
+                <div class="msg-meta">${senderName} · ${time}</div>
+                <div class="msg-bubble">${m.content || ''}${fileHtml}</div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        })
+        .subscribe();
+}
+
+// ===== PWA =====
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/chat-sw.js').catch(e => console.log('SW reg failed:', e));
+    }
+}
+
+// PWA install prompt
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('pwa-banner').style.display = 'flex';
+});
+
+document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.getElementById('pwa-banner').style.display = 'none';
+});
+
+document.getElementById('pwa-close-btn')?.addEventListener('click', () => {
+    document.getElementById('pwa-banner').style.display = 'none';
+});
+</script>
+</body>
+</html>

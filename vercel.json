@@ -7,6 +7,7 @@
     { "src": "/propuesta/(.*)", "dest": "/propuesta.html?id=$1" },
     { "src": "/contrato/(.*)", "dest": "/contrato.html?id=$1" },
     { "src": "/formulario/(.*)", "dest": "/formulario.html?id=$1" },
+    { "src": "/chat", "dest": "/chat.html" },
     { "src": "/(.*)", "dest": "/$1" }
   ]
 }
