@@ -285,13 +285,22 @@
 
         /* --- Header install btn --- */
         .header-install-btn {
-            width: 36px; height: 36px; border-radius: 50%;
-            background: var(--bg-tertiary); border: 1px solid var(--card-border);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1rem; cursor: pointer; transition: all 0.2s;
-            flex-shrink: 0;
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 14px; border-radius: 20px;
+            background: linear-gradient(135deg, #6c5ce7, #a855f7);
+            border: none; color: #fff;
+            font-size: 0.72rem; font-weight: 700;
+            cursor: pointer; transition: all 0.2s;
+            flex-shrink: 0; font-family: inherit;
+            box-shadow: 0 2px 12px rgba(108,92,231,0.3);
+            animation: installPulse 2.5s ease-in-out infinite;
         }
-        .header-install-btn:hover { background: var(--accent); border-color: var(--accent); }
+        .header-install-btn:hover { filter: brightness(1.15); transform: scale(1.03); }
+        .header-install-btn .install-icon { font-size: 0.9rem; }
+        @keyframes installPulse {
+            0%, 100% { box-shadow: 0 2px 12px rgba(108,92,231,0.3); }
+            50% { box-shadow: 0 2px 20px rgba(108,92,231,0.6); }
+        }
 
         /* --- Loading screen --- */
         .loading-screen {
@@ -398,7 +407,7 @@
             <div class="name">Gerard — iadebarrio</div>
             <div class="status"><span class="dot"></span> En línea</div>
         </div>
-        <button class="header-install-btn" onclick="showInstallModal()" title="Instalar app">📲</button>
+        <button class="header-install-btn" id="header-install-btn" onclick="showInstallModal()" title="Instalar app"><span class="install-icon">📲</span> Instalar</button>
     </div>
 
     <!-- Messages -->
@@ -491,7 +500,12 @@ function showError() {
 // ===== INSTALL BANNER =====
 function showInstallBanner() {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-    if (isStandalone) return; // Already installed
+    if (isStandalone) {
+        // Already installed — hide the button
+        const btn = document.getElementById('header-install-btn');
+        if (btn) btn.style.display = 'none';
+        return;
+    }
     
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     if (isIOS) {
@@ -815,9 +829,9 @@ function showInstallModal() {
         platformName = 'Mac';
         platformIcon = '💻';
         steps = [
-            { num: '1', text: 'En <strong>Chrome</strong>: Haz clic en el icono <strong>⬇️ instalar</strong> en la barra de direcciones' },
-            { num: '2', text: 'En <strong>Safari</strong>: Ve a <strong>Archivo → Añadir al Dock</strong>' },
-            { num: '3', text: 'Confirma la instalación haciendo clic en <strong>"Instalar"</strong>' }
+            { num: '1', text: 'En <strong>Chrome</strong>: Ve a <strong>⋮ Menú</strong> (tres puntos arriba a la derecha)' },
+            { num: '2', text: 'Selecciona <strong>"Instalar Chat — iadebarrio..."</strong> o <strong>"Guardar y compartir → Crear acceso directo"</strong>' },
+            { num: '3', text: 'En <strong>Safari</strong>: Ve a <strong>Archivo → Añadir al Dock</strong>' }
         ];
     } else if (isWindows) {
         platformName = 'Windows';
