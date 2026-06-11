@@ -11721,20 +11721,25 @@ window.createChatRoom = async function() {
 
     try {
         const user = (await _supabase.auth.getUser()).data.user;
-        const { data, error } = await _supabase.from('chat_rooms').insert({
+        const insertData = {
             user_id: user.id,
             lead_id: _chatSelectedLeadId || null,
             lead_name: name,
             lead_company: company,
-            lead_email: email,
-            lead_phone: phone
-        }).select().single();
-        if (error) throw error;
+            lead_email: email
+        };
+
+        // Try with lead_phone first, fallback without it
+        let result = await _supabase.from('chat_rooms').insert({ ...insertData, lead_phone: phone }).select().single();
+        if (result.error) {
+            result = await _supabase.from('chat_rooms').insert(insertData).select().single();
+        }
+        if (result.error) throw result.error;
 
         document.getElementById('create-chat-modal')?.remove();
         showNotification(`Chat con ${name} creado`, 'success');
         await loadChatRooms();
-        openChatRoom(data.id);
+        openChatRoom(result.data.id);
     } catch(e) {
         console.error('Error creating chat:', e);
         showNotification('Error al crear chat', 'error');
