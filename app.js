@@ -11810,8 +11810,7 @@ window.sendReminderNow = async function() {
             room_id: _chatCurrentRoom.id,
             sender_type: 'admin',
             sender_name: 'Gerard',
-            content: content,
-            is_reminder: true
+            content: content
         });
         await _supabase.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', _chatCurrentRoom.id);
         document.getElementById('reminder-modal')?.remove();

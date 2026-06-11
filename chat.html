@@ -78,6 +78,7 @@
             flex-direction: column;
             gap: 10px;
             scroll-behavior: smooth;
+            min-height: 0;
         }
         .chat-messages::-webkit-scrollbar { width: 4px; }
         .chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
@@ -152,6 +153,7 @@
             font-family: inherit;
             outline: none;
             transition: border-color 0.2s;
+            min-width: 0;
         }
         .chat-input-bar input[type="text"]:focus {
             border-color: var(--accent);
@@ -167,11 +169,11 @@
             transition: all 0.2s;
             flex-shrink: 0;
         }
-        .btn-attach {
+        .btn-attach, .btn-emoji {
             background: var(--bg-tertiary);
             color: var(--text-grey);
         }
-        .btn-attach:hover { background: var(--bg-primary); color: var(--text-main); }
+        .btn-attach:hover, .btn-emoji:hover { background: var(--bg-primary); color: var(--text-main); }
 
         .btn-send {
             background: var(--accent);
@@ -179,6 +181,35 @@
         }
         .btn-send:hover { filter: brightness(1.15); transform: scale(1.05); }
         .btn-send:active { transform: scale(0.95); }
+
+        /* --- Emoji picker --- */
+        .emoji-picker {
+            display: none;
+            position: absolute;
+            bottom: 52px; left: 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            z-index: 100;
+            width: 280px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .emoji-picker::-webkit-scrollbar { width: 4px; }
+        .emoji-picker::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 2px; font-size: 1.2rem; text-align: center;
+        }
+        .emoji-grid span {
+            cursor: pointer; padding: 3px; border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.15s;
+        }
+        .emoji-grid span:hover { background: rgba(255,255,255,0.08); }
 
         /* --- Loading screen --- */
         .loading-screen {
@@ -195,7 +226,6 @@
             animation: spin 0.8s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-
         .loading-screen p { font-size: 0.85rem; color: var(--text-grey); }
 
         /* --- Error screen --- */
@@ -209,7 +239,7 @@
         .error-screen h2 { font-size: 1.2rem; font-weight: 700; }
         .error-screen p { font-size: 0.85rem; color: var(--text-grey); max-width: 300px; text-align: center; line-height: 1.5; }
 
-        /* --- PWA install banner --- */
+        /* --- PWA install banner (Apple style) --- */
         .pwa-banner {
             display: none;
             padding: 14px 18px;
@@ -227,9 +257,7 @@
             display: flex; align-items: center; justify-content: center;
             font-size: 1.2rem; flex-shrink: 0;
         }
-        .pwa-banner .pwa-text {
-            flex: 1; min-width: 0;
-        }
+        .pwa-banner .pwa-text { flex: 1; min-width: 0; }
         .pwa-banner .pwa-text .pwa-title {
             font-size: 0.82rem; font-weight: 700; color: var(--text-main);
         }
@@ -241,17 +269,14 @@
             color: #fff; border: none;
             padding: 8px 18px; border-radius: 20px;
             font-size: 0.76rem; font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-family: inherit;
-            white-space: nowrap;
+            cursor: pointer; transition: all 0.2s;
+            font-family: inherit; white-space: nowrap;
         }
-        .pwa-banner .pwa-btn:hover { filter: brightness(1.15); transform: scale(1.03); }
+        .pwa-banner .pwa-btn:hover { filter: brightness(1.15); }
         .pwa-banner .pwa-close {
             background: none; border: none; color: var(--text-grey);
             cursor: pointer; font-size: 1rem; padding: 4px;
-            border-radius: 50%;
-            transition: all 0.2s;
+            border-radius: 50%; transition: all 0.2s;
         }
         .pwa-banner .pwa-close:hover { background: rgba(255,255,255,0.06); color: var(--text-main); }
 
@@ -295,6 +320,16 @@
         <button class="pwa-close" id="pwa-close-btn">✕</button>
     </div>
 
+    <!-- iOS Install banner -->
+    <div class="pwa-banner" id="ios-banner" style="display:none">
+        <div class="pwa-icon">📱</div>
+        <div class="pwa-text">
+            <div class="pwa-title">Instalar en iPhone</div>
+            <div class="pwa-subtitle">Pulsa <strong style="color:var(--text-main)">⬆️ Compartir</strong> → <strong style="color:var(--text-main)">"Añadir a pantalla de inicio"</strong></div>
+        </div>
+        <button class="pwa-close" onclick="document.getElementById('ios-banner').style.display='none'">✕</button>
+    </div>
+
     <!-- Header -->
     <div class="chat-header">
         <div class="avatar" id="chat-avatar">G</div>
@@ -311,6 +346,12 @@
     <div class="chat-input-bar">
         <button class="btn-icon btn-attach" onclick="document.getElementById('file-input').click()" title="Adjuntar archivo">📎</button>
         <input type="file" id="file-input" style="display:none" onchange="handleFileUpload(this)">
+        <div style="position:relative;flex-shrink:0">
+            <button class="btn-icon btn-emoji" onclick="toggleEmojiPicker()" title="Emojis">😊</button>
+            <div class="emoji-picker" id="emoji-picker">
+                <div class="emoji-grid" id="emoji-grid"></div>
+            </div>
+        </div>
         <input type="text" id="msg-input" placeholder="Escribe un mensaje..." autocomplete="off"
             onkeydown="if(event.key==='Enter')sendMessage()">
         <button class="btn-icon btn-send" onclick="sendMessage()" title="Enviar">➤</button>
@@ -332,12 +373,20 @@ document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
     const params = new URLSearchParams(window.location.search);
-    const token = params.get('token') || params.get('t');
+    // Try URL token first, then localStorage (for PWA)
+    let token = params.get('token') || params.get('t');
+    
+    if (token) {
+        // Save token for PWA reinstalls
+        localStorage.setItem('chat_token', token);
+    } else {
+        // PWA opened without token — recover from localStorage
+        token = localStorage.getItem('chat_token');
+    }
 
     if (!token) return showError();
 
     try {
-        // Find room by link_token
         const { data: room, error } = await sb
             .from('chat_rooms')
             .select('*')
@@ -353,6 +402,7 @@ async function init() {
         await loadMessages();
         subscribeToMessages();
         registerServiceWorker();
+        showInstallBanner();
     } catch(e) {
         console.error('Init error:', e);
         showError();
@@ -362,6 +412,20 @@ async function init() {
 function showError() {
     document.getElementById('loading-screen').style.display = 'none';
     document.getElementById('error-screen').style.display = 'flex';
+}
+
+// ===== INSTALL BANNER =====
+function showInstallBanner() {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    
+    if (isStandalone) return; // Already installed
+    
+    if (isIOS) {
+        // iOS doesn't support beforeinstallprompt — show manual instructions
+        document.getElementById('ios-banner').style.display = 'flex';
+    }
+    // Android/Chrome banner handled by beforeinstallprompt event below
 }
 
 // ===== LOAD MESSAGES =====
@@ -473,6 +537,42 @@ async function handleFileUpload(inputEl) {
     inputEl.value = '';
 }
 
+// ===== EMOJI PICKER =====
+const EMOJIS = ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','😋','😛','😜','🤪','😝','🤗','🤭','🤫','🤔','😐','😏','😒','🙄','😬','😌','😔','😪','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','😎','🤓','🧐','😕','😟','🙁','😮','😲','😳','🥺','😢','😭','😱','😤','😡','🤬','😈','💀','💩','🤡','👻','👽','🤖','👋','🤚','✋','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤝','🙏','💪','❤️','🧡','💛','💚','💙','💜','🖤','💔','💕','💯','🔥','✨','⭐','🌟','⚡','🎉','🎊','🏆','💰','💎','📌','💼','📊','📈','💡','🎯','🚀','✅','❌','⚠️','❓','❗','📱','💻','📧','📞','📅'];
+
+let emojiLoaded = false;
+function toggleEmojiPicker() {
+    const picker = document.getElementById('emoji-picker');
+    const isVisible = picker.style.display !== 'none';
+    picker.style.display = isVisible ? 'none' : 'block';
+    
+    if (!isVisible && !emojiLoaded) {
+        document.getElementById('emoji-grid').innerHTML = EMOJIS.map(e => 
+            `<span onclick="insertEmoji('${e}')">${e}</span>`
+        ).join('');
+        emojiLoaded = true;
+    }
+}
+
+function insertEmoji(emoji) {
+    const input = document.getElementById('msg-input');
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    input.value = input.value.substring(0, start) + emoji + input.value.substring(end);
+    input.focus();
+    input.selectionStart = input.selectionEnd = start + emoji.length;
+    document.getElementById('emoji-picker').style.display = 'none';
+}
+
+document.addEventListener('click', e => {
+    const picker = document.getElementById('emoji-picker');
+    if (picker && picker.style.display !== 'none') {
+        if (!e.target.closest('#emoji-picker') && !e.target.closest('.btn-emoji')) {
+            picker.style.display = 'none';
+        }
+    }
+});
+
 // ===== REALTIME =====
 function subscribeToMessages() {
     subscription = sb
@@ -486,7 +586,6 @@ function subscribeToMessages() {
             const m = payload.new;
             const container = document.getElementById('chat-messages');
 
-            // Remove empty state
             const empty = container.querySelector('.empty-state');
             if (empty) empty.remove();
 
@@ -518,11 +617,14 @@ function subscribeToMessages() {
 // ===== PWA =====
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/chat-sw.js').catch(e => console.log('SW reg failed:', e));
+        navigator.serviceWorker.register('/chat-sw.js').then(reg => {
+            // Force update check
+            reg.update();
+        }).catch(e => console.log('SW reg failed:', e));
     }
 }
 
-// PWA install prompt
+// Android/Chrome install prompt
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
@@ -532,7 +634,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
+    await deferredPrompt.userChoice;
     deferredPrompt = null;
     document.getElementById('pwa-banner').style.display = 'none';
 });
