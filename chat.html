@@ -586,6 +586,8 @@ async function sendMessage() {
             content: text
         });
         await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+        // Auto-cancel pending scheduled messages when lead replies
+        cancelPendingScheduled();
     } catch(e) {
         console.error('Send error:', e);
     }
@@ -613,11 +615,58 @@ async function handleFileUpload(inputEl) {
             file_name: file.name
         });
         await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+        cancelPendingScheduled();
     } catch(e) {
         console.error('Upload error:', e);
         alert('Error al subir archivo');
     }
     inputEl.value = '';
+}
+
+// ===== AUTO-CANCEL SCHEDULED MESSAGES ON LEAD REPLY =====
+async function cancelPendingScheduled() {
+    if (!currentRoom) return;
+    try {
+        await sb
+            .from('chat_scheduled_messages')
+            .update({ status: 'cancelled' })
+            .eq('room_id', currentRoom.id)
+            .eq('status', 'pending');
+        console.log('Pending scheduled messages cancelled for room', currentRoom.id);
+    } catch(e) {
+        console.error('Error cancelling scheduled:', e);
+    }
+}
+
+// ===== PWA BADGE (unread messages) =====
+let unreadCount = 0;
+let isPageVisible = true;
+
+document.addEventListener('visibilitychange', () => {
+    isPageVisible = !document.hidden;
+    if (isPageVisible) {
+        // Clear badge when user opens the app
+        unreadCount = 0;
+        updateBadge(0);
+    }
+});
+
+function updateBadge(count) {
+    if ('setAppBadge' in navigator) {
+        if (count > 0) {
+            navigator.setAppBadge(count).catch(() => {});
+        } else {
+            navigator.clearAppBadge().catch(() => {});
+        }
+    }
+}
+
+function onNewMessageReceived(senderType) {
+    // Only badge for admin messages when app is not visible
+    if (senderType === 'admin' && !isPageVisible) {
+        unreadCount++;
+        updateBadge(unreadCount);
+    }
 }
 
 // ===== EMOJI PICKER =====
@@ -718,6 +767,9 @@ function subscribeToMessages() {
             `;
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
+            
+            // PWA Badge: notify unread when app not visible
+            onNewMessageReceived(m.sender_type);
         })
         .subscribe();
 }

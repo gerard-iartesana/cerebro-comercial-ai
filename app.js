@@ -12012,6 +12012,15 @@ function renderScheduledMessages(data) {
         return;
     }
     
+    // Add "Cancel all pending" button if current room has pending messages
+    let cancelAllBtn = '';
+    if (_chatCurrentRoom) {
+        const pendingCount = data.filter(s => s.room_id === _chatCurrentRoom.id && s.status === 'pending').length;
+        if (pendingCount > 0) {
+            cancelAllBtn = `<div style="padding:8px 14px;border-bottom:1px solid var(--border-color)"><button onclick="cancelAllPendingForRoom()" style="width:100%;padding:8px 14px;border-radius:8px;background:rgba(255,59,48,0.08);border:1px solid rgba(255,59,48,0.15);color:#FF3B30;font-size:0.76rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s" onmouseover="this.style.background='rgba(255,59,48,0.15)'" onmouseout="this.style.background='rgba(255,59,48,0.08)'">🛑 Cancelar ${pendingCount} pendiente(s) de ${_chatCurrentRoom.lead_name}</button></div>`;
+        }
+    }
+    
     container.innerHTML = data.map(s => {
         const dt = new Date(s.scheduled_at);
         const dateStr = dt.toLocaleDateString('es-ES', {day:'2-digit',month:'short',year:'numeric'});
@@ -12044,6 +12053,7 @@ function renderScheduledMessages(data) {
             </div>
         </div>`;
     }).join('');
+    container.innerHTML = cancelAllBtn + container.innerHTML;
 }
 
 window.filterScheduledMessages = function() {
@@ -12064,6 +12074,24 @@ window.cancelScheduledMsg = async function(id) {
     try {
         await _supabase.from('chat_scheduled_messages').update({ status: 'cancelled' }).eq('id', id);
         showToast('Mensaje cancelado');
+        loadScheduledMessages();
+    } catch(e) {
+        showToast('Error al cancelar', true);
+    }
+};
+
+window.cancelAllPendingForRoom = async function() {
+    if (!_chatCurrentRoom) { showToast('Selecciona un chat primero', true); return; }
+    const pending = _scheduledMessagesCache.filter(s => s.room_id === _chatCurrentRoom.id && s.status === 'pending');
+    if (!pending.length) { showToast('No hay mensajes pendientes para este lead'); return; }
+    if (!confirm(`¿Cancelar ${pending.length} mensaje(s) pendiente(s) para ${_chatCurrentRoom.lead_name}?`)) return;
+    try {
+        await _supabase
+            .from('chat_scheduled_messages')
+            .update({ status: 'cancelled' })
+            .eq('room_id', _chatCurrentRoom.id)
+            .eq('status', 'pending');
+        showToast(`${pending.length} mensajes cancelados ✅`);
         loadScheduledMessages();
     } catch(e) {
         showToast('Error al cancelar', true);
