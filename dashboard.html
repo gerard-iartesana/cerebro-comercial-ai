@@ -3694,7 +3694,7 @@
                 </div>
 
                 <!-- Chat Layout: Sidebar + Main -->
-                <div style="display:grid;grid-template-columns:300px 1fr;gap:0;height:580px;border-radius:20px;overflow:hidden;border:1px solid var(--card-border);background:var(--bg-card);backdrop-filter:var(--glass-blur);box-shadow:var(--glass-shadow)">
+                <div style="display:grid;grid-template-columns:300px 1fr;gap:0;height:calc(100vh - 200px);min-height:500px;border-radius:20px;overflow:hidden;border:1px solid var(--card-border);background:var(--bg-card);backdrop-filter:var(--glass-blur);box-shadow:var(--glass-shadow)">
 
                     <!-- LEFT: Chat Rooms Sidebar -->
                     <div style="border-right:1px solid var(--border-color);display:flex;flex-direction:column;background:var(--bg-secondary)">
@@ -3717,7 +3717,7 @@
                     </div>
 
                     <!-- RIGHT: Active Conversation -->
-                    <div style="display:flex;flex-direction:column;background:var(--bg-primary)">
+                    <div style="display:flex;flex-direction:column;background:var(--bg-primary);min-height:0;overflow:hidden">
 
                         <!-- Chat Header (hidden until room selected) -->
                         <div id="chat-active-header" style="display:none;padding:14px 20px;border-bottom:1px solid var(--border-color);align-items:center;gap:12px;background:var(--bg-secondary)">
