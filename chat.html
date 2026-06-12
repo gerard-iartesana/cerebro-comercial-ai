@@ -796,7 +796,6 @@ function registerServiceWorker() {
 
 // ===== PUSH NOTIFICATIONS =====
 async function subscribeToPush(swReg) {
-    // Check if push is supported
     if (!('PushManager' in window)) {
         console.log('Push not supported');
         return;
@@ -806,30 +805,75 @@ async function subscribeToPush(swReg) {
     const existingSub = await swReg.pushManager.getSubscription();
     if (existingSub) {
         console.log('Already subscribed to push');
-        // Save subscription anyway (in case room changed)
         savePushSubscription(existingSub);
+        hidePushBell(); // already subscribed
         return;
     }
     
-    // Request permission
+    // If permission already granted, subscribe silently
+    if (Notification.permission === 'granted') {
+        await doSubscribe(swReg);
+        return;
+    }
+    
+    // Otherwise, show the bell button to request permission via user gesture
+    if (Notification.permission !== 'denied') {
+        showPushBell();
+    }
+}
+
+// Called when user taps the bell
+async function requestPushPermission() {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
         console.log('Notification permission denied');
+        hidePushBell();
         return;
     }
     
+    // Subscribe after permission granted
+    const reg = await navigator.serviceWorker.ready;
+    await doSubscribe(reg);
+    hidePushBell();
+}
+
+async function doSubscribe(swReg) {
     try {
-        // Subscribe to push
         const pushSub = await swReg.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
         });
-        
         console.log('Push subscribed!', pushSub);
         savePushSubscription(pushSub);
     } catch (e) {
         console.error('Push subscribe error:', e);
     }
+}
+
+function showPushBell() {
+    // Inject notification bell bar at top of chat
+    if (document.getElementById('push-bell-bar')) return;
+    const bar = document.createElement('div');
+    bar.id = 'push-bell-bar';
+    bar.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 16px;background:linear-gradient(135deg,rgba(108,92,231,0.15),rgba(168,85,247,0.1));border-bottom:1px solid rgba(108,92,231,0.2);cursor:pointer;';
+    bar.innerHTML = `
+        <span style="font-size:1.3rem">🔔</span>
+        <div style="flex:1">
+            <div style="font-size:0.8rem;font-weight:700;color:var(--text-main)">Activar notificaciones</div>
+            <div style="font-size:0.68rem;color:var(--text-grey)">Recibe avisos cuando te envíen un mensaje</div>
+        </div>
+        <button onclick="event.stopPropagation();requestPushPermission()" style="padding:6px 14px;border-radius:16px;background:linear-gradient(135deg,#6c5ce7,#a855f7);border:none;color:#fff;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit">Activar</button>
+        <button onclick="event.stopPropagation();hidePushBell()" style="background:none;border:none;color:var(--text-grey);font-size:1rem;cursor:pointer;padding:4px">✕</button>
+    `;
+    bar.onclick = () => requestPushPermission();
+    const chatApp = document.getElementById('chat-app');
+    const messages = document.getElementById('chat-messages');
+    chatApp.insertBefore(bar, messages);
+}
+
+function hidePushBell() {
+    const bell = document.getElementById('push-bell-bar');
+    if (bell) bell.remove();
 }
 
 function urlBase64ToUint8Array(base64String) {
