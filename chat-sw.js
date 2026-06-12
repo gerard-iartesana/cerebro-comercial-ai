@@ -1,5 +1,5 @@
-// Chat Service Worker - Network First + Push Notifications
-const CACHE_VERSION = 'chat-v8';
+// Chat Service Worker - Network First + Push Notifications + Badge
+const CACHE_VERSION = 'chat-v9';
 
 self.addEventListener('install', event => {
     self.skipWaiting();
@@ -44,7 +44,6 @@ self.addEventListener('push', event => {
             data = event.data.json();
         }
     } catch (e) {
-        // If not JSON, use text
         if (event.data) {
             data.body = event.data.text();
         }
@@ -55,40 +54,65 @@ self.addEventListener('push', event => {
         icon: data.icon || 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png',
         badge: data.badge || 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png',
         vibrate: [200, 100, 200],
-        tag: 'chat-message',
+        tag: 'chat-message-' + Date.now(), // unique tag so each message shows
         renotify: true,
-        requireInteraction: false,
+        requireInteraction: true, // keep notification visible until user interacts
         data: data.data || {},
-        actions: [
-            { action: 'open', title: 'Abrir chat' },
-            { action: 'close', title: 'Cerrar' }
-        ]
     };
 
     event.waitUntil(
-        self.registration.showNotification(data.title || 'Nuevo mensaje', options)
+        Promise.all([
+            self.registration.showNotification(data.title || 'Nuevo mensaje', options),
+            // Set app badge with unread count
+            updateBadge()
+        ])
     );
 });
 
-// Handle notification click
+// Count unread notifications and set badge
+async function updateBadge() {
+    try {
+        const notifications = await self.registration.getNotifications();
+        const count = notifications.length + 1; // +1 for the one being added
+        if (navigator.setAppBadge) {
+            await navigator.setAppBadge(count);
+        }
+    } catch (e) {
+        // Badge API not supported, ignore
+    }
+}
+
+// Clear badge when notification is clicked
 self.addEventListener('notificationclick', event => {
     event.notification.close();
 
     if (event.action === 'close') return;
 
-    // Open or focus the chat window
     event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-            // Try to find an existing chat window
-            for (const client of windowClients) {
-                if (client.url.includes('/chat') && 'focus' in client) {
-                    return client.focus();
+        Promise.all([
+            // Clear badge
+            (async () => {
+                try {
+                    // Clear all notifications
+                    const notifications = await self.registration.getNotifications();
+                    notifications.forEach(n => n.close());
+                    // Clear badge
+                    if (navigator.clearAppBadge) {
+                        await navigator.clearAppBadge();
+                    }
+                } catch (e) {}
+            })(),
+            // Open or focus chat window
+            clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+                for (const client of windowClients) {
+                    if (client.url.includes('/chat') && 'focus' in client) {
+                        return client.focus();
+                    }
                 }
-            }
-            // Open new window if none found
-            if (clients.openWindow) {
-                return clients.openWindow('/chat.html');
-            }
-        })
+                if (clients.openWindow) {
+                    return clients.openWindow('/chat.html');
+                }
+            })
+        ])
     );
 });
