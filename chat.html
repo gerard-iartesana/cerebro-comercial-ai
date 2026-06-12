@@ -489,6 +489,7 @@ async function init() {
         subscribeToMessages();
         registerServiceWorker();
         showInstallBanner();
+        clearAppBadge();
     } catch(e) {
         console.error('Init error:', e);
         showError();
@@ -785,6 +786,27 @@ function subscribeToMessages() {
         })
         .subscribe();
 }
+
+// ===== BADGE CLEAR =====
+function clearAppBadge() {
+    try {
+        if (navigator.clearAppBadge) navigator.clearAppBadge();
+        // Also clear notifications
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.ready.then(reg => {
+                reg.getNotifications().then(notifications => {
+                    notifications.forEach(n => n.close());
+                });
+            });
+        }
+    } catch(e) {}
+}
+
+// Clear badge when app comes to foreground
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') clearAppBadge();
+});
+window.addEventListener('focus', clearAppBadge);
 
 // ===== PWA =====
 function registerServiceWorker() {
