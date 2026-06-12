@@ -328,10 +328,10 @@ function renderRooms() {
         const time = r.last_message_at ? formatTime(r.last_message_at) : '';
         const initials = (r.lead_name || 'L').substring(0, 2).toUpperCase();
         
-        // Count unread (lead messages after last admin message)
-        const lastAdminMsg = msgs.filter(m => m.sender_type === 'admin').sort((a,b) => new Date(b.created_at) - new Date(a.created_at))[0];
-        const unread = lastAdminMsg 
-            ? msgs.filter(m => m.sender_type === 'lead' && new Date(m.created_at) > new Date(lastAdminMsg.created_at)).length
+        // Count unread (lead messages after last read time)
+        const lastRead = getLastRead(r.id);
+        const unread = lastRead
+            ? msgs.filter(m => m.sender_type === 'lead' && new Date(m.created_at) > new Date(lastRead)).length
             : msgs.filter(m => m.sender_type === 'lead').length;
 
         return `
@@ -363,6 +363,8 @@ async function openRoom(roomId) {
     currentRoom = rooms.find(r => r.id === roomId);
     if (!currentRoom) return;
 
+    // Mark as read
+    markAsRead(roomId);
     document.getElementById('chat-header-name').textContent = currentRoom.lead_name || currentRoom.lead_email || 'Lead';
     showScreen('chat-screen');
     await loadMessages();
@@ -612,6 +614,22 @@ function clearBadge() {
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') clearBadge(); });
 window.addEventListener('focus', clearBadge);
+
+// ===== READ TRACKING =====
+function getLastRead(roomId) {
+    try {
+        const data = JSON.parse(localStorage.getItem('admin_read') || '{}');
+        return data[roomId] || null;
+    } catch(e) { return null; }
+}
+
+function markAsRead(roomId) {
+    try {
+        const data = JSON.parse(localStorage.getItem('admin_read') || '{}');
+        data[roomId] = new Date().toISOString();
+        localStorage.setItem('admin_read', JSON.stringify(data));
+    } catch(e) {}
+}
 
 // ===== HELPERS =====
 function formatTime(dateStr) {
