@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0a0f">
+    <title>Admin Chat — iadebarrio</title>
+    <link rel="manifest" href="/manifest-admin.json">
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/4712/4712035.png">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/4712/4712035.png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+    :root {
+        --bg-primary: #0a0a0f;
+        --bg-secondary: #12121a;
+        --bg-tertiary: #1a1a2e;
+        --card-bg: #16161f;
+        --card-border: rgba(255,255,255,0.06);
+        --text-main: #f0f0f5;
+        --text-grey: #8888a0;
+        --accent: #6c5ce7;
+        --accent2: #a855f7;
+        --green: #00d26a;
+        --red: #ff4757;
+        --msg-admin: linear-gradient(135deg, #6c5ce7, #a855f7);
+        --msg-lead: #1e1e2e;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Inter', sans-serif;
+        background: var(--bg-primary); color: var(--text-main);
+        -webkit-font-smoothing: antialiased;
+        overscroll-behavior: none;
+    }
+
+    /* ===== SCREENS ===== */
+    .screen { display:none; flex-direction:column; height:100dvh; }
+    .screen.active { display:flex; }
+
+    /* ===== LOGIN ===== */
+    #login-screen {
+        align-items:center; justify-content:center;
+        padding: 24px; gap: 24px;
+        background: linear-gradient(180deg, #0a0a0f 0%, #12121a 100%);
+    }
+    .login-logo { font-size: 3rem; margin-bottom: 8px; }
+    .login-title { font-size: 1.4rem; font-weight: 800; }
+    .login-subtitle { font-size: 0.8rem; color: var(--text-grey); margin-bottom: 16px; }
+    .login-form { width: 100%; max-width: 320px; display:flex; flex-direction:column; gap:12px; }
+    .login-input {
+        padding: 14px 16px; border-radius: 14px;
+        background: var(--bg-tertiary); border: 1px solid var(--card-border);
+        color: var(--text-main); font-size: 0.9rem; font-family: inherit;
+        outline: none; transition: border 0.2s;
+    }
+    .login-input:focus { border-color: var(--accent); }
+    .login-input::placeholder { color: var(--text-grey); }
+    .login-btn {
+        padding: 14px; border-radius: 14px; border:none;
+        background: var(--msg-admin); color: #fff;
+        font-size: 0.9rem; font-weight: 700; cursor:pointer;
+        font-family: inherit; transition: all 0.2s;
+    }
+    .login-btn:active { transform: scale(0.97); }
+    .login-error { color: var(--red); font-size: 0.75rem; text-align:center; min-height:20px; }
+
+    /* ===== ROOMS LIST ===== */
+    #rooms-screen { background: var(--bg-primary); }
+    .rooms-header {
+        padding: 16px 20px 12px; 
+        border-bottom: 1px solid var(--card-border);
+        background: rgba(10,10,15,0.85); backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+    .rooms-header h1 { font-size: 1.5rem; font-weight: 800; }
+    .rooms-header .subtitle { font-size: 0.72rem; color: var(--text-grey); margin-top: 2px; }
+    .rooms-list { flex:1; overflow-y:auto; padding: 8px 0; }
+    .room-item {
+        display:flex; align-items:center; gap:12px;
+        padding: 14px 20px; cursor:pointer;
+        border-bottom: 1px solid rgba(255,255,255,0.03);
+        transition: background 0.15s;
+    }
+    .room-item:active { background: rgba(108,92,231,0.08); }
+    .room-avatar {
+        width:46px; height:46px; border-radius:50%;
+        background: var(--msg-admin); display:flex;
+        align-items:center; justify-content:center;
+        font-size:1rem; font-weight:700; flex-shrink:0;
+    }
+    .room-info { flex:1; min-width:0; }
+    .room-name { font-size:0.88rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .room-last-msg { font-size:0.72rem; color:var(--text-grey); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+    .room-meta { display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
+    .room-time { font-size:0.62rem; color:var(--text-grey); }
+    .room-badge {
+        width:20px; height:20px; border-radius:50%;
+        background: var(--accent); color:#fff;
+        font-size:0.6rem; font-weight:700;
+        display:none; align-items:center; justify-content:center;
+    }
+    .room-badge.has-unread { display:flex; }
+    .rooms-empty { text-align:center; padding:60px 20px; color:var(--text-grey); font-size:0.85rem; }
+
+    /* ===== CHAT ===== */
+    #chat-screen { background: var(--bg-primary); }
+    .chat-header {
+        display:flex; align-items:center; gap:12px;
+        padding: 12px 16px; border-bottom: 1px solid var(--card-border);
+        background: rgba(10,10,15,0.85); backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+    .chat-back {
+        width:36px; height:36px; border-radius:50%;
+        background: var(--bg-tertiary); border: 1px solid var(--card-border);
+        display:flex; align-items:center; justify-content:center;
+        font-size:1rem; cursor:pointer; flex-shrink:0;
+    }
+    .chat-back:active { background: var(--accent); }
+    .chat-header-info { flex:1; }
+    .chat-header-name { font-size:0.9rem; font-weight:700; }
+    .chat-header-status { font-size:0.68rem; color:var(--green); }
+    .chat-messages {
+        flex:1; overflow-y:auto; padding:16px;
+        display:flex; flex-direction:column; gap:6px;
+    }
+    .msg-wrapper { display:flex; flex-direction:column; max-width:82%; }
+    .msg-wrapper.admin { align-self:flex-end; align-items:flex-end; }
+    .msg-wrapper.lead { align-self:flex-start; align-items:flex-start; }
+    .msg-meta { font-size:0.58rem; color:var(--text-grey); margin-bottom:3px; padding:0 6px; }
+    .msg-bubble {
+        padding: 10px 14px; border-radius: 18px;
+        font-size: 0.85rem; line-height: 1.4; word-wrap:break-word;
+    }
+    .msg-wrapper.admin .msg-bubble {
+        background: var(--msg-admin); color:#fff;
+        border-bottom-right-radius: 6px;
+    }
+    .msg-wrapper.lead .msg-bubble {
+        background: var(--msg-lead); color:var(--text-main);
+        border: 1px solid var(--card-border);
+        border-bottom-left-radius: 6px;
+    }
+    .msg-bubble img {
+        max-width:100%; border-radius:12px; margin-top:6px; cursor:pointer;
+    }
+    .msg-bubble a { color: #a8b4ff; }
+    .chat-input-bar {
+        display:flex; align-items:center; gap:8px;
+        padding: 10px 12px;
+        border-top: 1px solid var(--card-border);
+        background: var(--bg-secondary);
+    }
+    .chat-input-bar input {
+        flex:1; padding:12px 16px; border-radius:24px;
+        background: var(--bg-tertiary); border:1px solid var(--card-border);
+        color: var(--text-main); font-size:0.85rem; font-family:inherit;
+        outline:none;
+    }
+    .chat-input-bar input:focus { border-color: var(--accent); }
+    .chat-input-bar input::placeholder { color: var(--text-grey); }
+    .chat-send-btn, .chat-attach-btn {
+        width:42px; height:42px; border-radius:50%;
+        display:flex; align-items:center; justify-content:center;
+        font-size:1.1rem; cursor:pointer; flex-shrink:0;
+        border:none; transition: all 0.15s;
+    }
+    .chat-send-btn { background: var(--msg-admin); color:#fff; }
+    .chat-send-btn:active { transform: scale(0.9); }
+    .chat-attach-btn { background: var(--bg-tertiary); border: 1px solid var(--card-border); }
+    .chat-attach-btn:active { background: var(--accent); }
+
+    /* ===== SAFE AREAS ===== */
+    @supports(padding-top: env(safe-area-inset-top)) {
+        .rooms-header, .chat-header { padding-top: calc(12px + env(safe-area-inset-top)); }
+        .chat-input-bar { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+    }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="screen active">
+    <div class="login-logo">💬</div>
+    <div class="login-title">Admin Chat</div>
+    <div class="login-subtitle">iadebarrio — Panel de mensajes</div>
+    <div class="login-form">
+        <input class="login-input" id="login-user" type="email" placeholder="Email" autocomplete="email">
+        <input class="login-input" id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password">
+        <button class="login-btn" onclick="doLogin()">Entrar</button>
+        <div class="login-error" id="login-error"></div>
+    </div>
+</div>
+
+<!-- ROOMS SCREEN -->
+<div id="rooms-screen" class="screen">
+    <div class="rooms-header">
+        <h1>Chats</h1>
+        <div class="subtitle">Conversaciones con leads</div>
+    </div>
+    <div class="rooms-list" id="rooms-list">
+        <div class="rooms-empty">Cargando conversaciones...</div>
+    </div>
+</div>
+
+<!-- CHAT SCREEN -->
+<div id="chat-screen" class="screen">
+    <div class="chat-header">
+        <div class="chat-back" onclick="goBack()">←</div>
+        <div class="chat-header-info">
+            <div class="chat-header-name" id="chat-header-name">Lead</div>
+            <div class="chat-header-status">● En línea</div>
+        </div>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-bar">
+        <label class="chat-attach-btn" for="file-input">📎</label>
+        <input type="file" id="file-input" style="display:none" onchange="handleFileUpload(this)">
+        <input type="text" id="msg-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')sendMsg()">
+        <button class="chat-send-btn" onclick="sendMsg()">➤</button>
+    </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://lmozoetpehmdxxremtqn.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxtb3pvZXRwZWhtZHh4cmVtdHFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNTA2NDUsImV4cCI6MjA5NTgyNjY0NX0.1xkCCw7q9CDvVbqGswCeFwXpgYfMtb0wcl7lHWlKQ8U';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const VAPID_PUBLIC_KEY = 'BAfWR9i2l5IKCTMpV5cjjjTt4dkSQuvGMUAO5aSVIVMEvXWElSTIrf3S92HhmqveaiWhcdXXw5WUaaYL7AxI1Fg';
+const API_BASE = window.location.origin + '/api';
+
+let adminEmail = null;
+let adminName = 'Gerard';
+let rooms = [];
+let currentRoom = null;
+let messagesSub = null;
+let roomsSub = null;
+
+// ===== NAVIGATION =====
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+// ===== LOGIN =====
+async function doLogin() {
+    const user = document.getElementById('login-user').value.trim();
+    const pass = document.getElementById('login-pass').value;
+    const errEl = document.getElementById('login-error');
+    errEl.textContent = '';
+
+    if (!user || !pass) { errEl.textContent = 'Completa todos los campos'; return; }
+
+    try {
+        const resp = await fetch(`${API_BASE}/auth`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: user, password: pass })
+        });
+        const data = await resp.json();
+
+        if (!data.success) {
+            errEl.textContent = data.error || 'Credenciales incorrectas';
+            return;
+        }
+
+        adminEmail = data.email;
+        localStorage.setItem('admin_session', JSON.stringify({ email: adminEmail, name: adminName }));
+        await loadRooms();
+        registerSW();
+    } catch(e) {
+        errEl.textContent = 'Error de conexión';
+    }
+}
+
+function checkSession() {
+    const session = localStorage.getItem('admin_session');
+    if (session) {
+        const s = JSON.parse(session);
+        adminEmail = s.email;
+        adminName = s.name || 'Gerard';
+        loadRooms();
+        registerSW();
+        return true;
+    }
+    return false;
+}
+
+// ===== ROOMS =====
+async function loadRooms() {
+    showScreen('rooms-screen');
+
+    const { data, error } = await sb
+        .from('chat_rooms')
+        .select('*, chat_messages(content, sender_type, created_at)')
+        .order('last_message_at', { ascending: false });
+
+    if (error) {
+        document.getElementById('rooms-list').innerHTML = '<div class="rooms-empty">Error al cargar</div>';
+        return;
+    }
+
+    rooms = data || [];
+    renderRooms();
+    subscribeToRooms();
+}
+
+function renderRooms() {
+    const container = document.getElementById('rooms-list');
+    if (!rooms.length) {
+        container.innerHTML = '<div class="rooms-empty">No hay conversaciones todavía</div>';
+        return;
+    }
+
+    container.innerHTML = rooms.map(r => {
+        const msgs = r.chat_messages || [];
+        const lastMsg = msgs.sort((a,b) => new Date(b.created_at) - new Date(a.created_at))[0];
+        const lastText = lastMsg ? (lastMsg.sender_type === 'admin' ? 'Tú: ' : '') + (lastMsg.content || '📎 Archivo').substring(0, 50) : 'Sin mensajes';
+        const time = r.last_message_at ? formatTime(r.last_message_at) : '';
+        const initials = (r.lead_name || 'L').substring(0, 2).toUpperCase();
+        
+        // Count unread (lead messages after last admin message)
+        const lastAdminMsg = msgs.filter(m => m.sender_type === 'admin').sort((a,b) => new Date(b.created_at) - new Date(a.created_at))[0];
+        const unread = lastAdminMsg 
+            ? msgs.filter(m => m.sender_type === 'lead' && new Date(m.created_at) > new Date(lastAdminMsg.created_at)).length
+            : msgs.filter(m => m.sender_type === 'lead').length;
+
+        return `
+            <div class="room-item" onclick="openRoom('${r.id}')">
+                <div class="room-avatar">${initials}</div>
+                <div class="room-info">
+                    <div class="room-name">${r.lead_name || r.lead_email || 'Lead'}</div>
+                    <div class="room-last-msg">${lastText}</div>
+                </div>
+                <div class="room-meta">
+                    <div class="room-time">${time}</div>
+                    <div class="room-badge ${unread > 0 ? 'has-unread' : ''}">${unread}</div>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+function subscribeToRooms() {
+    if (roomsSub) roomsSub.unsubscribe();
+    roomsSub = sb.channel('admin-rooms-realtime')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, () => {
+            loadRooms(); // Reload to update last message and unread
+        })
+        .subscribe();
+}
+
+// ===== CHAT =====
+async function openRoom(roomId) {
+    currentRoom = rooms.find(r => r.id === roomId);
+    if (!currentRoom) return;
+
+    document.getElementById('chat-header-name').textContent = currentRoom.lead_name || currentRoom.lead_email || 'Lead';
+    showScreen('chat-screen');
+    await loadMessages();
+    subscribeToMessages();
+    clearBadge();
+}
+
+function goBack() {
+    if (messagesSub) { messagesSub.unsubscribe(); messagesSub = null; }
+    currentRoom = null;
+    loadRooms();
+}
+
+async function loadMessages() {
+    const container = document.getElementById('chat-messages');
+    const { data: messages, error } = await sb
+        .from('chat_messages')
+        .select('*')
+        .eq('room_id', currentRoom.id)
+        .order('created_at', { ascending: true });
+
+    if (error || !messages?.length) {
+        container.innerHTML = '<div class="rooms-empty">👋 Inicio de la conversación</div>';
+        return;
+    }
+
+    container.innerHTML = messages.map(m => {
+        const cls = m.sender_type === 'admin' ? 'admin' : 'lead';
+        const name = m.sender_type === 'admin' ? 'Tú' : (currentRoom.lead_name || 'Lead');
+        const time = new Date(m.created_at).toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+        
+        let fileHtml = '';
+        if (m.file_url) {
+            const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.file_name || '');
+            fileHtml = isImg
+                ? `<img src="${m.file_url}" alt="${m.file_name}" onclick="window.open('${m.file_url}','_blank')">`
+                : `<a href="${m.file_url}" target="_blank">📄 ${m.file_name || 'Archivo'}</a>`;
+        }
+
+        return `
+            <div class="msg-wrapper ${cls}">
+                <div class="msg-meta">${name} · ${time}</div>
+                <div class="msg-bubble">${m.content || ''}${fileHtml}</div>
+            </div>`;
+    }).join('');
+
+    const scrollBottom = () => container.scrollTop = container.scrollHeight;
+    scrollBottom();
+    requestAnimationFrame(scrollBottom);
+    setTimeout(scrollBottom, 100);
+    setTimeout(scrollBottom, 500);
+}
+
+function subscribeToMessages() {
+    if (messagesSub) messagesSub.unsubscribe();
+    messagesSub = sb.channel('admin-chat-' + currentRoom.id)
+        .on('postgres_changes', {
+            event: 'INSERT', schema: 'public', table: 'chat_messages',
+            filter: `room_id=eq.${currentRoom.id}`
+        }, payload => {
+            const m = payload.new;
+            const container = document.getElementById('chat-messages');
+            const cls = m.sender_type === 'admin' ? 'admin' : 'lead';
+            const name = m.sender_type === 'admin' ? 'Tú' : (currentRoom.lead_name || 'Lead');
+            const time = new Date(m.created_at).toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+            
+            let fileHtml = '';
+            if (m.file_url) {
+                const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.file_name || '');
+                fileHtml = isImg
+                    ? `<img src="${m.file_url}" alt="${m.file_name}" onclick="window.open('${m.file_url}','_blank')">`
+                    : `<a href="${m.file_url}" target="_blank">📄 ${m.file_name || 'Archivo'}</a>`;
+            }
+
+            container.insertAdjacentHTML('beforeend', `
+                <div class="msg-wrapper ${cls}">
+                    <div class="msg-meta">${name} · ${time}</div>
+                    <div class="msg-bubble">${m.content || ''}${fileHtml}</div>
+                </div>`);
+            container.scrollTop = container.scrollHeight;
+        })
+        .subscribe();
+}
+
+// ===== SEND MESSAGE =====
+async function sendMsg() {
+    if (!currentRoom) return;
+    const input = document.getElementById('msg-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+    input.value = '';
+
+    try {
+        await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'admin',
+            sender_name: adminName,
+            content: msg
+        });
+        await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+
+        // Push to lead
+        fetch(`${API_BASE}/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'send',
+                room_id: currentRoom.id,
+                title: `${adminName} — iadebarrio`,
+                message: msg.length > 100 ? msg.substring(0, 100) + '...' : msg
+            })
+        }).catch(() => {});
+    } catch(e) {
+        console.error('Send error:', e);
+    }
+}
+
+async function handleFileUpload(inputEl) {
+    if (!currentRoom || !inputEl.files[0]) return;
+    const file = inputEl.files[0];
+
+    try {
+        const filePath = `chat/${currentRoom.id}/${Date.now()}_${file.name}`;
+        const { error: uploadErr } = await sb.storage.from('chat-files').upload(filePath, file);
+        if (uploadErr) throw uploadErr;
+
+        const { data: urlData } = sb.storage.from('chat-files').getPublicUrl(filePath);
+        await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'admin',
+            sender_name: adminName,
+            content: '',
+            file_url: urlData.publicUrl,
+            file_name: file.name
+        });
+        await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+
+        fetch(`${API_BASE}/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'send',
+                room_id: currentRoom.id,
+                title: `${adminName} — iadebarrio`,
+                message: `📎 ${file.name}`
+            })
+        }).catch(() => {});
+    } catch(e) {
+        console.error('Upload error:', e);
+    }
+    inputEl.value = '';
+}
+
+// ===== PWA + PUSH =====
+function registerSW() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/admin-sw.js').then(reg => {
+            reg.update();
+            subscribeToPush(reg);
+        }).catch(e => console.log('SW failed:', e));
+    }
+}
+
+async function subscribeToPush(swReg) {
+    if (!('PushManager' in window)) return;
+    
+    const existing = await swReg.pushManager.getSubscription();
+    if (existing) {
+        saveAdminPushSub(existing);
+        return;
+    }
+    
+    if (Notification.permission === 'granted') {
+        await doSubscribe(swReg);
+    } else if (Notification.permission !== 'denied') {
+        // Show activation prompt
+        const bar = document.createElement('div');
+        bar.id = 'push-bar';
+        bar.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 16px;background:linear-gradient(135deg,rgba(108,92,231,0.15),rgba(168,85,247,0.1));border-bottom:1px solid rgba(108,92,231,0.2);cursor:pointer;';
+        bar.innerHTML = `
+            <span style="font-size:1.2rem">🔔</span>
+            <div style="flex:1">
+                <div style="font-size:0.78rem;font-weight:700;color:var(--text-main)">Activar notificaciones</div>
+                <div style="font-size:0.65rem;color:var(--text-grey)">Recibe avisos cuando un lead te escriba</div>
+            </div>
+            <button onclick="event.stopPropagation();activatePush()" style="padding:6px 14px;border-radius:16px;background:linear-gradient(135deg,#6c5ce7,#a855f7);border:none;color:#fff;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit">Activar</button>
+        `;
+        bar.onclick = () => activatePush();
+        const roomsScreen = document.getElementById('rooms-screen');
+        const roomsList = document.getElementById('rooms-list');
+        roomsScreen.insertBefore(bar, roomsList);
+    }
+}
+
+async function activatePush() {
+    const perm = await Notification.requestPermission();
+    const bar = document.getElementById('push-bar');
+    if (bar) bar.remove();
+    if (perm !== 'granted') return;
+    const reg = await navigator.serviceWorker.ready;
+    await doSubscribe(reg);
+}
+
+async function doSubscribe(swReg) {
+    try {
+        const sub = await swReg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+        saveAdminPushSub(sub);
+    } catch(e) { console.error('Push sub error:', e); }
+}
+
+async function saveAdminPushSub(pushSub) {
+    // Save as admin subscription (use a special "admin" room ID)
+    try {
+        await fetch(`${API_BASE}/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'subscribe',
+                room_id: 'admin-global',
+                subscription: pushSub.toJSON()
+            })
+        });
+    } catch(e) { console.error('Save push error:', e); }
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+function clearBadge() {
+    try {
+        if (navigator.clearAppBadge) navigator.clearAppBadge();
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.ready.then(reg => {
+                reg.getNotifications().then(n => n.forEach(x => x.close()));
+            });
+        }
+    } catch(e) {}
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') clearBadge(); });
+window.addEventListener('focus', clearBadge);
+
+// ===== HELPERS =====
+function formatTime(dateStr) {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diff = now - d;
+    if (diff < 86400000 && d.getDate() === now.getDate()) {
+        return d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+    }
+    if (diff < 172800000) return 'Ayer';
+    return d.toLocaleDateString('es-ES', { day:'numeric', month:'short' });
+}
+
+// ===== INIT =====
+if (!checkSession()) {
+    showScreen('login-screen');
+}
+</script>
+</body>
+</html>

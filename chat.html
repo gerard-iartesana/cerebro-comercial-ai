@@ -601,6 +601,17 @@ async function sendMessage() {
         await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
         // Auto-cancel pending scheduled messages when lead replies
         cancelPendingScheduled();
+        // Push notification to admin
+        fetch(`${API_BASE}/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'send',
+                room_id: 'admin-global',
+                title: currentRoom.lead_name || 'Lead',
+                message: text.length > 100 ? text.substring(0, 100) + '...' : text
+            })
+        }).catch(() => {});
     } catch(e) {
         console.error('Send error:', e);
     }
@@ -629,6 +640,17 @@ async function handleFileUpload(inputEl) {
         });
         await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
         cancelPendingScheduled();
+        // Push to admin
+        fetch(`${API_BASE}/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'send',
+                room_id: 'admin-global',
+                title: currentRoom.lead_name || 'Lead',
+                message: `📎 ${file.name}`
+            })
+        }).catch(() => {});
     } catch(e) {
         console.error('Upload error:', e);
         alert('Error al subir archivo');
