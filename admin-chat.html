@@ -67,7 +67,32 @@
     .login-error { color: var(--red); font-size: 0.75rem; text-align:center; min-height:20px; }
 
     /* ===== ROOMS LIST ===== */
-    #rooms-screen { background: var(--bg-primary); }
+    #rooms-screen { background: var(--bg-primary); position: relative; }
+    .fab-nuevo-chat {
+        position: absolute; bottom: 24px; right: 20px;
+        width: 56px; height: 56px; border-radius: 50%;
+        background: linear-gradient(135deg, #6c5ce7, #a855f7);
+        color: #fff; font-size: 1.5rem;
+        box-shadow: 0 4px 20px rgba(108,92,231,0.5);
+        z-index: 10; border: none; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        transition: transform 0.15s;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .fab-nuevo-chat:active { transform: scale(0.9); }
+    .create-lead-label {
+        font-size: 0.78rem; font-weight: 700; color: var(--text-grey);
+        margin-bottom: 6px; display: block;
+    }
+    .create-lead-input {
+        padding: 12px 14px; border-radius: 12px;
+        background: var(--bg-tertiary); border: 1px solid var(--card-border);
+        color: var(--text-main); font-size: 0.88rem;
+        width: 100%; outline: none; font-family: inherit;
+        transition: border 0.2s;
+    }
+    .create-lead-input:focus { border-color: var(--accent); }
+    .create-lead-input::placeholder { color: var(--text-grey); }
     .rooms-header {
         padding: 16px 20px 12px; 
         border-bottom: 1px solid var(--card-border);
@@ -312,6 +337,7 @@
     <div class="rooms-list" id="rooms-list">
         <div class="rooms-empty">Cargando conversaciones...</div>
     </div>
+    <button class="fab-nuevo-chat" onclick="openCreateLeadModal()" title="Nuevo Chat">+</button>
 </div>
 
 <!-- CHAT SCREEN -->
@@ -371,6 +397,35 @@
         <div class="modal-section-label">Fecha y hora de envío</div>
         <input type="datetime-local" class="modal-datetime" id="schedule-datetime">
         <button class="modal-action-btn" id="schedule-send-btn" onclick="sendScheduled()">Programar Envío</button>
+    </div>
+</div>
+
+<!-- CREATE LEAD MODAL -->
+<div class="fullscreen-modal" id="create-lead-modal">
+    <div class="modal-header">
+        <div class="modal-header-title">💬 Nuevo Chat con Lead</div>
+        <div class="modal-close" onclick="closeCreateLeadModal()">✕</div>
+    </div>
+    <div class="modal-body">
+        <div style="display:flex;flex-direction:column;gap:14px">
+            <div>
+                <label class="create-lead-label" for="create-lead-name">Nombre *</label>
+                <input class="create-lead-input" id="create-lead-name" type="text" placeholder="Nombre del lead" required>
+            </div>
+            <div>
+                <label class="create-lead-label" for="create-lead-company">Empresa</label>
+                <input class="create-lead-input" id="create-lead-company" type="text" placeholder="Nombre de la empresa">
+            </div>
+            <div>
+                <label class="create-lead-label" for="create-lead-email">Email</label>
+                <input class="create-lead-input" id="create-lead-email" type="email" placeholder="email@ejemplo.com">
+            </div>
+            <div>
+                <label class="create-lead-label" for="create-lead-phone">Teléfono</label>
+                <input class="create-lead-input" id="create-lead-phone" type="tel" placeholder="+34 600 000 000">
+            </div>
+        </div>
+        <button class="modal-action-btn" onclick="createLeadRoom()">Crear Chat</button>
     </div>
 </div>
 
@@ -665,10 +720,21 @@ async function handleFileUpload(inputEl) {
 function registerSW() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/admin-sw.js').then(reg => {
+            reg.addEventListener('updatefound', () => {
+                const newSW = reg.installing;
+                newSW.addEventListener('statechange', () => {
+                    if (newSW.state === 'activated') {
+                        window.location.reload();
+                    }
+                });
+            });
             reg.update();
             subscribeToPush(reg);
         }).catch(e => console.log('SW failed:', e));
     }
+}
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
 }
 
 async function subscribeToPush(swReg) {
@@ -957,6 +1023,36 @@ async function sendScheduled() {
     } finally {
         btn.disabled = false;
         btn.textContent = 'Programar Envío';
+    }
+}
+
+// ===== CREATE LEAD =====
+function openCreateLeadModal() {
+    document.getElementById('create-lead-modal').classList.add('active');
+}
+function closeCreateLeadModal() {
+    document.getElementById('create-lead-modal').classList.remove('active');
+}
+async function createLeadRoom() {
+    const name = document.getElementById('create-lead-name')?.value.trim();
+    if (!name) { showToast('El nombre es obligatorio'); return; }
+    const company = document.getElementById('create-lead-company')?.value.trim() || '';
+    const email = document.getElementById('create-lead-email')?.value.trim() || '';
+    const phone = document.getElementById('create-lead-phone')?.value.trim() || '';
+    try {
+        const { data, error } = await sb.from('chat_rooms').insert({
+            lead_name: name,
+            lead_company: company,
+            lead_email: email,
+            lead_phone: phone
+        }).select().single();
+        if (error) throw error;
+        closeCreateLeadModal();
+        showToast('Chat con ' + name + ' creado ✅');
+        await loadRooms();
+        openRoom(data.id);
+    } catch(e) {
+        showToast('Error al crear: ' + (e.message || ''));
     }
 }
 

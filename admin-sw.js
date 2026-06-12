@@ -39,8 +39,8 @@ self.addEventListener('push', event => {
     }
     const options = {
         body: data.body || 'Tienes un mensaje nuevo',
-        icon: data.icon || 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png',
-        badge: 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png',
+        icon: data.icon || '/admin-icon.png',
+        badge: '/admin-icon.png',
         vibrate: [200, 100, 200],
         tag: 'admin-chat-' + Date.now(),
         renotify: true,
