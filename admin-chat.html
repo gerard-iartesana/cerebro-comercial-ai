@@ -172,10 +172,111 @@
     .chat-attach-btn { background: var(--bg-tertiary); border: 1px solid var(--card-border); }
     .chat-attach-btn:active { background: var(--accent); }
 
+    /* ===== CHAT HEADER ACTIONS ===== */
+    .chat-header-actions {
+        display:flex; align-items:center; gap:8px; flex-shrink:0;
+    }
+    .chat-header-action {
+        width:38px; height:38px; border-radius:50%;
+        background: var(--bg-tertiary); border: 1px solid var(--card-border);
+        display:flex; align-items:center; justify-content:center;
+        font-size:1rem; cursor:pointer; flex-shrink:0;
+        transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+    }
+    .chat-header-action:active { background: var(--accent); border-color: var(--accent); transform: scale(0.92); }
+
+    /* ===== TOAST ===== */
+    .toast-notification {
+        position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px);
+        background: var(--bg-tertiary); color: var(--text-main);
+        padding: 12px 24px; border-radius: 14px;
+        font-size: 0.82rem; font-weight: 600;
+        border: 1px solid var(--card-border);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        z-index: 2000; opacity:0; pointer-events:none;
+        transition: opacity 0.25s, transform 0.25s;
+    }
+    .toast-notification.visible {
+        opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto;
+    }
+
+    /* ===== FULL SCREEN MODALS ===== */
+    .fullscreen-modal {
+        position:fixed; inset:0; z-index:1000;
+        background: var(--bg-primary);
+        display:none; flex-direction:column;
+    }
+    .fullscreen-modal.active { display:flex; }
+    .modal-header {
+        display:flex; align-items:center; gap:12px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--card-border);
+        background: rgba(10,10,15,0.85); backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        flex-shrink:0;
+    }
+    .modal-header-title { flex:1; font-size:0.95rem; font-weight:800; }
+    .modal-close {
+        width:36px; height:36px; border-radius:50%;
+        background: var(--bg-tertiary); border: 1px solid var(--card-border);
+        display:flex; align-items:center; justify-content:center;
+        font-size:1rem; cursor:pointer; flex-shrink:0;
+        color: var(--text-main);
+    }
+    .modal-close:active { background: var(--red); border-color: var(--red); }
+    .modal-body {
+        flex:1; overflow-y:auto; padding:16px;
+        display:flex; flex-direction:column; gap:14px;
+    }
+    .modal-subtitle {
+        font-size:0.78rem; color: var(--text-grey); font-weight:500;
+    }
+    .modal-section-label {
+        font-size:0.72rem; color: var(--text-grey); text-transform:uppercase;
+        letter-spacing:0.5px; font-weight:700; margin-top:4px;
+    }
+    .template-btn {
+        width:100%; text-align:left; padding:12px;
+        border-radius:12px; border:1px solid var(--card-border);
+        background: var(--bg-tertiary); color: var(--text-main);
+        font-size:0.82rem; line-height:1.45; cursor:pointer;
+        font-family:inherit; transition: border-color 0.15s;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .template-btn:active, .template-btn.selected {
+        border-color: var(--accent);
+    }
+    .modal-textarea {
+        width:100%; min-height:100px; padding:14px;
+        border-radius:12px; border:1px solid var(--card-border);
+        background: var(--bg-tertiary); color: var(--text-main);
+        font-size:0.85rem; font-family:inherit; line-height:1.45;
+        outline:none; resize:vertical;
+    }
+    .modal-textarea:focus { border-color: var(--accent); }
+    .modal-datetime {
+        width:100%; padding:14px;
+        border-radius:12px; border:1px solid var(--card-border);
+        background: var(--bg-tertiary); color: var(--text-main);
+        font-size:0.85rem; font-family:inherit;
+        outline:none; color-scheme: dark;
+    }
+    .modal-datetime:focus { border-color: var(--accent); }
+    .modal-action-btn {
+        width:100%; padding:14px; border-radius:14px; border:none;
+        background: var(--msg-admin); color:#fff;
+        font-size:0.9rem; font-weight:700; cursor:pointer;
+        font-family:inherit; transition: all 0.15s;
+        margin-top:6px;
+    }
+    .modal-action-btn:active { transform: scale(0.97); opacity:0.9; }
+    .modal-action-btn:disabled { opacity:0.5; pointer-events:none; }
+
     /* ===== SAFE AREAS ===== */
     @supports(padding-top: env(safe-area-inset-top)) {
-        .rooms-header, .chat-header { padding-top: calc(12px + env(safe-area-inset-top)); }
+        .rooms-header, .chat-header, .modal-header { padding-top: calc(12px + env(safe-area-inset-top)); }
         .chat-input-bar { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+        .modal-body { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
     }
 </style>
 </head>
@@ -221,6 +322,11 @@
             <div class="chat-header-name" id="chat-header-name">Lead</div>
             <div class="chat-header-status">● En línea</div>
         </div>
+        <div class="chat-header-actions">
+            <div class="chat-header-action" onclick="copyLink()" title="Copiar link">🔗</div>
+            <div class="chat-header-action" onclick="openReminderModal()" title="Recordatorio">🔔</div>
+            <div class="chat-header-action" onclick="openScheduleModal()" title="Programar">⏰</div>
+        </div>
     </div>
     <div class="chat-messages" id="chat-messages"></div>
     <div class="chat-input-bar">
@@ -228,6 +334,43 @@
         <input type="file" id="file-input" style="display:none" onchange="handleFileUpload(this)">
         <input type="text" id="msg-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')sendMsg()">
         <button class="chat-send-btn" onclick="sendMsg()">➤</button>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-notification" id="toast-notification"></div>
+
+<!-- REMINDER MODAL -->
+<div class="fullscreen-modal" id="reminder-modal">
+    <div class="modal-header">
+        <div class="modal-header-title">🔔 Enviar Recordatorio</div>
+        <div class="modal-close" onclick="closeReminderModal()">✕</div>
+    </div>
+    <div class="modal-body">
+        <div class="modal-subtitle" id="reminder-lead-name">Para: Lead</div>
+        <div class="modal-section-label">Plantillas</div>
+        <div id="reminder-templates"></div>
+        <div class="modal-section-label">Mensaje</div>
+        <textarea class="modal-textarea" id="reminder-textarea"></textarea>
+        <button class="modal-action-btn" id="reminder-send-btn" onclick="sendReminder()">Enviar Ahora</button>
+    </div>
+</div>
+
+<!-- SCHEDULE MODAL -->
+<div class="fullscreen-modal" id="schedule-modal">
+    <div class="modal-header">
+        <div class="modal-header-title">⏰ Programar Mensaje</div>
+        <div class="modal-close" onclick="closeScheduleModal()">✕</div>
+    </div>
+    <div class="modal-body">
+        <div class="modal-subtitle" id="schedule-lead-name">Para: Lead</div>
+        <div class="modal-section-label">Plantillas</div>
+        <div id="schedule-templates"></div>
+        <div class="modal-section-label">Mensaje</div>
+        <textarea class="modal-textarea" id="schedule-textarea"></textarea>
+        <div class="modal-section-label">Fecha y hora de envío</div>
+        <input type="datetime-local" class="modal-datetime" id="schedule-datetime">
+        <button class="modal-action-btn" id="schedule-send-btn" onclick="sendScheduled()">Programar Envío</button>
     </div>
 </div>
 
@@ -641,6 +784,180 @@ function formatTime(dateStr) {
     }
     if (diff < 172800000) return 'Ayer';
     return d.toLocaleDateString('es-ES', { day:'numeric', month:'short' });
+}
+
+// ===== TOAST =====
+function showToast(msg) {
+    const t = document.getElementById('toast-notification');
+    t.textContent = msg;
+    t.classList.add('visible');
+    clearTimeout(t._tid);
+    t._tid = setTimeout(() => t.classList.remove('visible'), 2000);
+}
+
+// ===== COPY LINK =====
+function copyLink() {
+    if (!currentRoom || !currentRoom.link_token) {
+        showToast('No hay link disponible ❌');
+        return;
+    }
+    const url = `${window.location.origin}/chat?token=${currentRoom.link_token}`;
+    navigator.clipboard.writeText(url).then(() => {
+        showToast('Link copiado ✅');
+    }).catch(() => {
+        showToast('Error al copiar ❌');
+    });
+}
+
+// ===== REMINDER MODAL =====
+const REMINDER_TEMPLATES = [
+    '👋 Hola {name}, te escribo para hacer seguimiento. ¿Has tenido oportunidad de revisar nuestro último mensaje?',
+    '📋 Hola {name}, quería recordarte que estamos pendientes de tu respuesta.',
+    '🕐 Hola {name}, solo un pequeño recordatorio. ¿Cuándo te viene bien?',
+    '💡 {name}, te dejo un recordatorio amigable. Estamos preparados para empezar cuando tú lo estés.'
+];
+
+function openReminderModal() {
+    if (!currentRoom) return;
+    const leadName = currentRoom.lead_name || currentRoom.lead_email || 'Lead';
+    document.getElementById('reminder-lead-name').textContent = `Para: ${leadName}`;
+
+    const container = document.getElementById('reminder-templates');
+    container.innerHTML = REMINDER_TEMPLATES.map((tpl, i) => {
+        const filled = tpl.replace(/\{name\}/g, leadName);
+        return `<button class="template-btn ${i === 0 ? 'selected' : ''}" onclick="selectReminderTemplate(this, ${i})">${filled}</button>`;
+    }).join('');
+
+    const firstFilled = REMINDER_TEMPLATES[0].replace(/\{name\}/g, leadName);
+    document.getElementById('reminder-textarea').value = firstFilled;
+    document.getElementById('reminder-modal').classList.add('active');
+}
+
+function selectReminderTemplate(btn, idx) {
+    const leadName = currentRoom.lead_name || currentRoom.lead_email || 'Lead';
+    document.querySelectorAll('#reminder-templates .template-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const filled = REMINDER_TEMPLATES[idx].replace(/\{name\}/g, leadName);
+    document.getElementById('reminder-textarea').value = filled;
+}
+
+function closeReminderModal() {
+    document.getElementById('reminder-modal').classList.remove('active');
+}
+
+async function sendReminder() {
+    if (!currentRoom) return;
+    const msg = document.getElementById('reminder-textarea').value.trim();
+    if (!msg) { showToast('Escribe un mensaje'); return; }
+
+    const btn = document.getElementById('reminder-send-btn');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+
+    try {
+        await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'admin',
+            sender_name: adminName,
+            content: msg
+        });
+        await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+
+        // Push to lead
+        fetch(`${API_BASE}/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'send',
+                room_id: currentRoom.id,
+                title: `${adminName} — iadebarrio`,
+                message: msg.length > 100 ? msg.substring(0, 100) + '...' : msg
+            })
+        }).catch(() => {});
+
+        closeReminderModal();
+        showToast('Recordatorio enviado ✅');
+    } catch(e) {
+        console.error('Reminder error:', e);
+        showToast('Error al enviar ❌');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Enviar Ahora';
+    }
+}
+
+// ===== SCHEDULE MODAL =====
+const SCHEDULE_TEMPLATES = [
+    'Buenos días {name}, ¿cómo va todo? Quería hacer un seguimiento rápido.',
+    'Hola {name}, te recuerdo que tenemos pendiente confirmar los detalles.',
+    '{name}, te envío un recordatorio amigable. Estamos listos para empezar cuando tú digas.',
+    'Hola {name}, ¿has podido revisar la propuesta que te envié?'
+];
+
+function openScheduleModal() {
+    if (!currentRoom) return;
+    const leadName = currentRoom.lead_name || currentRoom.lead_email || 'Lead';
+    document.getElementById('schedule-lead-name').textContent = `Para: ${leadName}`;
+
+    const container = document.getElementById('schedule-templates');
+    container.innerHTML = SCHEDULE_TEMPLATES.map((tpl, i) => {
+        const filled = tpl.replace(/\{name\}/g, leadName);
+        return `<button class="template-btn ${i === 0 ? 'selected' : ''}" onclick="selectScheduleTemplate(this, ${i})">${filled}</button>`;
+    }).join('');
+
+    const firstFilled = SCHEDULE_TEMPLATES[0].replace(/\{name\}/g, leadName);
+    document.getElementById('schedule-textarea').value = firstFilled;
+
+    // Default: 30 min from now
+    const now = new Date(Date.now() + 30 * 60000);
+    const pad = n => String(n).padStart(2, '0');
+    const dtVal = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    document.getElementById('schedule-datetime').value = dtVal;
+
+    document.getElementById('schedule-modal').classList.add('active');
+}
+
+function selectScheduleTemplate(btn, idx) {
+    const leadName = currentRoom.lead_name || currentRoom.lead_email || 'Lead';
+    document.querySelectorAll('#schedule-templates .template-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const filled = SCHEDULE_TEMPLATES[idx].replace(/\{name\}/g, leadName);
+    document.getElementById('schedule-textarea').value = filled;
+}
+
+function closeScheduleModal() {
+    document.getElementById('schedule-modal').classList.remove('active');
+}
+
+async function sendScheduled() {
+    if (!currentRoom) return;
+    const msg = document.getElementById('schedule-textarea').value.trim();
+    const dt = document.getElementById('schedule-datetime').value;
+    if (!msg) { showToast('Escribe un mensaje'); return; }
+    if (!dt) { showToast('Selecciona fecha y hora'); return; }
+
+    const scheduledAt = new Date(dt).toISOString();
+    if (new Date(dt) <= new Date()) { showToast('La fecha debe ser futura'); return; }
+
+    const btn = document.getElementById('schedule-send-btn');
+    btn.disabled = true;
+    btn.textContent = 'Programando...';
+
+    try {
+        await sb.from('chat_scheduled_messages').insert({
+            room_id: currentRoom.id,
+            content: msg,
+            scheduled_at: scheduledAt
+        });
+        closeScheduleModal();
+        showToast('Mensaje programado ✅');
+    } catch(e) {
+        console.error('Schedule error:', e);
+        showToast('Error al programar ❌');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Programar Envío';
+    }
 }
 
 // ===== INIT =====
