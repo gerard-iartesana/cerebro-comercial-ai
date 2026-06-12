@@ -435,6 +435,9 @@ const SUPABASE_URL = 'https://lmozoetpehmdxxremtqn.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxtb3pvZXRwZWhtZHh4cmVtdHFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNTA2NDUsImV4cCI6MjA5NTgyNjY0NX0.1xkCCw7q9CDvVbqGswCeFwXpgYfMtb0wcl7lHWlKQ8U';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+const VAPID_PUBLIC_KEY = 'BAfWR9i2l5IKCTMpV5cjjjTt4dkSQuvGMUAO5aSVIVMEvXWElSTIrf3S92HhmqveaiWhcdXXw5WUaaYL7AxI1Fg';
+const API_BASE = 'https://cerebrocomercial-ai.iadebarrio.com/api';
+
 let currentRoom = null;
 let subscription = null;
 let deferredPrompt = null;
@@ -782,9 +785,79 @@ function subscribeToMessages() {
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/chat-sw.js').then(reg => {
-            // Force update check
             reg.update();
+            // Subscribe to push notifications after SW is ready
+            if (currentRoom) {
+                subscribeToPush(reg);
+            }
         }).catch(e => console.log('SW reg failed:', e));
+    }
+}
+
+// ===== PUSH NOTIFICATIONS =====
+async function subscribeToPush(swReg) {
+    // Check if push is supported
+    if (!('PushManager' in window)) {
+        console.log('Push not supported');
+        return;
+    }
+    
+    // Check if already subscribed
+    const existingSub = await swReg.pushManager.getSubscription();
+    if (existingSub) {
+        console.log('Already subscribed to push');
+        // Save subscription anyway (in case room changed)
+        savePushSubscription(existingSub);
+        return;
+    }
+    
+    // Request permission
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+        console.log('Notification permission denied');
+        return;
+    }
+    
+    try {
+        // Subscribe to push
+        const pushSub = await swReg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+        
+        console.log('Push subscribed!', pushSub);
+        savePushSubscription(pushSub);
+    } catch (e) {
+        console.error('Push subscribe error:', e);
+    }
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+async function savePushSubscription(pushSub) {
+    if (!currentRoom) return;
+    try {
+        await fetch(`${API_BASE}/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'subscribe',
+                room_id: currentRoom.id,
+                subscription: pushSub.toJSON()
+            })
+        });
+        console.log('Push subscription saved for room', currentRoom.id);
+    } catch (e) {
+        console.error('Error saving push subscription:', e);
     }
 }
 

@@ -11530,6 +11530,9 @@ window.sendDashboardChatMsg = async function() {
         await _supabase.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', _chatCurrentRoom.id);
         _chatCurrentRoom.last_message_at = new Date().toISOString();
         renderChatRoomsList(_chatRoomsCache);
+        
+        // Send push notification to lead
+        sendPushToLead(_chatCurrentRoom.id, msg);
     } catch(e) {
         console.error('Error sending message:', e);
         showToast('Error al enviar mensaje', true);
@@ -11558,12 +11561,35 @@ window.handleChatFileUpload = async function(inputEl) {
         });
         await _supabase.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', _chatCurrentRoom.id);
         showToast('Archivo enviado');
+        sendPushToLead(_chatCurrentRoom.id, `📎 ${file.name}`);
     } catch(e) {
         console.error('Error uploading file:', e);
         showToast('Error al subir archivo', true);
     }
     inputEl.value = '';
 };
+
+// --- Push Notification to Lead ---
+async function sendPushToLead(roomId, message) {
+    try {
+        const resp = await fetch('/api/push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'send',
+                room_id: roomId,
+                title: 'Gerard — iadebarrio',
+                message: message.length > 100 ? message.substring(0, 100) + '...' : message
+            })
+        });
+        const result = await resp.json();
+        if (result.sent > 0) {
+            console.log(`Push sent to ${result.sent} device(s)`);
+        }
+    } catch(e) {
+        console.error('Push notification error:', e);
+    }
+}
 
 // --- Modal Nuevo Chat ---
 let _chatLeadsCache = [];
