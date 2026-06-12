@@ -573,7 +573,12 @@ function renderMessages(messages) {
     });
 
     container.innerHTML = html;
-    requestAnimationFrame(() => container.scrollTop = container.scrollHeight);
+    // Scroll to bottom - multiple attempts for images loading
+    const scrollBottom = () => container.scrollTop = container.scrollHeight;
+    scrollBottom();
+    requestAnimationFrame(scrollBottom);
+    setTimeout(scrollBottom, 100);
+    setTimeout(scrollBottom, 500);
 }
 
 // ===== SEND MESSAGE =====
