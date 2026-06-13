@@ -1067,6 +1067,21 @@ const safeStorage = {
     }
 };
 
+// ===== LINKIFY HELPER =====
+function linkify(text) {
+    if (!text) return '';
+    let escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+    return escaped.replace(urlRegex, function(url) {
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+    });
+}
+
 let adminEmail = null;
 let adminName = 'Gerard';
 let rooms = [];
@@ -1304,7 +1319,7 @@ async function loadMessages() {
         return `
             <div class="msg-wrapper ${cls}" data-msg-id="${m.id}" data-msg-content="${safeContent}" data-msg-file="${m.file_url||''}" data-msg-fname="${m.file_name||''}">
                 <div class="msg-meta">${name} · ${time}</div>
-                <div class="msg-bubble">${m.content || ''}${fileHtml}</div>
+                <div class="msg-bubble">${linkify(m.content || '')}${fileHtml}</div>
             </div>`;
     }).join('');
 
@@ -1349,7 +1364,7 @@ function subscribeToMessages() {
             container.insertAdjacentHTML('beforeend', `
                 <div class="msg-wrapper ${cls}" data-msg-id="${m.id}" data-msg-content="${safeContent}" data-msg-file="${m.file_url||''}" data-msg-fname="${m.file_name||''}">
                     <div class="msg-meta">${name} · ${time}</div>
-                    <div class="msg-bubble">${m.content || ''}${fileHtml}</div>
+                    <div class="msg-bubble">${linkify(m.content || '')}${fileHtml}</div>
                 </div>`);
             container.scrollTop = container.scrollHeight;
         })

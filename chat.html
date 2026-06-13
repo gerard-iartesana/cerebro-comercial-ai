@@ -601,11 +601,15 @@
 </div>
 
 <!-- Exit Screen -->
-<div class="error-screen" id="exit-screen" style="display:none">
-    <span>🚪</span>
-    <h2 style="margin:0;font-size:1.3rem;font-weight:800;color:var(--text-main)">Sesión Cerrada</h2>
-    <p style="margin:10px 0 0 0;font-size:0.85rem;color:var(--text-grey);max-width:300px;text-align:center;line-height:1.5">Has cerrado la sesión de forma segura.<br>Ya puedes volver a la pantalla de tu dispositivo o cerrar esta ventana.</p>
-    <button class="chat-back-btn" onclick="try{window.close();}catch(e){}" style="margin-top:20px;padding:8px 20px;width:auto;border-radius:10px;font-size:0.85rem;font-weight:600">Cerrar ventana</button>
+<div class="error-screen" id="exit-screen" style="display:none;background:var(--bg-primary);backdrop-filter:blur(10px)">
+    <div style="width:70px;height:70px;border-radius:50%;background:rgba(52,199,89,0.1);border:1px solid rgba(52,199,89,0.25);display:flex;align-items:center;justify-content:center;margin-bottom:10px;box-shadow:0 8px 32px rgba(52,199,89,0.1)">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#32d74b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+    </div>
+    <h2 style="margin:0;font-size:1.4rem;font-weight:800;color:var(--text-main);letter-spacing:-0.02em">Sesión Cerrada</h2>
+    <p style="margin:0;font-size:0.88rem;color:var(--text-grey);max-width:280px;text-align:center;line-height:1.6">Has cerrado la sesión de forma segura.<br>Ya puedes volver a la pantalla de tu dispositivo o cerrar esta ventana.</p>
+    <button class="chat-back-btn" onclick="try{window.close();}catch(e){}" style="margin-top:10px;padding:12px 24px;width:auto;border-radius:12px;font-size:0.85rem;font-weight:700;background:var(--bg-tertiary);border:1px solid var(--card-border);color:var(--text-main);cursor:pointer;transition:all 0.2s" onmouseenter="this.style.background='var(--bg-hover)'" onmouseleave="this.style.background='var(--bg-tertiary)'">Cerrar ventana</button>
 </div>
 
 <!-- Rooms Screen (mini dashboard) -->
@@ -615,7 +619,7 @@
         <div class="rooms-title">Mis Chats</div>
         <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
             <button class="header-install-btn" id="rooms-install-btn" onclick="showInstallModal()" title="Instalar app"><span class="install-icon">📲</span> Instalar</button>
-            <button class="chat-back-btn" onclick="logoutLead()" title="Cerrar sesión" style="display:flex;align-items:center;justify-content:center">🚪</button>
+            <button class="header-install-btn" onclick="logoutLead()" title="Cerrar sesión" style="background:rgba(255,71,87,0.12);color:#ff4757;border:1px solid rgba(255,71,87,0.25)">Salir</button>
         </div>
     </div>
     <div class="rooms-list" id="rooms-list"></div>
@@ -990,11 +994,29 @@ function openChatForRoom(room) {
             backBtn.innerHTML = '←';
             backBtn.title = 'Volver a mis chats';
             backBtn.onclick = goBackToRooms;
+            // Restore default circular style
+            backBtn.style.width = '36px';
+            backBtn.style.borderRadius = '50%';
+            backBtn.style.padding = '0';
+            backBtn.style.fontSize = '1rem';
+            backBtn.style.fontWeight = '400';
+            backBtn.style.color = 'var(--text-main)';
+            backBtn.style.borderColor = 'var(--card-border)';
+            backBtn.style.background = 'var(--bg-tertiary)';
         } else {
             backBtn.style.display = 'flex';
-            backBtn.innerHTML = '🚪';
+            backBtn.innerHTML = 'Salir';
             backBtn.title = 'Cerrar sesión / Salir';
             backBtn.onclick = logoutLead;
+            // Apply text label pill styling
+            backBtn.style.width = 'auto';
+            backBtn.style.borderRadius = '10px';
+            backBtn.style.padding = '0 12px';
+            backBtn.style.fontSize = '0.8rem';
+            backBtn.style.fontWeight = '600';
+            backBtn.style.color = '#ff4757';
+            backBtn.style.borderColor = 'rgba(255,71,87,0.25)';
+            backBtn.style.background = 'rgba(255,71,87,0.12)';
         }
     }
 

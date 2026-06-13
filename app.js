@@ -2671,11 +2671,16 @@ async function loadStorageData() {
                     estadoHtml = `<span style="padding:2px 8px;border-radius:5px;background:${estadoBg};color:${estadoColor};font-size:0.62rem;font-weight:700;white-space:nowrap">${f.meta.estado_label}</span>`;
                 }
 
-                // Action button
+                // Action buttons (Open, Send, Delete)
                 let actionHtml = '';
+                const cleanName = f.name.replace(/'/g, "\\'");
+                const itemPath = f.path.replace(/'/g, "\\'");
+                
                 if (f.url) {
-                    actionHtml = `<a href="${f.url}" target="_blank" style="color:#007AFF;font-size:0.75rem;font-weight:600;text-decoration:none;white-space:nowrap;padding:4px 10px;border-radius:6px;border:1px solid rgba(0,113,227,0.2);background:rgba(0,113,227,0.04);transition:all 0.15s" onmouseenter="this.style.background='rgba(0,113,227,0.1)'" onmouseleave="this.style.background='rgba(0,113,227,0.04)'">⬇️ Abrir</a>`;
+                    actionHtml += `<a href="${f.url}" target="_blank" style="color:#007AFF;font-size:0.75rem;font-weight:600;text-decoration:none;white-space:nowrap;padding:4px 10px;border-radius:6px;border:1px solid rgba(0,113,227,0.2);background:rgba(0,113,227,0.04);transition:all 0.15s" onmouseenter="this.style.background='rgba(0,113,227,0.1)'" onmouseleave="this.style.background='rgba(0,113,227,0.04)'">⬇️ Abrir</a>`;
+                    actionHtml += `<button onclick="sendStorageFile('${f.url}', '${cleanName}')" style="color:#6c5ce7;font-size:0.75rem;font-weight:600;white-space:nowrap;padding:4px 10px;border-radius:6px;border:1px solid rgba(108,92,231,0.2);background:rgba(108,92,231,0.04);transition:all 0.15s;cursor:pointer;font-family:inherit" onmouseenter="this.style.background='rgba(108,92,231,0.1)'" onmouseleave="this.style.background='rgba(108,92,231,0.04)'">📤 Enviar</button>`;
                 }
+                actionHtml += `<button onclick="deleteStorageFile('${f.source}', '${f.bucket}', '${itemPath}', '${f.meta?.id || f.id || ''}', '${cleanName}')" style="color:#ff453a;font-size:0.75rem;font-weight:600;white-space:nowrap;padding:4px 10px;border-radius:6px;border:1px solid rgba(255,69,58,0.2);background:rgba(255,69,58,0.04);transition:all 0.15s;cursor:pointer;font-family:inherit" onmouseenter="this.style.background='rgba(255,69,58,0.1)'" onmouseleave="this.style.background='rgba(255,69,58,0.04)'">🗑️ Borrar</button>`;
 
                 html += `<div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border-color);transition:background 0.15s" onmouseenter="this.style.background='var(--bg-hover)'" onmouseleave="this.style.background='transparent'">
                     <span style="font-size:1.4rem">${icon}</span>
@@ -2703,6 +2708,140 @@ async function loadStorageData() {
         document.getElementById('storage-file-list').innerHTML = `<div style="text-align:center;padding:30px;color:#ff453a;font-size:0.8rem">Error al cargar: ${e.message}</div>`;
     }
 }
+
+// --- Borrar archivo de storage o documento de BD ---
+window.deleteStorageFile = async function(source, bucket, path, id, name) {
+    if (!confirm(`¿Estás seguro de que deseas borrar "${name}"? Esta acción no se puede deshacer.`)) {
+        return;
+    }
+    try {
+        const res = await fetch('/api/storage', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source, bucket, path, id })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Elemento borrado con éxito');
+            loadStorageData(); // Recargar listado
+        } else {
+            alert('Error al borrar: ' + (data.error || 'Error desconocido'));
+        }
+    } catch(e) {
+        console.error('Error in deleteStorageFile:', e);
+        alert('Error al intentar borrar el archivo.');
+    }
+};
+
+// --- Enviar archivo desde storage a un lead por chat ---
+window.sendStorageFile = function(url, fileName) {
+    if (!_chatRoomsCache || _chatRoomsCache.length === 0) {
+        alert('No hay leads cargados para enviar el archivo.');
+        return;
+    }
+    
+    // Crear modal de selección
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'send-file-modal';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.position = 'fixed';
+    modal.style.inset = '0';
+    modal.style.zIndex = '2000';
+    modal.style.background = 'rgba(0,0,0,0.6)';
+    modal.style.backdropFilter = 'blur(10px)';
+    modal.style.webkitBackdropFilter = 'blur(10px)';
+    
+    const optionsHtml = _chatRoomsCache.map(r => 
+        `<option value="${r.id}">${r.lead_name || r.lead_email || 'Lead sin nombre'}</option>`
+    ).join('');
+    
+    modal.innerHTML = `
+        <div class="modal-box" style="max-width:400px;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:18px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,0.3)">
+            <div class="modal-header" style="padding:16px 20px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center">
+                <div style="display:flex;align-items:center;gap:12px">
+                    <div style="font-size:1.5rem">📤</div>
+                    <div>
+                        <h2 style="margin:0;font-size:1.1rem;font-weight:800;color:var(--text-main)">Enviar archivo a un lead</h2>
+                        <span style="font-size:0.75rem;color:var(--text-grey);display:block;margin-top:2px;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fileName}</span>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="document.getElementById('send-file-modal').remove()" style="background:transparent;border:none;color:var(--text-grey);font-size:1.2rem;cursor:pointer">✕</button>
+            </div>
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:16px;padding:20px">
+                <div>
+                    <label style="font-size:0.72rem;font-weight:700;color:var(--text-grey);display:block;margin-bottom:6px">👤 SELECCIONAR LEAD</label>
+                    <select id="send-file-lead-select" class="modal-input" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--card-border);background:var(--bg-tertiary);color:var(--text-main);font-family:inherit;outline:none">
+                        ${optionsHtml}
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding:16px 20px;border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;gap:10px;background:rgba(0,0,0,0.1)">
+                <button onclick="document.getElementById('send-file-modal').remove()" style="padding:10px 18px;border-radius:10px;border:1px solid var(--card-border);background:transparent;color:var(--text-main);font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
+                <button id="btn-confirm-send-file" style="padding:10px 18px;border-radius:10px;background:var(--accent);color:white;font-weight:700;border:none;cursor:pointer;font-family:inherit">Enviar</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    document.getElementById('btn-confirm-send-file').onclick = async function() {
+        const roomId = document.getElementById('send-file-lead-select').value;
+        if (!roomId) return;
+        const targetRoom = _chatRoomsCache.find(r => r.id === roomId);
+        if (!targetRoom) return;
+        
+        const btn = document.getElementById('btn-confirm-send-file');
+        btn.textContent = 'Enviando...';
+        btn.disabled = true;
+        
+        try {
+            await _supabase.from('chat_messages').insert({
+                room_id: roomId,
+                sender_type: 'admin',
+                sender_name: 'Gerard',
+                content: `📎 ${fileName}`,
+                file_url: url,
+                file_name: fileName
+            });
+            
+            await _supabase.from('chat_rooms').update({ 
+                last_message_at: new Date().toISOString(),
+                unread_count: (targetRoom.unread_count || 0) + 1
+            }).eq('id', roomId);
+            
+            targetRoom.unread_count = (targetRoom.unread_count || 0) + 1;
+            targetRoom.last_message_at = new Date().toISOString();
+            if (window.renderChatRoomsList) {
+                renderChatRoomsList(_chatRoomsCache);
+            }
+            
+            await _supabase.from('chat_activities').insert({
+                room_id: roomId,
+                lead_name: targetRoom.lead_name || 'Lead',
+                action: 'send_message',
+                desc: `Gerard (admin) compartió desde storage: "${fileName}"`,
+                sender_type: 'admin'
+            });
+            
+            showToast('Archivo enviado con éxito');
+            document.getElementById('send-file-modal').remove();
+            
+            if (_chatCurrentRoom && _chatCurrentRoom.id === roomId) {
+                loadMessages();
+            }
+            
+            sendPushToLead(roomId, `📎 ${fileName}`);
+        } catch(e) {
+            console.error('Error sending file from storage:', e);
+            alert('Error al enviar el archivo: ' + e.message);
+            btn.textContent = 'Enviar';
+            btn.disabled = false;
+        }
+    };
+};
 
 // ── Sync Status Check ────────────────────────────────────────
 async function checkSyncStatus() {
@@ -13202,6 +13341,25 @@ window.openChatReportModal = function() {
                         <input type="datetime-local" id="report-date-end" class="modal-input" value="${endVal}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--card-border);background:var(--bg-tertiary);color:var(--text-main);font-family:inherit;outline:none">
                     </div>
                 </div>
+
+                <!-- Delivery Options -->
+                <div>
+                    <label style="font-size:0.72rem;font-weight:700;color:var(--text-grey);display:block;margin-bottom:8px">📦 OPCIONES DE ENVÍO / DESCARGA</label>
+                    <div style="display:flex;flex-direction:column;gap:10px">
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.85rem;color:var(--text-main);user-select:none">
+                            <input type="checkbox" id="report-opt-download" checked style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer">
+                            <span>📥 Descargar PDF localmente</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.85rem;color:var(--text-main);user-select:none">
+                            <input type="checkbox" id="report-opt-chat" style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer">
+                            <span>💬 Enviar al lead por este chat</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.85rem;color:var(--text-main);user-select:none">
+                            <input type="checkbox" id="report-opt-email" style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer">
+                            <span>📧 Enviar al lead por email</span>
+                        </label>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer" style="padding:16px 20px;border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;gap:10px;background:rgba(0,0,0,0.1)">
                 <button onclick="document.getElementById('chat-report-modal').remove()" style="padding:10px 18px;border-radius:10px;border:1px solid var(--card-border);background:transparent;color:var(--text-main);font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
@@ -13225,6 +13383,20 @@ window.generatePdfChatReport = async function(event) {
     
     const room = _chatRoomsCache.find(r => r.id === roomId);
     if (!room) return;
+    
+    const optDownload = document.getElementById('report-opt-download').checked;
+    const optChat = document.getElementById('report-opt-chat').checked;
+    const optEmail = document.getElementById('report-opt-email').checked;
+    
+    if (optEmail && !room.lead_email) {
+        alert('El lead seleccionado no tiene un correo electrónico configurado para poder enviárselo por email.');
+        return;
+    }
+    
+    if (!optDownload && !optChat && !optEmail) {
+        alert('Por favor, selecciona al menos una opción de envío o descarga.');
+        return;
+    }
     
     const btn = event.target;
     const originalText = btn.textContent;
@@ -13324,15 +13496,123 @@ window.generatePdfChatReport = async function(event) {
             });
         }
         
+        btn.textContent = 'Procesando PDF...';
+        
+        // Generate a clean filename and path for the report
+        const reportFileName = `Reporte-Chat-${(room.lead_name || 'Lead').replace(/\s+/g, '-')}-${Date.now()}.pdf`;
         const opt = {
             margin:       12,
-            filename:     `Reporte-Chat-${(room.lead_name || 'Lead').replace(/\s+/g, '-')}-${new Date().toISOString().slice(0,10)}.pdf`,
+            filename:     reportFileName,
             image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { scale: 2, useCORS: true },
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
         
-        await html2pdf().set(opt).from(container).save();
+        // Output PDF as a Blob in memory
+        const pdfBlob = await html2pdf().set(opt).from(container).output('blob');
+        
+        btn.textContent = 'Subiendo a Storage...';
+        
+        // Upload Blob automatically to Supabase Storage (archivos bucket)
+        const storagePath = `informes/${reportFileName}`;
+        const { error: uploadErr } = await _supabase.storage
+            .from('archivos')
+            .upload(storagePath, pdfBlob, {
+                contentType: 'application/pdf',
+                cacheControl: '3600',
+                upsert: true
+            });
+        if (uploadErr) throw uploadErr;
+        
+        const { data: urlData } = _supabase.storage.from('archivos').getPublicUrl(storagePath);
+        const fileUrl = urlData?.publicUrl;
+        
+        // Refresh the storage view if it is open
+        if (typeof loadStorageData === 'function') {
+            loadStorageData();
+        }
+        
+        // 1. Download local copy if requested
+        if (optDownload) {
+            btn.textContent = 'Descargando...';
+            const blobUrl = URL.createObjectURL(pdfBlob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = reportFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
+        }
+        
+        // 2. Send via Chat if requested
+        if (optChat) {
+            btn.textContent = 'Enviando por Chat...';
+            await _supabase.from('chat_messages').insert({
+                room_id: roomId,
+                sender_type: 'admin',
+                sender_name: 'Gerard',
+                content: `📎 ${reportFileName}`,
+                file_url: fileUrl,
+                file_name: reportFileName
+            });
+            
+            await _supabase.from('chat_rooms').update({ 
+                last_message_at: new Date().toISOString(),
+                unread_count: (room.unread_count || 0) + 1
+            }).eq('id', roomId);
+            room.unread_count = (room.unread_count || 0) + 1;
+            room.last_message_at = new Date().toISOString();
+            if (window.renderChatRoomsList) {
+                renderChatRoomsList(_chatRoomsCache);
+            }
+            
+            await _supabase.from('chat_activities').insert({
+                room_id: roomId,
+                lead_name: room.lead_name || 'Lead',
+                action: 'send_message',
+                desc: `Gerard (admin) envió el informe de chat: "${reportFileName}"`,
+                sender_type: 'admin'
+            });
+            
+            if (_chatCurrentRoom && _chatCurrentRoom.id === roomId) {
+                loadMessages();
+            }
+            sendPushToLead(roomId, `📎 ${reportFileName}`);
+        }
+        
+        // 3. Send via Email if requested
+        if (optEmail) {
+            btn.textContent = 'Enviando por Email...';
+            const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(pdfBlob);
+            });
+            
+            const emailRes = await fetch('/api/send-manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: room.lead_email,
+                    subject: `Informe de Chat — ${room.lead_name || 'Lead'}`,
+                    body: `Hola ${room.lead_name || 'cliente'},\n\nAdjunto a este correo encontrarás el informe de nuestra conversación de chat correspondiente al periodo solicitado.\n\nAtentamente,\nGerard Fanals`,
+                    attachments: [
+                        {
+                            filename: reportFileName,
+                            content: base64
+                        }
+                    ]
+                })
+            });
+            const emailData = await emailRes.json();
+            if (!emailRes.ok || !emailData.success) {
+                throw new Error(emailData.error || 'No se pudo enviar el correo.');
+            }
+        }
+        
+        showToast('Informe procesado con éxito');
         
         const modalEl = document.getElementById('chat-report-modal');
         if (modalEl) modalEl.remove();
