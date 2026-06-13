@@ -1254,9 +1254,7 @@ function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.register('/chat-sw.js').then(reg => {
         // Subscribe to push notifications after SW is ready
-        if (currentRoom) {
-            subscribeToPush(reg);
-        }
+        subscribeToPush(reg);
         setInterval(() => reg.update(), 60000);
         reg.addEventListener('updatefound', () => {
             const newSW = reg.installing;
@@ -1387,20 +1385,23 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 async function savePushSubscription(pushSub) {
-    if (!currentRoom) return;
-    try {
-        await fetch(`${API_BASE}/push`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'subscribe',
-                room_id: currentRoom.id,
-                subscription: pushSub.toJSON()
-            })
-        });
-        console.log('Push subscription saved for room', currentRoom.id);
-    } catch (e) {
-        console.error('Error saving push subscription:', e);
+    // Save for all rooms this lead belongs to
+    const roomsToSubscribe = allRooms.length ? allRooms : (currentRoom ? [currentRoom] : []);
+    for (const room of roomsToSubscribe) {
+        try {
+            await fetch(`${API_BASE}/push`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'subscribe',
+                    room_id: room.id,
+                    subscription: pushSub.toJSON()
+                })
+            });
+            console.log('Push subscription saved for room', room.id);
+        } catch (e) {
+            console.error('Error saving push subscription for room', room.id, e);
+        }
     }
 }
 

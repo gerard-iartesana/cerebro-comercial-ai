@@ -11354,16 +11354,20 @@ function renderChatRoomsList(rooms) {
         const color = colors[r.lead_name.charCodeAt(0) % colors.length];
         const isActive = _chatCurrentRoom && _chatCurrentRoom.id === r.id;
         const time = r.last_message_at ? new Date(r.last_message_at).toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'}) : '';
+        const isGroup = r.is_group;
+        const avatarBg = isGroup ? 'linear-gradient(135deg,#0ea5e9,#06b6d4)' : color;
+        const avatarContent = isGroup ? '👥' : initial;
+        const groupTag = isGroup ? '<span style="font-size:0.58rem;background:rgba(14,165,233,0.15);color:#0ea5e9;padding:1px 5px;border-radius:5px;margin-left:4px;font-weight:600">Grupo</span>' : '';
         return `<div onclick="openChatRoom('${r.id}')" style="display:flex;gap:10px;padding:10px 12px;border-radius:12px;cursor:pointer;transition:all 0.15s;align-items:center;margin-bottom:4px;${isActive ? 'background:var(--accent-glow);border:1px solid rgba(10,132,255,0.2)' : 'border:1px solid transparent'}" onmouseover="if(!this.style.background.includes('accent'))this.style.background='rgba(255,255,255,0.04)'" onmouseout="if(!this.style.background.includes('accent'))this.style.background='transparent'">
-            <div style="width:38px;height:38px;min-width:38px;border-radius:50%;background:${color};color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem">${initial}</div>
+            <div style="width:38px;height:38px;min-width:38px;border-radius:50%;background:${avatarBg};color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${isGroup ? '1rem' : '0.85rem'}">${avatarContent}</div>
             <div style="flex:1;min-width:0">
                 <div style="display:flex;justify-content:space-between;align-items:center">
-                    <span style="font-size:0.82rem;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.lead_name}</span>
+                    <span style="font-size:0.82rem;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.lead_name}${groupTag}</span>
                     <span style="font-size:0.65rem;color:var(--text-grey);flex-shrink:0;margin-left:6px">${time}</span>
                 </div>
                 <div style="font-size:0.72rem;color:var(--text-grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.lead_company || r.lead_email || ''}</div>
             </div>
-            ${r.unread_count > 0 ? `<div style="min-width:20px;height:20px;border-radius:50%;background:#FF3B30;color:white;font-size:0.65rem;font-weight:700;display:flex;align-items:center;justify-content:center">${r.unread_count}</div>` : ''}
+            ${r.unread_count > 0 ? `<div style="min-width:20px;height:20px;border-radius:50%;background:var(--accent,#007AFF);color:white;font-size:0.65rem;font-weight:700;display:flex;align-items:center;justify-content:center">${r.unread_count}</div>` : ''}
         </div>`;
     }).join('');
 }
@@ -11392,15 +11396,20 @@ window.openChatRoom = async function(roomId) {
     if (inputBar) inputBar.style.display = 'flex';
 
     // Update header info
-    const initial = (room.lead_name || '?')[0].toUpperCase();
+    const isGroup = room.is_group;
+    const initial = isGroup ? '👥' : (room.lead_name || '?')[0].toUpperCase();
     const colors = ['#007AFF','#FF9500','#34C759','#AF52DE','#FF3B30','#5AC8FA','#FF2D55'];
-    const color = colors[room.lead_name.charCodeAt(0) % colors.length];
+    const color = isGroup ? 'linear-gradient(135deg,#0ea5e9,#06b6d4)' : colors[room.lead_name.charCodeAt(0) % colors.length];
     const avatar = document.getElementById('chat-active-avatar');
-    if (avatar) { avatar.textContent = initial; avatar.style.background = color; }
+    if (avatar) { avatar.textContent = initial; avatar.style.background = color; avatar.style.fontSize = isGroup ? '1rem' : ''; }
     const nameEl = document.getElementById('chat-active-name');
     if (nameEl) nameEl.textContent = room.lead_name;
     const compEl = document.getElementById('chat-active-company');
-    if (compEl) compEl.textContent = room.lead_company || room.lead_email || '';
+    if (compEl) compEl.textContent = isGroup ? '👥 Chat grupal' : (room.lead_company || room.lead_email || '');
+    
+    // Show/hide add member button for groups
+    const addMemberBtn = document.getElementById('chat-add-member-btn');
+    if (addMemberBtn) addMemberBtn.style.display = isGroup ? 'inline-flex' : 'none';
 
     // Re-render room list to show active state
     renderChatRoomsList(_chatRoomsCache);
@@ -11622,8 +11631,12 @@ window.sendDashboardChatMsg = async function() {
         });
         if (error) throw error;
 
-        // Update room
-        await _supabase.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', _chatCurrentRoom.id);
+        // Update room + increment unread for lead
+        await _supabase.from('chat_rooms').update({ 
+            last_message_at: new Date().toISOString(),
+            unread_count: (_chatCurrentRoom.unread_count || 0) + 1
+        }).eq('id', _chatCurrentRoom.id);
+        _chatCurrentRoom.unread_count = (_chatCurrentRoom.unread_count || 0) + 1;
         _chatCurrentRoom.last_message_at = new Date().toISOString();
         renderChatRoomsList(_chatRoomsCache);
         
@@ -11655,7 +11668,11 @@ window.handleChatFileUpload = async function(inputEl) {
             file_url: urlData.publicUrl,
             file_name: file.name
         });
-        await _supabase.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', _chatCurrentRoom.id);
+        await _supabase.from('chat_rooms').update({ 
+            last_message_at: new Date().toISOString(),
+            unread_count: (_chatCurrentRoom.unread_count || 0) + 1
+        }).eq('id', _chatCurrentRoom.id);
+        _chatCurrentRoom.unread_count = (_chatCurrentRoom.unread_count || 0) + 1;
         showToast('Archivo enviado');
         sendPushToLead(_chatCurrentRoom.id, `📎 ${file.name}`);
     } catch(e) {
@@ -12131,6 +12148,156 @@ window.copyChatLink = function() {
     });
 };
 
+// ===== ADD MEMBERS TO GROUP (Dashboard) =====
+let _dashAddMemberNew = [];
+let _dashAddMemberExisting = [];
+
+window.showDashboardAddMemberModal = async function() {
+    if (!_chatCurrentRoom || !_chatCurrentRoom.is_group) return;
+    
+    const { data: existingMembers } = await _supabase
+        .from('chat_room_members')
+        .select('lead_id, lead_name, lead_email, access_token')
+        .eq('room_id', _chatCurrentRoom.id);
+    
+    _dashAddMemberExisting = (existingMembers || []).map(m => m.lead_id).filter(Boolean);
+    _dashAddMemberNew = [];
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'dash-add-member-modal';
+    modal.innerHTML = `
+        <div class="modal-box" style="max-width:480px">
+            <div class="modal-header">
+                <h2 style="font-size:1.1rem;font-weight:800">👥 Miembros: ${_chatCurrentRoom.lead_name}</h2>
+                <button class="modal-close" onclick="document.getElementById('dash-add-member-modal').remove()">✕</button>
+            </div>
+            <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:14px">
+                <div>
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:8px;display:block">Miembros actuales</label>
+                    <div style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto">
+                        ${(existingMembers || []).map(m => `
+                            <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:var(--bg-main);border:1px solid var(--card-border)">
+                                <div style="width:30px;height:30px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.72rem">${(m.lead_name||'?')[0].toUpperCase()}</div>
+                                <div style="flex:1"><span style="font-size:0.82rem;font-weight:600">${m.lead_name || 'Sin nombre'}</span></div>
+                                <span style="font-size:0.68rem;color:var(--green);font-weight:600">✓</span>
+                            </div>
+                        `).join('') || '<div style="font-size:0.8rem;color:var(--text-grey)">Sin miembros</div>'}
+                    </div>
+                </div>
+                <div style="border-top:1px solid var(--card-border);padding-top:14px">
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Añadir nuevo miembro</label>
+                    <input class="modal-input" id="dash-add-member-search" type="text" placeholder="Buscar lead..." oninput="dashSearchAddMember(this.value)" autocomplete="off" style="width:100%">
+                    <div id="dash-add-member-results" style="display:none;background:var(--bg-main);border:1px solid var(--card-border);border-radius:10px;max-height:180px;overflow-y:auto;margin-top:4px"></div>
+                </div>
+                <div id="dash-new-members-chips" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+                <button id="dash-add-members-submit" class="btn-primary" style="display:none;width:100%;padding:12px;border-radius:12px;font-weight:700" onclick="dashSubmitAddMembers()">Añadir miembros</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+};
+
+window.dashSearchAddMember = async function(query) {
+    const container = document.getElementById('dash-add-member-results');
+    if (!container) return;
+    const q = query.toLowerCase().trim();
+    if (!q) { container.style.display = 'none'; return; }
+    
+    if (!_chatLeadsCache.length) {
+        try {
+            const { data } = await _supabase.from('outreach_leads').select('id, first_name, last_name, company_name, email, phone').order('first_name');
+            _chatLeadsCache = (data || []).map(l => ({
+                id: l.id,
+                nombre: [l.first_name, l.last_name].filter(Boolean).join(' '),
+                empresa: l.company_name || '',
+                email: l.email || ''
+            }));
+        } catch(e) {}
+    }
+    
+    const excludeIds = [..._dashAddMemberExisting, ..._dashAddMemberNew.map(m => m.id)];
+    const filtered = _chatLeadsCache.filter(l =>
+        !excludeIds.includes(l.id) &&
+        (l.nombre.toLowerCase().includes(q) || l.empresa.toLowerCase().includes(q) || l.email.toLowerCase().includes(q))
+    ).slice(0, 6);
+    
+    if (!filtered.length) {
+        container.innerHTML = '<div style="padding:12px;font-size:0.8rem;color:var(--text-grey)">Sin resultados</div>';
+        container.style.display = 'block';
+        return;
+    }
+    
+    container.innerHTML = filtered.map(l => `
+        <div onclick="dashPickAddMember('${l.id}','${(l.nombre||'').replace(/'/g,"\\'")}','${(l.email||'').replace(/'/g,"\\'")}')" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--card-border);transition:background 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'">
+            <div style="width:26px;height:26px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.65rem">${(l.nombre||'?')[0].toUpperCase()}</div>
+            <div style="flex:1"><span style="font-size:0.82rem;font-weight:600">${l.nombre}</span><br><span style="font-size:0.68rem;color:var(--text-grey)">${l.email || l.empresa || ''}</span></div>
+        </div>
+    `).join('');
+    container.style.display = 'block';
+};
+
+window.dashPickAddMember = function(id, nombre, email) {
+    if (_dashAddMemberNew.find(m => m.id === id)) return;
+    _dashAddMemberNew.push({ id, nombre, email });
+    document.getElementById('dash-add-member-search').value = '';
+    document.getElementById('dash-add-member-results').style.display = 'none';
+    dashRenderNewChips();
+};
+
+window.dashRemoveNewMember = function(id) {
+    _dashAddMemberNew = _dashAddMemberNew.filter(m => m.id !== id);
+    dashRenderNewChips();
+};
+
+function dashRenderNewChips() {
+    const container = document.getElementById('dash-new-members-chips');
+    const btn = document.getElementById('dash-add-members-submit');
+    if (!container) return;
+    container.innerHTML = _dashAddMemberNew.map(m => `
+        <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:rgba(10,132,255,0.1);border:1px solid rgba(10,132,255,0.3);border-radius:16px;font-size:0.78rem;font-weight:600;color:var(--accent)">
+            ${m.nombre}
+            <span onclick="dashRemoveNewMember('${m.id}')" style="cursor:pointer;font-size:0.85rem">✕</span>
+        </span>
+    `).join('');
+    if (btn) btn.style.display = _dashAddMemberNew.length ? 'block' : 'none';
+}
+
+window.dashSubmitAddMembers = async function() {
+    if (!_chatCurrentRoom || !_dashAddMemberNew.length) return;
+    try {
+        const memberInserts = _dashAddMemberNew.map(m => ({
+            room_id: _chatCurrentRoom.id,
+            lead_id: m.id || null,
+            lead_name: m.nombre,
+            lead_email: m.email || ''
+        }));
+        const { data: newMembers, error } = await _supabase.from('chat_room_members').insert(memberInserts).select();
+        if (error) throw error;
+        
+        await _supabase.from('chat_messages').insert({
+            room_id: _chatCurrentRoom.id,
+            sender_type: 'system',
+            sender_name: 'Sistema',
+            content: '👥 Nuevos miembros añadidos: ' + _dashAddMemberNew.map(m => m.nombre).join(', ')
+        });
+        
+        document.getElementById('dash-add-member-modal')?.remove();
+        showToast('Miembros añadidos ✅');
+        
+        if (newMembers && newMembers.length) {
+            const origin = window.location.origin;
+            const linksText = newMembers.map(m => `${m.lead_name}: ${origin}/chat?token=${m.access_token}`).join('\n');
+            showToast('Links copiados al portapapeles');
+            navigator.clipboard.writeText(linksText).catch(() => {});
+        }
+        
+        await loadChatRooms();
+    } catch(e) {
+        showToast('Error: ' + (e.message || ''), true);
+    }
+};
+
 // --- Enviar recordatorio al lead (con modal editable + plantillas custom) ---
 const _defaultReminderTemplates = [
     '👋 Hola {name}, te escribo para hacer seguimiento. ¿Has tenido oportunidad de revisar nuestro último mensaje? Estoy disponible para cualquier duda. ¡Gracias!',
@@ -12228,7 +12395,11 @@ window.sendReminderNow = async function() {
             sender_name: 'Gerard',
             content: content
         });
-        await _supabase.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', _chatCurrentRoom.id);
+        await _supabase.from('chat_rooms').update({ 
+            last_message_at: new Date().toISOString(),
+            unread_count: (_chatCurrentRoom.unread_count || 0) + 1
+        }).eq('id', _chatCurrentRoom.id);
+        _chatCurrentRoom.unread_count = (_chatCurrentRoom.unread_count || 0) + 1;
         document.getElementById('reminder-modal')?.remove();
         showToast(`Recordatorio enviado a ${_chatCurrentRoom.lead_name}`);
     } catch(e) {

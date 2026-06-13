@@ -381,6 +381,7 @@
             <div class="chat-header-status">● En línea</div>
         </div>
         <div class="chat-header-actions">
+            <div class="chat-header-action" id="add-member-btn" onclick="openAddMemberModal()" title="Añadir miembros" style="display:none">👥+</div>
             <div class="chat-header-action" onclick="copyLink()" title="Copiar link">🔗</div>
             <div class="chat-header-action" onclick="openReminderModal()" title="Recordatorio">🔔</div>
             <div class="chat-header-action" onclick="openScheduleModal()" title="Programar">⏰</div>
@@ -592,6 +593,7 @@ function renderRooms() {
         const lastText = lastMsg ? (lastMsg.sender_type === 'admin' ? 'Tú: ' : '') + (lastMsg.content || '📎 Archivo').substring(0, 50) : 'Sin mensajes';
         const time = r.last_message_at ? formatTime(r.last_message_at) : '';
         const initials = (r.lead_name || 'L').substring(0, 2).toUpperCase();
+        const isGroup = r.is_group;
         
         // Count unread (lead messages after last read time)
         const lastRead = getLastRead(r.id);
@@ -599,11 +601,14 @@ function renderRooms() {
             ? msgs.filter(m => m.sender_type === 'lead' && new Date(m.created_at) > new Date(lastRead)).length
             : msgs.filter(m => m.sender_type === 'lead').length;
 
+        const avatarBg = isGroup ? 'linear-gradient(135deg,#0ea5e9,#06b6d4)' : '';
+        const groupLabel = isGroup ? '<span style="font-size:0.6rem;background:rgba(14,165,233,0.15);color:#0ea5e9;padding:1px 6px;border-radius:6px;margin-left:6px;font-weight:600">Grupo</span>' : '';
+
         return `
             <div class="room-item" onclick="openRoom('${r.id}')">
-                <div class="room-avatar">${initials}</div>
+                <div class="room-avatar" ${isGroup ? 'style="background:' + avatarBg + ';font-size:1rem"' : ''}>${isGroup ? '👥' : initials}</div>
                 <div class="room-info">
-                    <div class="room-name">${r.lead_name || r.lead_email || 'Lead'}</div>
+                    <div class="room-name">${r.lead_name || r.lead_email || 'Lead'}${groupLabel}</div>
                     <div class="room-last-msg">${lastText}</div>
                 </div>
                 <div class="room-meta">
@@ -630,7 +635,13 @@ async function openRoom(roomId) {
 
     // Mark as read
     markAsRead(roomId);
+    const isGroup = currentRoom.is_group;
     document.getElementById('chat-header-name').textContent = currentRoom.lead_name || currentRoom.lead_email || 'Lead';
+    
+    // Show/hide add member button for groups
+    const addMemberBtn = document.getElementById('add-member-btn');
+    if (addMemberBtn) addMemberBtn.style.display = isGroup ? 'flex' : 'none';
+    
     showScreen('chat-screen');
     await loadMessages();
     subscribeToMessages();
@@ -776,7 +787,11 @@ async function sendMsg() {
             sender_name: adminName,
             content: msg
         });
-        await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+        await sb.from('chat_rooms').update({ 
+            last_message_at: new Date().toISOString(),
+            unread_count: (currentRoom.unread_count || 0) + 1
+        }).eq('id', currentRoom.id);
+        currentRoom.unread_count = (currentRoom.unread_count || 0) + 1;
 
         // Push to lead
         fetch(`${API_BASE}/push`, {
@@ -812,7 +827,11 @@ async function handleFileUpload(inputEl) {
             file_url: urlData.publicUrl,
             file_name: file.name
         });
-        await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+        await sb.from('chat_rooms').update({ 
+            last_message_at: new Date().toISOString(),
+            unread_count: (currentRoom.unread_count || 0) + 1
+        }).eq('id', currentRoom.id);
+        currentRoom.unread_count = (currentRoom.unread_count || 0) + 1;
 
         fetch(`${API_BASE}/push`, {
             method: 'POST',
@@ -1066,7 +1085,11 @@ async function sendReminder() {
             sender_name: adminName,
             content: msg
         });
-        await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+        await sb.from('chat_rooms').update({ 
+            last_message_at: new Date().toISOString(),
+            unread_count: (currentRoom.unread_count || 0) + 1
+        }).eq('id', currentRoom.id);
+        currentRoom.unread_count = (currentRoom.unread_count || 0) + 1;
 
         // Push to lead
         fetch(`${API_BASE}/push`, {
@@ -1461,6 +1484,163 @@ async function createGroup() {
 
         await loadRooms();
         openRoom(data.id);
+    } catch(e) {
+        showToast('Error: ' + (e.message || ''));
+    }
+}
+
+// ===== ADD MEMBERS TO EXISTING GROUP =====
+async function openAddMemberModal() {
+    if (!currentRoom || !currentRoom.is_group) return;
+    
+    // Load current members
+    const { data: existingMembers } = await sb
+        .from('chat_room_members')
+        .select('lead_id, lead_name, lead_email, access_token')
+        .eq('room_id', currentRoom.id);
+    
+    let existing = document.getElementById('add-member-modal');
+    if (existing) existing.remove();
+    
+    const modal = document.createElement('div');
+    modal.id = 'add-member-modal';
+    modal.className = 'fullscreen-modal active';
+    modal.innerHTML = `
+        <div class="modal-header">
+            <div class="modal-header-title">👥 Miembros: ${currentRoom.lead_name}</div>
+            <div class="modal-close" onclick="document.getElementById('add-member-modal').remove()">✕</div>
+        </div>
+        <div class="modal-body">
+            <div style="display:flex;flex-direction:column;gap:14px">
+                <div>
+                    <label class="create-lead-label">Miembros actuales</label>
+                    <div id="existing-members-list" style="display:flex;flex-direction:column;gap:6px">
+                        ${(existingMembers || []).map(m => `
+                            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--bg-tertiary);border:1px solid var(--card-border)">
+                                <div style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.75rem">${(m.lead_name||'?')[0].toUpperCase()}</div>
+                                <div style="flex:1;min-width:0">
+                                    <div style="font-size:0.82rem;font-weight:700">${m.lead_name || 'Sin nombre'}</div>
+                                    <div style="font-size:0.68rem;color:var(--text-grey)">${m.lead_email || ''}</div>
+                                </div>
+                                <span style="font-size:0.68rem;color:var(--green);font-weight:600">✓ Activo</span>
+                            </div>
+                        `).join('') || '<div style="font-size:0.8rem;color:var(--text-grey);padding:8px">Sin miembros</div>'}
+                    </div>
+                </div>
+                <div style="border-top:1px solid var(--card-border);padding-top:14px">
+                    <label class="create-lead-label">Añadir nuevo miembro</label>
+                    <input class="create-lead-input" id="add-member-search" type="text" placeholder="Buscar lead..." oninput="searchAddMember(this.value)" autocomplete="off">
+                    <div id="add-member-results" style="display:none;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:12px;max-height:200px;overflow-y:auto;margin-top:4px"></div>
+                </div>
+                <div id="new-members-chips" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+                <button id="add-members-submit" style="display:none;width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#6c5ce7,#a855f7);border:none;color:#fff;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit" onclick="submitAddMembers()">Añadir miembros</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    window._addMemberExisting = (existingMembers || []).map(m => m.lead_id).filter(Boolean);
+    window._addMemberNew = [];
+}
+
+async function searchAddMember(query) {
+    const container = document.getElementById('add-member-results');
+    if (!container) return;
+    const q = query.toLowerCase().trim();
+    if (!q) { container.style.display = 'none'; return; }
+    
+    if (!leadSearchCache.length) {
+        try {
+            const { data } = await sb.from('outreach_leads').select('id, first_name, last_name, company_name, email, phone').order('first_name');
+            leadSearchCache = (data || []).map(l => ({
+                id: l.id,
+                nombre: [l.first_name, l.last_name].filter(Boolean).join(' '),
+                empresa: l.company_name || '',
+                email: l.email || '',
+                telefono: l.phone || ''
+            }));
+        } catch(e) {}
+    }
+    
+    const excludeIds = [...(window._addMemberExisting || []), ...(window._addMemberNew || []).map(m => m.id)];
+    const filtered = leadSearchCache.filter(l =>
+        !excludeIds.includes(l.id) &&
+        (l.nombre.toLowerCase().includes(q) || l.empresa.toLowerCase().includes(q) || l.email.toLowerCase().includes(q))
+    ).slice(0, 6);
+    
+    if (!filtered.length) {
+        container.innerHTML = '<div style="padding:12px;font-size:0.8rem;color:var(--text-grey)">Sin resultados</div>';
+        container.style.display = 'block';
+        return;
+    }
+    
+    container.innerHTML = filtered.map(l => `
+        <div onclick="pickAddMember('${l.id}','${(l.nombre||'').replace(/'/g,"\\'")}','${(l.email||'').replace(/'/g,"\\'")}')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--card-border)" ontouchstart="this.style.background='rgba(255,255,255,0.05)'" ontouchend="this.style.background='transparent'">
+            <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.7rem">${(l.nombre||'?')[0].toUpperCase()}</div>
+            <div style="flex:1">
+                <div style="font-size:0.82rem;font-weight:600">${l.nombre}</div>
+                <div style="font-size:0.68rem;color:var(--text-grey)">${l.email || l.empresa || ''}</div>
+            </div>
+        </div>
+    `).join('');
+    container.style.display = 'block';
+}
+
+function pickAddMember(id, nombre, email) {
+    if (!window._addMemberNew) window._addMemberNew = [];
+    if (window._addMemberNew.find(m => m.id === id)) return;
+    window._addMemberNew.push({ id, nombre, email });
+    document.getElementById('add-member-search').value = '';
+    document.getElementById('add-member-results').style.display = 'none';
+    renderNewMemberChips();
+}
+
+function removeNewMember(id) {
+    window._addMemberNew = (window._addMemberNew || []).filter(m => m.id !== id);
+    renderNewMemberChips();
+}
+
+function renderNewMemberChips() {
+    const container = document.getElementById('new-members-chips');
+    const btn = document.getElementById('add-members-submit');
+    if (!container) return;
+    const members = window._addMemberNew || [];
+    container.innerHTML = members.map(m => `
+        <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.3);border-radius:20px;font-size:0.78rem;font-weight:600;color:var(--accent)">
+            ${m.nombre}
+            <span onclick="removeNewMember('${m.id}')" style="cursor:pointer;font-size:0.9rem">✕</span>
+        </span>
+    `).join('');
+    if (btn) btn.style.display = members.length ? 'block' : 'none';
+}
+
+async function submitAddMembers() {
+    if (!currentRoom || !window._addMemberNew?.length) return;
+    try {
+        const memberInserts = window._addMemberNew.map(m => ({
+            room_id: currentRoom.id,
+            lead_id: m.id || null,
+            lead_name: m.nombre,
+            lead_email: m.email || ''
+        }));
+        const { data: newMembers, error } = await sb.from('chat_room_members').insert(memberInserts).select();
+        if (error) throw error;
+        
+        await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'system',
+            sender_name: 'Sistema',
+            content: '👥 Nuevos miembros añadidos: ' + window._addMemberNew.map(m => m.nombre).join(', ')
+        });
+        
+        document.getElementById('add-member-modal')?.remove();
+        showToast('Miembros añadidos ✅');
+        
+        if (newMembers && newMembers.length) {
+            setTimeout(() => showGroupLinksModal(currentRoom.lead_name, newMembers), 300);
+        }
+        
+        await loadRooms();
     } catch(e) {
         showToast('Error: ' + (e.message || ''));
     }
