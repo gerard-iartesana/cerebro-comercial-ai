@@ -1,5 +1,5 @@
 // Chat Service Worker - Network First + Push Notifications + Badge
-const CACHE_VERSION = 'chat-v22-update-via-cache-none-1718394200';
+const CACHE_VERSION = 'chat-v23-notification-reference-error-1718394600';
 
 self.addEventListener('install', event => {
     self.skipWaiting();
@@ -59,8 +59,8 @@ self.addEventListener('push', event => {
         data: data.data || {},
     };
 
-    // Safely add requireInteraction only if supported to avoid iOS Safari issues
-    if ('requireInteraction' in Notification.prototype) {
+    // Safely add requireInteraction only if supported to avoid iOS Safari issues (Notification is undefined in Safari SW)
+    if (typeof Notification !== 'undefined' && Notification.prototype && 'requireInteraction' in Notification.prototype) {
         options.requireInteraction = true;
     }
 
