@@ -1,5 +1,5 @@
 // Chat Service Worker - Network First + Push Notifications + Badge
-const CACHE_VERSION = 'chat-v9';
+const CACHE_VERSION = 'chat-v10-1718272000';
 
 self.addEventListener('install', event => {
     self.skipWaiting();

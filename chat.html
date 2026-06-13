@@ -386,6 +386,30 @@
             50% { box-shadow: 0 0 0 10px rgba(255,71,87,0); }
         }
 
+        /* --- Toast (centered Apple style) --- */
+        #lead-toast {
+            position:fixed; top:50%; left:50%;
+            transform:translate(-50%, -50%) scale(0.85);
+            background: rgba(30,30,42,0.95); color: #e8e6f0;
+            padding: 16px 28px; border-radius: 18px;
+            font-size: 0.88rem; font-weight: 700;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            z-index: 3000; opacity:0; pointer-events:none;
+            transition: opacity 0.3s, transform 0.3s;
+            text-align:center; max-width:280px;
+        }
+        #lead-toast.visible {
+            opacity:1; transform:translate(-50%, -50%) scale(1); pointer-events:auto;
+        }
+
+        /* --- SW update banner --- */
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-100%); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         /* --- Responsive --- */
         @media (min-width: 600px) {
             body {
@@ -949,15 +973,46 @@ window.addEventListener('focus', clearAppBadge);
 
 // ===== PWA =====
 function registerServiceWorker() {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/chat-sw.js').then(reg => {
-            reg.update();
-            // Subscribe to push notifications after SW is ready
-            if (currentRoom) {
-                subscribeToPush(reg);
-            }
-        }).catch(e => console.log('SW reg failed:', e));
-    }
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/chat-sw.js').then(reg => {
+        // Subscribe to push notifications after SW is ready
+        if (currentRoom) {
+            subscribeToPush(reg);
+        }
+        setInterval(() => reg.update(), 60000);
+        reg.addEventListener('updatefound', () => {
+            const newSW = reg.installing;
+            newSW.addEventListener('statechange', () => {
+                if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                    showUpdateBanner();
+                }
+            });
+        });
+    }).catch(e => console.log('SW error:', e));
+}
+
+function showUpdateBanner() {
+    if (document.getElementById('update-banner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'update-banner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:3000;padding:0;animation:slideDown 0.4s cubic-bezier(0.34,1.56,0.64,1)';
+    banner.innerHTML = `
+        <div style="margin:12px;padding:14px 18px;border-radius:16px;background:linear-gradient(135deg,rgba(108,92,231,0.95),rgba(168,85,247,0.95));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(108,92,231,0.4)">
+            <div style="font-size:1.3rem">🔄</div>
+            <div style="flex:1">
+                <div style="font-size:0.82rem;font-weight:700;color:#fff">Actualización disponible</div>
+                <div style="font-size:0.72rem;color:rgba(255,255,255,0.8);margin-top:2px">Toca para actualizar</div>
+            </div>
+            <button onclick="window.location.reload()" style="padding:8px 16px;border-radius:10px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:#fff;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit">Actualizar</button>
+        </div>
+    `;
+    document.body.prepend(banner);
+}
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!document._isReloading) { document._isReloading = true; window.location.reload(); }
+    });
 }
 
 // ===== PUSH NOTIFICATIONS =====
@@ -1268,13 +1323,11 @@ function showLeadToast(msg) {
     if (!toast) {
         toast = document.createElement('div');
         toast.id = 'lead-toast';
-        toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:12px 24px;background:rgba(16,16,24,0.95);border:1px solid var(--card-border);border-radius:14px;color:var(--text-main,#e8e6f0);font-size:0.82rem;font-weight:600;z-index:2000;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);transition:opacity 0.3s';
         document.body.appendChild(toast);
     }
     toast.textContent = msg;
-    toast.style.opacity = '1';
-    toast.style.display = 'block';
-    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => { toast.style.display = 'none'; }, 300); }, 2000);
+    toast.classList.add('visible');
+    setTimeout(() => { toast.classList.remove('visible'); }, 2000);
 }
 // ===== VOICE DICTATION =====
 let recognition = null;
