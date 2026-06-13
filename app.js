@@ -13242,6 +13242,21 @@ window.toggleSidebarGroup = function(groupId) {
         subnav.classList.add('collapsed');
         localStorage.setItem(`cc_sidebar_collapsed_${groupId}`, 'true');
     } else {
+        // ACCORDION BEHAVIOR: Collapse all other groups first!
+        const groups = ['dashboard', 'leads', 'clients', 'config', 'comms'];
+        groups.forEach(otherGroupId => {
+            if (otherGroupId !== groupId) {
+                const otherHeader = document.querySelector(`.sidebar-group-header[data-group="${otherGroupId}"]`);
+                const otherSubnav = document.getElementById(`subnav-${otherGroupId}`);
+                if (otherHeader && otherSubnav) {
+                    otherHeader.classList.remove('expanded');
+                    otherSubnav.classList.add('collapsed');
+                    localStorage.setItem(`cc_sidebar_collapsed_${otherGroupId}`, 'true');
+                }
+            }
+        });
+
+        // Expand the clicked group
         header.classList.add('expanded');
         subnav.classList.remove('collapsed');
         localStorage.setItem(`cc_sidebar_collapsed_${groupId}`, 'false');
@@ -13250,20 +13265,42 @@ window.toggleSidebarGroup = function(groupId) {
 
 window.initializeSidebarCollapse = function() {
     const groups = ['dashboard', 'leads', 'clients', 'config', 'comms'];
+    
+    // First, check if there is an active nav item inside a group on load
+    let activeGroupId = null;
+    const activeItem = document.querySelector('.sidebar-nav-item.active');
+    if (activeItem) {
+        const parentSubnav = activeItem.closest('.sidebar-subnav');
+        if (parentSubnav) {
+            // ID format is "subnav-{groupId}"
+            activeGroupId = parentSubnav.id.replace('subnav-', '');
+        }
+    }
+    
+    // If no active group was found from the active item, find the last expanded group from localStorage
+    if (!activeGroupId) {
+        for (const groupId of groups) {
+            const saved = localStorage.getItem(`cc_sidebar_collapsed_${groupId}`);
+            if (saved === 'false') {
+                activeGroupId = groupId;
+                break; // Only allow one group to be expanded (accordion)
+            }
+        }
+    }
+    
     groups.forEach(groupId => {
         const header = document.querySelector(`.sidebar-group-header[data-group="${groupId}"]`);
         const subnav = document.getElementById(`subnav-${groupId}`);
         if (!header || !subnav) return;
-
-        const saved = localStorage.getItem(`cc_sidebar_collapsed_${groupId}`);
-        const isCollapsed = saved === null ? true : (saved === 'true');
         
-        if (isCollapsed) {
-            header.classList.remove('expanded');
-            subnav.classList.add('collapsed');
-        } else {
+        if (groupId === activeGroupId) {
             header.classList.add('expanded');
             subnav.classList.remove('collapsed');
+            localStorage.setItem(`cc_sidebar_collapsed_${groupId}`, 'false');
+        } else {
+            header.classList.remove('expanded');
+            subnav.classList.add('collapsed');
+            localStorage.setItem(`cc_sidebar_collapsed_${groupId}`, 'true');
         }
     });
 };
