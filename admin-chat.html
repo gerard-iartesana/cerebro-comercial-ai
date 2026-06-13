@@ -1179,13 +1179,54 @@ async function createLeadRoom() {
     const company = document.getElementById('create-lead-company')?.value.trim() || '';
     const email = document.getElementById('create-lead-email')?.value.trim() || '';
     const phone = document.getElementById('create-lead-phone')?.value.trim() || '';
+
+    let leadId = selectedLeadId;
+
+    // Si no hay lead seleccionado del CRM, crear/buscar en outreach_leads
+    if (!leadId) {
+        try {
+            const leadEmail = email || (name.toLowerCase().replace(/\s+/g, '.') + '@chat-lead.local');
+            const nameParts = name.split(' ');
+            const firstName = nameParts[0] || name;
+            const lastName = nameParts.slice(1).join(' ') || '';
+
+            // Intentar buscar por email primero
+            const { data: existing } = await sb.from('outreach_leads')
+                .select('id').eq('email', leadEmail).maybeSingle();
+
+            if (existing) {
+                leadId = existing.id;
+                // Actualizar datos si hay nuevos
+                await sb.from('outreach_leads').update({
+                    first_name: firstName,
+                    company_name: company || undefined,
+                    phone: phone || undefined
+                }).eq('id', leadId);
+            } else {
+                // Crear nuevo lead
+                const { data: newLead, error: leadErr } = await sb.from('outreach_leads').insert({
+                    email: leadEmail,
+                    first_name: firstName,
+                    last_name: lastName,
+                    company_name: company,
+                    phone: phone,
+                    status: 'lead'
+                }).select('id').single();
+                if (!leadErr && newLead) leadId = newLead.id;
+            }
+        } catch(e) {
+            console.warn('No se pudo registrar en outreach_leads:', e.message);
+        }
+    }
+
     const insertData = {
         lead_name: name,
         lead_company: company,
         lead_email: email,
         lead_phone: phone
     };
-    if (selectedLeadId) insertData.lead_id = selectedLeadId;
+    if (leadId) insertData.lead_id = leadId;
+
     try {
         const { data, error } = await sb.from('chat_rooms').insert(insertData).select().single();
         if (error) throw error;
