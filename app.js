@@ -11473,7 +11473,7 @@ function renderChatMessages(messages) {
             if (isImg) {
                 fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" style="max-width:260px;border-radius:10px;margin-top:6px;cursor:pointer" onclick="window.open('${m.file_url}','_blank')">`;
             } else if (isAudio) {
-                fileHtml = `<audio controls preload="auto" style="max-width:260px;margin-top:6px"><source src="${m.file_url}">Tu navegador no soporta este audio. <a href="${m.file_url}" target="_blank">Descargar</a></audio>`;
+                fileHtml = `<audio controls preload="none" src="${m.file_url}" style="max-width:260px;margin-top:6px"></audio>`;
             } else if (isVideo) {
                 fileHtml = `<video controls src="${m.file_url}" preload="metadata" playsinline style="max-width:260px;max-height:200px;border-radius:10px;margin-top:6px"></video>`;
             } else {
@@ -11524,7 +11524,7 @@ function subscribeToChatRoom(roomId) {
                 if (isImg) {
                     fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" style="max-width:260px;border-radius:10px;margin-top:6px;cursor:pointer" onclick="window.open('${m.file_url}','_blank')">`;
                 } else if (isAudio) {
-                    fileHtml = `<audio controls preload="auto" style="max-width:260px;margin-top:6px"><source src="${m.file_url}">Tu navegador no soporta este audio. <a href="${m.file_url}" target="_blank">Descargar</a></audio>`;
+                    fileHtml = `<audio controls preload="none" src="${m.file_url}" style="max-width:260px;margin-top:6px"></audio>`;
                 } else if (isVideo) {
                     fileHtml = `<video controls src="${m.file_url}" preload="metadata" playsinline style="max-width:260px;max-height:200px;border-radius:10px;margin-top:6px"></video>`;
                 } else {
@@ -11557,11 +11557,12 @@ let _dashCtxMsgId = null, _dashCtxContent = '', _dashCtxFile = '', _dashCtxFname
 (function initDashContextMenu() {
     const menu = document.createElement('div');
     menu.id = 'dash-ctx-menu';
-    menu.style.cssText = 'position:fixed;z-index:9999;background:var(--bg-surface,#1e1e2a);border:1px solid var(--border-color,#2a2a3d);border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,0.5);padding:6px 0;min-width:170px;display:none;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)';
+    menu.style.cssText = 'position:fixed;z-index:9999;background:rgba(22,22,34,0.97);border:1px solid rgba(108,92,231,0.25);border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,0.55);padding:6px 0;min-width:180px;display:none;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)';
+    const itemStyle = 'display:flex;align-items:center;gap:10px;padding:12px 18px;font-size:0.84rem;cursor:pointer;color:#e8e6f0;transition:background 0.12s;font-family:inherit';
     menu.innerHTML = `
-        <div class="dash-ctx-item" style="display:flex;align-items:center;gap:10px;padding:11px 18px;font-size:0.82rem;cursor:pointer" onclick="dashCtxCopy()">📋 Copiar</div>
-        <div class="dash-ctx-item" style="display:flex;align-items:center;gap:10px;padding:11px 18px;font-size:0.82rem;cursor:pointer" onclick="dashCtxForward()">↩️ Reenviar</div>
-        <div class="dash-ctx-item" style="display:flex;align-items:center;gap:10px;padding:11px 18px;font-size:0.82rem;cursor:pointer;color:#ff4757" onclick="dashCtxDelete()">🗑️ Borrar</div>
+        <div style="${itemStyle};border-radius:14px 14px 0 0" onmouseover="this.style.background='rgba(108,92,231,0.18)'" onmouseout="this.style.background=''" onclick="dashCtxCopy()">📋 Copiar</div>
+        <div style="${itemStyle}" onmouseover="this.style.background='rgba(108,92,231,0.18)'" onmouseout="this.style.background=''" onclick="dashCtxForward()">↩️ Reenviar</div>
+        <div style="${itemStyle};color:#ff4757;border-radius:0 0 14px 14px" onmouseover="this.style.background='rgba(255,71,87,0.12)'" onmouseout="this.style.background=''" onclick="dashCtxDelete()">🗑️ Borrar</div>
     `;
     document.body.appendChild(menu);
 
@@ -11595,7 +11596,7 @@ window.dashCtxCopy = async function() {
 
 window.dashCtxDelete = async function() {
     document.getElementById('dash-ctx-menu').style.display = 'none';
-    if (!_dashCtxMsgId || !confirm('¿Borrar este mensaje?')) return;
+    if (!_dashCtxMsgId) return;
     try {
         const { error } = await _supabase.from('chat_messages').delete().eq('id', _dashCtxMsgId);
         if (error) throw error;

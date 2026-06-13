@@ -98,6 +98,14 @@ CREATE POLICY "Leads can insert messages in their room"
     ON chat_messages FOR INSERT
     WITH CHECK (true);
 
+CREATE POLICY "Leads can delete messages in their room"
+    ON chat_messages FOR DELETE
+    USING (true);
+
+CREATE POLICY "Leads can update messages in their room"
+    ON chat_messages FOR UPDATE
+    USING (true);
+
 -- SCHEDULED: admin gestiona sus programados
 CREATE POLICY "Users can manage their scheduled messages"
     ON chat_scheduled_messages FOR ALL

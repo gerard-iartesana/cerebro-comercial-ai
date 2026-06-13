@@ -879,7 +879,7 @@ async function loadMessages() {
             if (isImg) {
                 fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" onclick="window.open('${m.file_url}','_blank')">`;
             } else if (isAudio) {
-                fileHtml = `<audio controls preload="auto"><source src="${m.file_url}">Tu navegador no soporta este audio. <a href="${m.file_url}" target="_blank">Descargar</a></audio>`;
+                fileHtml = `<audio controls preload="none" src="${m.file_url}"></audio>`;
             } else if (isVideo) {
                 fileHtml = `<video controls src="${m.file_url}" preload="metadata" playsinline style="max-height:280px;border-radius:10px"></video>`;
             } else {
@@ -924,7 +924,7 @@ function subscribeToMessages() {
                 if (isImg) {
                     fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" onclick="window.open('${m.file_url}','_blank')">`;
                 } else if (isAudio) {
-                    fileHtml = `<audio controls preload="auto"><source src="${m.file_url}">Tu navegador no soporta este audio. <a href="${m.file_url}" target="_blank">Descargar</a></audio>`;
+                    fileHtml = `<audio controls preload="none" src="${m.file_url}"></audio>`;
                 } else if (isVideo) {
                     fileHtml = `<video controls src="${m.file_url}" preload="metadata" playsinline style="max-height:280px;border-radius:10px"></video>`;
                 } else {
@@ -1127,6 +1127,7 @@ function getSupportedAudioMime() {
 // ===== MESSAGE CONTEXT MENU =====
 let _ctxMsgId = null, _ctxMsgContent = '', _ctxMsgFile = '', _ctxMsgFname = '';
 let _longPressTimer = null;
+let _touchStartX = 0, _touchStartY = 0;
 
 function initContextMenu() {
     const menu = document.createElement('div');
@@ -1146,15 +1147,28 @@ function initContextMenu() {
     container.addEventListener('touchstart', e => {
         const wrapper = e.target.closest('.msg-wrapper');
         if (!wrapper) return;
+        const touch = e.touches[0];
+        _touchStartX = touch.clientX;
+        _touchStartY = touch.clientY;
         _longPressTimer = setTimeout(() => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            showContextMenu(wrapper, touch.clientX, touch.clientY);
+            showContextMenu(wrapper, _touchStartX, _touchStartY);
             navigator.vibrate?.(30);
         }, 500);
-    }, { passive: false });
-    container.addEventListener('touchend', () => clearTimeout(_longPressTimer));
-    container.addEventListener('touchmove', () => clearTimeout(_longPressTimer));
+    }, { passive: true });
+    container.addEventListener('touchend', e => {
+        clearTimeout(_longPressTimer);
+        // If context menu is active, prevent the tap from triggering click
+        const menu = document.getElementById('msg-ctx-menu');
+        if (menu && menu.classList.contains('active')) {
+            e.preventDefault();
+        }
+    });
+    container.addEventListener('touchmove', e => {
+        const touch = e.touches[0];
+        if (Math.abs(touch.clientX - _touchStartX) > 10 || Math.abs(touch.clientY - _touchStartY) > 10) {
+            clearTimeout(_longPressTimer);
+        }
+    });
 
     // Right click for desktop
     container.addEventListener('contextmenu', e => {
@@ -1216,7 +1230,7 @@ async function ctxCopy() {
 async function ctxDelete() {
     hideContextMenu();
     if (!_ctxMsgId) return;
-    if (!confirm('¿Borrar este mensaje?')) return;
+    // No confirmation needed - just delete
     try {
         const { error } = await sb.from('chat_messages').delete().eq('id', _ctxMsgId);
         if (error) throw error;
@@ -1224,6 +1238,7 @@ async function ctxDelete() {
         if (el) el.remove();
         showToast('Mensaje borrado ✅');
     } catch(e) {
+        console.error('Delete error:', e);
         showToast('Error al borrar: ' + (e.message || ''));
     }
 }
