@@ -770,6 +770,8 @@ function showRoomsScreen() {
     document.getElementById('rooms-screen').style.display = 'flex';
     document.getElementById('chat-app').style.display = 'none';
     renderRoomsList();
+    updateTotalBadge();
+    subscribeToAllRooms();
 }
 
 function renderRoomsList() {
@@ -811,6 +813,9 @@ function renderRoomsList() {
 function openChatForRoom(room) {
     currentRoom = room;
 
+    // Unsubscribe from all-rooms listener
+    if (allRoomsSubscription) { allRoomsSubscription.unsubscribe(); allRoomsSubscription = null; }
+
     // Update header
     const isGroup = room.is_group;
     const headerName = document.getElementById('chat-header-name');
@@ -828,6 +833,10 @@ function openChatForRoom(room) {
     }
     if (backBtn) backBtn.style.display = hasMultipleRooms ? 'flex' : 'none';
 
+    // Clear unread for this room
+    room.unread_count = 0;
+    sb.from('chat_rooms').update({ unread_count: 0 }).eq('id', room.id).then(() => {});
+
     // Show chat, hide rooms
     document.getElementById('rooms-screen').style.display = 'none';
     document.getElementById('chat-app').style.display = 'flex';
@@ -836,18 +845,17 @@ function openChatForRoom(room) {
     loadMessages();
     if (subscription) { subscription.unsubscribe(); subscription = null; }
     subscribeToMessages();
+    updateTotalBadge();
 }
 
 function goBackToRooms() {
     if (subscription) { subscription.unsubscribe(); subscription = null; }
     currentRoom = null;
-    // Reload rooms data for fresh previews
     reloadAndShowRooms();
 }
 
 async function reloadAndShowRooms() {
     try {
-        // Re-fetch rooms with latest messages
         const roomIds = allRooms.map(r => r.id);
         const { data: freshRooms } = await sb
             .from('chat_rooms')
@@ -856,7 +864,6 @@ async function reloadAndShowRooms() {
             .order('last_message_at', { ascending: false });
         
         if (freshRooms) {
-            // Preserve _member_name and group flags
             freshRooms.forEach(fr => {
                 const old = allRooms.find(r => r.id === fr.id);
                 if (old) {
@@ -869,6 +876,50 @@ async function reloadAndShowRooms() {
         }
     } catch(e) { console.warn('Error reloading rooms:', e); }
     showRoomsScreen();
+}
+
+// ===== TOTAL BADGE (sum of all rooms) =====
+function updateTotalBadge() {
+    const total = allRooms.reduce((sum, r) => sum + (r.unread_count || 0), 0);
+    if ('setAppBadge' in navigator) {
+        if (total > 0) navigator.setAppBadge(total).catch(() => {});
+        else navigator.clearAppBadge().catch(() => {});
+    }
+    // Update page title
+    document.title = total > 0 ? `(${total}) Chat — iadebarrio` : 'Chat — iadebarrio';
+}
+
+// ===== SUBSCRIBE TO ALL ROOMS (for rooms screen) =====
+let allRoomsSubscription = null;
+
+function subscribeToAllRooms() {
+    if (allRoomsSubscription) { allRoomsSubscription.unsubscribe(); allRoomsSubscription = null; }
+    const roomIds = allRooms.map(r => r.id);
+    if (!roomIds.length) return;
+
+    allRoomsSubscription = sb
+        .channel('all-rooms-' + Date.now())
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'chat_messages'
+        }, payload => {
+            const m = payload.new;
+            if (!roomIds.includes(m.room_id)) return;
+            // Only count admin messages as unread for the lead
+            if (m.sender_type === 'admin') {
+                const room = allRooms.find(r => r.id === m.room_id);
+                if (room) {
+                    room.unread_count = (room.unread_count || 0) + 1;
+                    // Update last message preview
+                    room.chat_messages = [{ content: m.content, sender_type: m.sender_type, created_at: m.created_at }];
+                    room.last_message_at = m.created_at;
+                    renderRoomsList();
+                    updateTotalBadge();
+                }
+            }
+        })
+        .subscribe();
 }
 
 // ===== INSTALL BANNER =====
@@ -1051,28 +1102,24 @@ let isPageVisible = true;
 
 document.addEventListener('visibilitychange', () => {
     isPageVisible = !document.hidden;
-    if (isPageVisible) {
-        // Clear badge when user opens the app
-        unreadCount = 0;
-        updateBadge(0);
+    if (isPageVisible && currentRoom) {
+        // Clear unread for current room when user opens the app
+        currentRoom.unread_count = 0;
+        sb.from('chat_rooms').update({ unread_count: 0 }).eq('id', currentRoom.id).then(() => {});
+        updateTotalBadge();
     }
 });
 
-function updateBadge(count) {
-    if ('setAppBadge' in navigator) {
-        if (count > 0) {
-            navigator.setAppBadge(count).catch(() => {});
-        } else {
-            navigator.clearAppBadge().catch(() => {});
-        }
-    }
-}
-
 function onNewMessageReceived(senderType) {
-    // Only badge for admin messages when app is not visible
-    if (senderType === 'admin' && !isPageVisible) {
-        unreadCount++;
-        updateBadge(unreadCount);
+    if (senderType === 'admin') {
+        if (!isPageVisible) {
+            // App in background — increment current room unread
+            if (currentRoom) {
+                currentRoom.unread_count = (currentRoom.unread_count || 0) + 1;
+            }
+            unreadCount++;
+        }
+        updateTotalBadge();
     }
 }
 
