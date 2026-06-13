@@ -11989,18 +11989,85 @@ window.createChatGroup = async function() {
             is_group: true
         }).select().single();
         if (error) throw error;
+
+        // Insert each member with their own access_token
+        const memberInserts = _groupMembers.map(m => ({
+            room_id: data.id,
+            lead_id: m.id || null,
+            lead_name: m.nombre,
+            lead_email: m.email || ''
+        }));
+        const { data: members, error: memErr } = await _supabase.from('chat_room_members')
+            .insert(memberInserts).select();
+        if (memErr) console.warn('Error inserting members:', memErr.message);
+
         await _supabase.from('chat_messages').insert({
             room_id: data.id, sender_type: 'system', sender_name: 'Sistema',
-            content: '👥 Grupo creado: ' + _groupMembers.map(m => m.nombre).join(', ')
+            content: '👥 Grupo creado con: ' + _groupMembers.map(m => m.nombre).join(', ')
         });
+
         document.getElementById('create-group-modal')?.remove();
-        showToast('Grupo "' + name + '" creado');
+
+        if (members && members.length) {
+            showToast('Grupo creado ✅');
+            setTimeout(() => _showGroupLinksModal(name, members), 300);
+        } else {
+            showToast('Grupo "' + name + '" creado');
+        }
+
         await loadChatRooms();
         openChatRoom(data.id);
     } catch(e) {
         console.error('[Chat] Error creating group:', e.message || e);
         showToast('Error: ' + (e.message || 'No se pudo crear'), true);
     }
+};
+
+function _showGroupLinksModal(groupName, members) {
+    const origin = window.location.origin;
+    let existing = document.getElementById('group-links-modal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'group-links-modal';
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div class="modal-box" style="max-width:520px">
+            <div class="modal-header">
+                <h2 style="font-size:1.1rem;font-weight:800">🔗 Links del grupo: ${groupName}</h2>
+                <button class="modal-close" onclick="document.getElementById('group-links-modal').remove()">✕</button>
+            </div>
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:10px">
+                <p style="font-size:0.8rem;color:var(--text-grey);margin:0">Cada miembro tiene su link personal. Haz clic para copiar:</p>
+                ${members.map(m => `
+                    <div style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:var(--bg-card);border:1px solid var(--card-border);cursor:pointer;transition:border-color 0.15s"
+                         onclick="navigator.clipboard.writeText('${origin}/chat?token=${m.access_token}').then(()=>{this.style.borderColor='#34c759';this.querySelector('.gl-status').textContent='✅ Copiado';setTimeout(()=>{this.style.borderColor='';this.querySelector('.gl-status').textContent='📋 Copiar'},1500)})">
+                        <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;flex-shrink:0">${(m.lead_name||'?')[0].toUpperCase()}</div>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-size:0.85rem;font-weight:700">${m.lead_name}</div>
+                            <div style="font-size:0.68rem;color:var(--text-grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${origin}/chat?token=${m.access_token.substring(0,12)}...</div>
+                        </div>
+                        <span class="gl-status" style="font-size:0.72rem;color:var(--text-grey);white-space:nowrap;flex-shrink:0">📋 Copiar</span>
+                    </div>
+                `).join('')}
+                <button class="btn-primary" onclick="_copyAllGroupLinks('${groupName.replace(/'/g,"\\'")}', '${members.map(m=>m.lead_name+'|'+m.access_token).join(';;')}')"
+                    style="width:100%;padding:12px;border-radius:12px;font-weight:700;font-size:0.88rem;margin-top:6px">
+                    📋 Copiar todos los links
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+window._copyAllGroupLinks = function(groupName, membersStr) {
+    const origin = window.location.origin;
+    let text = '👥 Grupo: ' + groupName + '\n\n';
+    membersStr.split(';;').forEach(m => {
+        const [name, token] = m.split('|');
+        text += name + ': ' + origin + '/chat?token=' + token + '\n';
+    });
+    navigator.clipboard.writeText(text).then(() => showToast('Todos los links copiados ✅'));
 };
 
 

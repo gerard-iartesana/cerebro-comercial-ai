@@ -564,13 +564,39 @@ async function init() {
     if (!token) return showError();
 
     try {
-        const { data: room, error } = await sb
+        // First try direct room token
+        let { data: room, error } = await sb
             .from('chat_rooms')
             .select('*')
             .eq('link_token', token)
-            .single();
+            .maybeSingle();
 
-        if (error || !room) return showError();
+        // If not found, check group member token
+        if (!room) {
+            const { data: member } = await sb
+                .from('chat_room_members')
+                .select('room_id, lead_name, lead_email')
+                .eq('access_token', token)
+                .maybeSingle();
+
+            if (member) {
+                // Load the actual room
+                const { data: groupRoom } = await sb
+                    .from('chat_rooms')
+                    .select('*')
+                    .eq('id', member.room_id)
+                    .single();
+
+                if (groupRoom) {
+                    room = groupRoom;
+                    // Override lead_name with this member's name for messages
+                    room._member_name = member.lead_name;
+                    room._is_group_member = true;
+                }
+            }
+        }
+
+        if (!room) return showError();
 
         currentRoom = room;
         document.getElementById('loading-screen').style.display = 'none';
@@ -686,7 +712,7 @@ async function sendMessage() {
         await sb.from('chat_messages').insert({
             room_id: currentRoom.id,
             sender_type: 'lead',
-            sender_name: currentRoom.lead_name || 'Lead',
+            sender_name: currentRoom._member_name || currentRoom.lead_name || 'Lead',
             content: text
         });
         await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
@@ -724,7 +750,7 @@ async function handleFileUpload(inputEl) {
         await sb.from('chat_messages').insert({
             room_id: currentRoom.id,
             sender_type: 'lead',
-            sender_name: currentRoom.lead_name || 'Lead',
+            sender_name: currentRoom._member_name || currentRoom.lead_name || 'Lead',
             content: '',
             file_url: urlData.publicUrl,
             file_name: file.name
