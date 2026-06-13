@@ -156,7 +156,9 @@
     .msg-meta { font-size:0.58rem; color:var(--text-grey); margin-bottom:3px; padding:0 6px; }
     .msg-bubble {
         padding: 10px 14px; border-radius: 18px;
-        font-size: 0.85rem; line-height: 1.4; word-wrap:break-word;
+        font-size: 0.85rem; line-height: 1.4;
+        word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;
+        overflow: hidden;
     }
     .msg-wrapper.admin .msg-bubble {
         background: var(--msg-admin); color:#fff;
@@ -170,7 +172,12 @@
     .msg-bubble img {
         max-width:100%; border-radius:12px; margin-top:6px; cursor:pointer;
     }
-    .msg-bubble a { color: #a8b4ff; }
+    .msg-bubble a { color: #a8b4ff; word-break: break-all; }
+    .msg-bubble audio, .msg-bubble video {
+        max-width: 100%; border-radius: 10px; margin-top: 4px;
+    }
+    .msg-bubble audio { width: 100%; min-width: 200px; }
+    .msg-bubble video { max-height: 280px; }
     .chat-input-area {
         border-top: 1px solid var(--card-border);
         background: var(--bg-secondary);
@@ -843,7 +850,7 @@ async function loadMessages() {
             if (isImg) {
                 fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" onclick="window.open('${m.file_url}','_blank')">`;
             } else if (isAudio) {
-                fileHtml = `<audio controls src="${m.file_url}" preload="metadata"></audio>`;
+                fileHtml = `<audio controls preload="auto"><source src="${m.file_url}" type="${fn.endsWith('.webm')?'audio/webm':'audio/mp4'}">Tu navegador no soporta este audio. <a href="${m.file_url}" target="_blank">Descargar</a></audio>`;
             } else if (isVideo) {
                 fileHtml = `<video controls src="${m.file_url}" preload="metadata" playsinline style="max-height:280px;border-radius:10px"></video>`;
             } else {
@@ -887,7 +894,7 @@ function subscribeToMessages() {
                 if (isImg) {
                     fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" onclick="window.open('${m.file_url}','_blank')">`;
                 } else if (isAudio) {
-                    fileHtml = `<audio controls src="${m.file_url}" preload="metadata"></audio>`;
+                    fileHtml = `<audio controls preload="auto"><source src="${m.file_url}" type="${fn.endsWith('.webm')?'audio/webm':'audio/mp4'}">Tu navegador no soporta este audio. <a href="${m.file_url}" target="_blank">Descargar</a></audio>`;
                 } else if (isVideo) {
                     fileHtml = `<video controls src="${m.file_url}" preload="metadata" playsinline style="max-height:280px;border-radius:10px"></video>`;
                 } else {

@@ -11473,7 +11473,7 @@ function renderChatMessages(messages) {
             if (isImg) {
                 fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" style="max-width:260px;border-radius:10px;margin-top:6px;cursor:pointer" onclick="window.open('${m.file_url}','_blank')">`;
             } else if (isAudio) {
-                fileHtml = `<audio controls src="${m.file_url}" preload="metadata" style="max-width:260px;margin-top:6px"></audio>`;
+                fileHtml = `<audio controls preload="auto" style="max-width:260px;margin-top:6px"><source src="${m.file_url}" type="${fn.endsWith('.webm')?'audio/webm':'audio/mp4'}">Tu navegador no soporta este audio. <a href="${m.file_url}" target="_blank">Descargar</a></audio>`;
             } else if (isVideo) {
                 fileHtml = `<video controls src="${m.file_url}" preload="metadata" playsinline style="max-width:260px;max-height:200px;border-radius:10px;margin-top:6px"></video>`;
             } else {
@@ -11523,7 +11523,7 @@ function subscribeToChatRoom(roomId) {
                 if (isImg) {
                     fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" style="max-width:260px;border-radius:10px;margin-top:6px;cursor:pointer" onclick="window.open('${m.file_url}','_blank')">`;
                 } else if (isAudio) {
-                    fileHtml = `<audio controls src="${m.file_url}" preload="metadata" style="max-width:260px;margin-top:6px"></audio>`;
+                    fileHtml = `<audio controls preload="auto" style="max-width:260px;margin-top:6px"><source src="${m.file_url}" type="${fn.endsWith('.webm')?'audio/webm':'audio/mp4'}">Tu navegador no soporta este audio. <a href="${m.file_url}" target="_blank">Descargar</a></audio>`;
                 } else if (isVideo) {
                     fileHtml = `<video controls src="${m.file_url}" preload="metadata" playsinline style="max-width:260px;max-height:200px;border-radius:10px;margin-top:6px"></video>`;
                 } else {
