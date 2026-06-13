@@ -621,6 +621,10 @@
             <div class="status" id="chat-header-status"><span class="dot"></span> En línea</div>
         </div>
         <button class="header-install-btn" id="header-install-btn" onclick="showInstallModal()" title="Instalar app"><span class="install-icon">📲</span> Instalar</button>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+            <button onclick="openLeadReminderModal()" style="width:36px;height:36px;border-radius:50%;background:var(--bg-tertiary,#1e1e2a);border:1px solid var(--card-border);display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;flex-shrink:0" title="Recordatorio">🔔</button>
+            <button onclick="openLeadScheduleModal()" style="width:36px;height:36px;border-radius:50%;background:var(--bg-tertiary,#1e1e2a);border:1px solid var(--card-border);display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;flex-shrink:0" title="Programar mensaje">⏰</button>
+        </div>
     </div>
 
     <!-- Messages -->
@@ -766,10 +770,20 @@ async function init() {
     let token = params.get('token') || params.get('t');
     
     if (token) {
-        localStorage.setItem('chat_token', token);
+        try {
+            localStorage.setItem('chat_token', token);
+        } catch(e) {
+            console.warn('Could not save token to localStorage:', e);
+        }
         setCookie('chat_token', token, 365);
     } else {
-        token = getCookie('chat_token') || localStorage.getItem('chat_token');
+        let localToken = null;
+        try {
+            localToken = localStorage.getItem('chat_token');
+        } catch(e) {
+            console.warn('Could not read token from localStorage:', e);
+        }
+        token = getCookie('chat_token') || localToken;
     }
 
     if (!token) return showError();

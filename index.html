@@ -179,15 +179,25 @@
             
             html.setAttribute('data-theme', newTheme);
             document.querySelector('.theme-icon').textContent = newTheme === 'light' ? '☀️' : '🌙';
-            localStorage.setItem('cc_theme', newTheme);
+            try {
+                localStorage.setItem('cc_theme', newTheme);
+            } catch(e) {
+                console.warn('Could not save theme to localStorage:', e);
+            }
         }
 
         // On Load Theme Restore
         (function() {
-            const savedTheme = localStorage.getItem('cc_theme') || 'dark';
+            let savedTheme = 'dark';
+            try {
+                savedTheme = localStorage.getItem('cc_theme') || 'dark';
+            } catch(e) {
+                console.warn('Could not read theme from localStorage:', e);
+            }
             document.documentElement.setAttribute('data-theme', savedTheme);
             window.addEventListener('DOMContentLoaded', () => {
-                document.querySelector('.theme-icon').textContent = savedTheme === 'light' ? '☀️' : '🌙';
+                const themeIcon = document.querySelector('.theme-icon');
+                if (themeIcon) themeIcon.textContent = savedTheme === 'light' ? '☀️' : '🌙';
             });
         })();
 

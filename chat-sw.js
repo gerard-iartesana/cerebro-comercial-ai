@@ -1,5 +1,5 @@
 // Chat Service Worker - Network First + Push Notifications + Badge
-const CACHE_VERSION = 'chat-v14-remove-buttons-1718298000';
+const CACHE_VERSION = 'chat-v15-restore-buttons-1718384400';
 
 self.addEventListener('install', event => {
     self.skipWaiting();

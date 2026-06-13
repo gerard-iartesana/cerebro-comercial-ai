@@ -370,6 +370,109 @@
     .modal-action-btn:active { transform: scale(0.97); opacity:0.9; }
     .modal-action-btn:disabled { opacity:0.5; pointer-events:none; }
 
+    /* Modal Overlay & Box (matching dashboard) */
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        display: none; align-items: center; justify-content: center;
+        z-index: 9999;
+        animation: modalFadeIn 0.2s ease;
+    }
+    .modal-overlay.active { display: flex; }
+    @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    
+    .modal-box {
+        background: var(--bg-secondary);
+        border: 1px solid var(--card-border);
+        border-radius: 20px;
+        width: 95%; max-width: 480px;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        animation: modalSlideIn 0.25s ease;
+    }
+    @keyframes modalSlideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* Overlay Modal Elements (matching dashboard h2, close button, body, footer, cancel button) */
+    .modal-overlay .modal-header {
+        padding: 20px 24px;
+        background: transparent;
+        backdrop-filter: none; -webkit-backdrop-filter: none;
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px solid var(--card-border);
+        flex-shrink: 0;
+    }
+    .modal-overlay .modal-header h2 {
+        margin: 0; font-size: 1.1rem; font-weight: 700;
+        color: var(--text-main);
+    }
+    .modal-overlay .modal-close {
+        width: 32px; height: 32px; border-radius: 50%;
+        border: none; background: var(--bg-secondary);
+        font-size: 1.1rem; cursor: pointer; color: var(--text-grey);
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.2s;
+    }
+    .modal-overlay .modal-close:hover { background: #ff3b30; color: white; }
+    
+    .modal-overlay .modal-body {
+        padding: 20px 24px;
+        flex: 1;
+        overflow-y: auto;
+        display: flex; flex-direction: column; gap: 16px;
+    }
+    
+    .modal-overlay .modal-footer {
+        flex-shrink: 0;
+        padding: 16px 24px; border-top: 1px solid var(--card-border);
+        display: flex; justify-content: flex-end; gap: 10px;
+        background: transparent;
+    }
+    
+    .modal-overlay .modal-cancel-btn {
+        padding: 10px 20px; border: 1px solid var(--card-border);
+        background: transparent; border-radius: 12px;
+        font-size: 0.85rem; font-weight: 600; cursor: pointer;
+        color: var(--text-grey); transition: all 0.2s;
+        font-family: inherit;
+    }
+    .modal-overlay .modal-cancel-btn:hover { background: var(--bg-tertiary); }
+    
+    .task-field-label {
+        font-size: 0.72rem; font-weight: 700;
+        color: var(--text-grey); text-transform: uppercase;
+        display: block; margin-bottom: 6px; letter-spacing: 0.04em;
+    }
+    .task-priority-pills {
+        display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .task-prio-pill {
+        flex: 1; text-align: center;
+        padding: 8px 12px; border: 1.5px solid var(--card-border);
+        background: transparent; border-radius: 10px;
+        font-size: 0.8rem; font-weight: 600; cursor: pointer;
+        color: var(--text-grey); transition: all 0.2s;
+        font-family: inherit;
+    }
+    .task-prio-pill.active {
+        border-color: var(--accent); background: var(--accent);
+        color: white;
+    }
+    .modal-input {
+        width: 100%; padding: 10px 14px;
+        border: 1px solid var(--card-border);
+        border-radius: 10px; font-size: 0.85rem;
+        background: var(--bg-tertiary);
+        color: var(--text-main);
+        transition: border-color 0.2s;
+        box-sizing: border-box;
+        font-family: inherit;
+        outline: none;
+    }
+    .modal-input:focus { border-color: var(--accent); }
+
     /* ===== SAFE AREAS ===== */
     @supports(padding-top: env(safe-area-inset-top)) {
         .rooms-header, .chat-header, .modal-header { padding-top: calc(12px + env(safe-area-inset-top)); }
@@ -555,75 +658,102 @@
 <div class="toast-notification" id="toast-notification"></div>
 
 <!-- PWA TASK MODAL -->
-<div class="fullscreen-modal" id="pwa-task-modal">
-    <div class="modal-header">
-        <div class="modal-header-title">☑️ Crear Tarea</div>
-        <div class="modal-close" onclick="closePwaTaskModal()">✕</div>
-    </div>
-    <div class="modal-body" style="gap:12px;display:flex;flex-direction:column">
-        <div class="modal-subtitle" id="pwa-task-lead-name">Para: Lead</div>
-        
-        <div class="modal-section-label">Título de la Tarea</div>
-        <input type="text" id="pwa-task-title" class="modal-datetime" style="padding:12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;color:var(--text-main)" placeholder="Ej: Llamar por teléfono...">
+<div class="modal-overlay" id="pwa-task-modal" onclick="if(event.target===this)closePwaTaskModal()">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>☑️ Crear Tarea</h2>
+            <button class="modal-close" onclick="closePwaTaskModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-subtitle" id="pwa-task-lead-name" style="font-size:0.82rem;color:var(--text-grey);margin-bottom:8px">Para: Lead</div>
+            
+            <div>
+                <label class="task-field-label">📝 TÍTULO</label>
+                <input type="text" id="pwa-task-title" class="modal-input" placeholder="Ej: Llamar por teléfono...">
+            </div>
 
-        <div class="modal-section-label">Descripción</div>
-        <textarea class="modal-textarea" id="pwa-task-desc" style="min-height:80px" placeholder="Detalles de la tarea..."></textarea>
+            <div>
+                <label class="task-field-label">📄 DESCRIPCIÓN</label>
+                <textarea class="modal-input" id="pwa-task-desc" style="min-height:80px;resize:vertical" placeholder="Detalles de la tarea..."></textarea>
+            </div>
 
-        <div class="modal-section-label">Prioridad</div>
-        <select id="pwa-task-priority" style="width:100%;padding:12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;color:var(--text-main);outline:none">
-            <option value="hoy">Hoy</option>
-            <option value="week">Esta semana</option>
-            <option value="month" selected>Este mes</option>
-        </select>
+            <div>
+                <label class="task-field-label">📌 PRIORIDAD</label>
+                <div class="task-priority-pills" id="pwa-task-priority-container">
+                    <button class="task-prio-pill" data-prio="hoy" onclick="setPwaTaskPriority('hoy')">Hoy</button>
+                    <button class="task-prio-pill" data-prio="week" onclick="setPwaTaskPriority('week')">Semana</button>
+                    <button class="task-prio-pill active" data-prio="month" onclick="setPwaTaskPriority('month')">Mes</button>
+                </div>
+                <input type="hidden" id="pwa-task-priority" value="month">
+            </div>
 
-        <div class="modal-section-label">Fecha límite</div>
-        <input type="date" class="modal-datetime" id="pwa-task-due-date">
-
-        <button class="modal-action-btn" id="pwa-task-save-btn" onclick="savePwaTask()">Guardar Tarea</button>
+            <div>
+                <label class="task-field-label">🔴 FECHA LÍMITE</label>
+                <input type="date" class="modal-input" id="pwa-task-due-date">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-cancel-btn" onclick="closePwaTaskModal()">Cancelar</button>
+            <button class="modal-action-btn" id="pwa-task-save-btn" onclick="savePwaTask()" style="padding:10px 20px;border-radius:12px;background:var(--accent);border:none;color:white;font-weight:700;cursor:pointer">Guardar Tarea</button>
+        </div>
     </div>
 </div>
 
 <!-- PWA MEETING MODAL -->
-<div class="fullscreen-modal" id="pwa-meeting-modal">
-    <div class="modal-header">
-        <div class="modal-header-title">📅 Agendar Cita</div>
-        <div class="modal-close" onclick="closePwaMeetingModal()">✕</div>
-    </div>
-    <div class="modal-body" style="gap:12px;display:flex;flex-direction:column">
-        <div class="modal-subtitle" id="pwa-meeting-lead-name">Para: Lead</div>
+<div class="modal-overlay" id="pwa-meeting-modal" onclick="if(event.target===this)closePwaMeetingModal()">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>📅 Agendar Cita</h2>
+            <button class="modal-close" onclick="closePwaMeetingModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-subtitle" id="pwa-meeting-lead-name" style="font-size:0.82rem;color:var(--text-grey);margin-bottom:8px">Para: Lead</div>
 
-        <div class="modal-section-label">Nombre del Contacto</div>
-        <input type="text" id="pwa-meeting-name" class="modal-datetime" style="padding:12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;color:var(--text-main)">
-
-        <div class="modal-section-label">Email</div>
-        <input type="email" id="pwa-meeting-email" class="modal-datetime" style="padding:12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;color:var(--text-main)">
-
-        <div class="modal-section-label">Teléfono</div>
-        <input type="tel" id="pwa-meeting-phone" class="modal-datetime" style="padding:12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;color:var(--text-main)">
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div>
-                <div class="modal-section-label">Fecha</div>
-                <input type="date" class="modal-datetime" id="pwa-meeting-date">
+                <label class="task-field-label">👤 NOMBRE DEL CONTACTO</label>
+                <input type="text" id="pwa-meeting-name" class="modal-input">
             </div>
+
             <div>
-                <div class="modal-section-label">Hora</div>
-                <input type="time" class="modal-datetime" id="pwa-meeting-time">
+                <label class="task-field-label">📧 EMAIL</label>
+                <input type="email" id="pwa-meeting-email" class="modal-input">
+            </div>
+
+            <div>
+                <label class="task-field-label">📱 TELÉFONO</label>
+                <input type="tel" id="pwa-meeting-phone" class="modal-input">
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div>
+                    <label class="task-field-label">📅 FECHA</label>
+                    <input type="date" class="modal-input" id="pwa-meeting-date">
+                </div>
+                <div>
+                    <label class="task-field-label">🕒 HORA</label>
+                    <input type="time" class="modal-input" id="pwa-meeting-time">
+                </div>
+            </div>
+
+            <div>
+                <label class="task-field-label">💼 TIPO</label>
+                <select id="pwa-meeting-type" class="modal-input">
+                    <option value="discovery" selected>📅 Reunión (Discovery)</option>
+                    <option value="followup">🔄 Follow-up</option>
+                    <option value="closing">🤝 Cierre</option>
+                    <option value="support">🛠️ Soporte</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="task-field-label">📝 NOTAS</label>
+                <textarea class="modal-input" id="pwa-meeting-notes" style="min-height:60px;resize:vertical" placeholder="Notas sobre la reunión..."></textarea>
             </div>
         </div>
-
-        <div class="modal-section-label">Tipo</div>
-        <select id="pwa-meeting-type" style="width:100%;padding:12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;color:var(--text-main);outline:none">
-            <option value="discovery" selected>📅 Reunión (Discovery)</option>
-            <option value="followup">🔄 Follow-up</option>
-            <option value="closing">🤝 Cierre</option>
-            <option value="support">🛠️ Soporte</option>
-        </select>
-
-        <div class="modal-section-label">Notas</div>
-        <textarea class="modal-textarea" id="pwa-meeting-notes" style="min-height:60px" placeholder="Notas sobre la reunión..."></textarea>
-
-        <button class="modal-action-btn" id="pwa-meeting-save-btn" onclick="savePwaMeeting()">Agendar Cita</button>
+        <div class="modal-footer">
+            <button class="modal-cancel-btn" onclick="closePwaMeetingModal()">Cancelar</button>
+            <button class="modal-action-btn" id="pwa-meeting-save-btn" onclick="savePwaMeeting()" style="padding:10px 20px;border-radius:12px;background:var(--accent);border:none;color:white;font-weight:700;cursor:pointer">Agendar Cita</button>
+        </div>
     </div>
 </div>
 
@@ -730,6 +860,37 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const VAPID_PUBLIC_KEY = 'BAfWR9i2l5IKCTMpV5cjjjTt4dkSQuvGMUAO5aSVIVMEvXWElSTIrf3S92HhmqveaiWhcdXXw5WUaaYL7AxI1Fg';
 const API_BASE = window.location.origin + '/api';
 
+const safeStorage = {
+    _mem: {},
+    getItem(k) {
+        try {
+            return localStorage.getItem(k);
+        } catch(e) {
+            const match = document.cookie.match(new RegExp('(^| )' + k + '=([^;]+)'));
+            if (match) return decodeURIComponent(match[2]);
+            return this._mem[k] || null;
+        }
+    },
+    setItem(k, v) {
+        try {
+            localStorage.setItem(k, v);
+        } catch(e) {
+            const d = new Date();
+            d.setTime(d.getTime() + (30*24*60*60*1000));
+            document.cookie = `${k}=${encodeURIComponent(v)};expires=${d.toUTCString()};path=/;SameSite=Strict`;
+            this._mem[k] = String(v);
+        }
+    },
+    removeItem(k) {
+        try {
+            localStorage.removeItem(k);
+        } catch(e) {
+            document.cookie = `${k}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;SameSite=Strict`;
+            delete this._mem[k];
+        }
+    }
+};
+
 let adminEmail = null;
 let adminName = 'Gerard';
 let rooms = [];
@@ -766,16 +927,17 @@ async function doLogin() {
         }
 
         adminEmail = data.email;
-        localStorage.setItem('admin_session', JSON.stringify({ email: adminEmail, name: adminName }));
+        safeStorage.setItem('admin_session', JSON.stringify({ email: adminEmail, name: adminName }));
         await loadRooms();
         registerSW();
     } catch(e) {
+        console.error(e);
         errEl.textContent = 'Error de conexión';
     }
 }
 
 function checkSession() {
-    const session = localStorage.getItem('admin_session');
+    const session = safeStorage.getItem('admin_session');
     if (session) {
         const s = JSON.parse(session);
         adminEmail = s.email;
@@ -1562,16 +1724,16 @@ window.addEventListener('focus', clearBadge);
 // ===== READ TRACKING =====
 function getLastRead(roomId) {
     try {
-        const data = JSON.parse(localStorage.getItem('admin_read') || '{}');
+        const data = JSON.parse(safeStorage.getItem('admin_read') || '{}');
         return data[roomId] || null;
     } catch(e) { return null; }
 }
 
 function markAsRead(roomId) {
     try {
-        const data = JSON.parse(localStorage.getItem('admin_read') || '{}');
+        const data = JSON.parse(safeStorage.getItem('admin_read') || '{}');
         data[roomId] = new Date().toISOString();
-        localStorage.setItem('admin_read', JSON.stringify(data));
+        safeStorage.setItem('admin_read', JSON.stringify(data));
     } catch(e) {}
 }
 
@@ -1616,9 +1778,16 @@ function openPwaTaskModal() {
     document.getElementById('pwa-task-lead-name').textContent = `Para: ${currentRoom.lead_name || 'Lead'}`;
     document.getElementById('pwa-task-title').value = `Seguimiento con ${currentRoom.lead_name || 'Lead'}`;
     document.getElementById('pwa-task-desc').value = `Tarea creada desde el chat PWA.\nLead: ${currentRoom.lead_name || ''}\nEmail: ${currentRoom.lead_email || ''}`;
-    document.getElementById('pwa-task-priority').value = 'month';
+    setPwaTaskPriority('month');
     document.getElementById('pwa-task-due-date').value = '';
     document.getElementById('pwa-task-modal').classList.add('active');
+}
+
+function setPwaTaskPriority(val) {
+    document.getElementById('pwa-task-priority').value = val;
+    document.querySelectorAll('#pwa-task-priority-container .task-prio-pill').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-prio') === val);
+    });
 }
 
 function closePwaTaskModal() {
