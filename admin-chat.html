@@ -831,6 +831,20 @@
                     <input type="date" class="modal-input" id="pwa-task-due-date">
                 </div>
             </div>
+
+            <div>
+                <label class="task-field-label">📝 NOTAS</label>
+                <textarea class="modal-input" id="pwa-task-notes" style="min-height:70px;resize:vertical" placeholder="Notas, apuntes, ideas..."></textarea>
+            </div>
+
+            <div>
+                <label class="task-field-label">📋 SUBTAREAS (<span id="pwa-subtask-count">0</span>)</label>
+                <div id="pwa-subtasks-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
+                <div style="display:flex;gap:6px">
+                    <input type="text" id="pwa-new-subtask-input" class="modal-input" placeholder="Nueva subtarea..." style="flex:1" onkeypress="if(event.key==='Enter')addPwaSubtask()">
+                    <button class="modal-action-btn" onclick="addPwaSubtask()" style="padding:8px 14px;font-size:0.8rem;background:var(--accent);border:none;color:white;border-radius:10px;cursor:pointer">+ Añadir</button>
+                </div>
+            </div>
         </div>
         <div class="modal-footer">
             <button class="modal-cancel-btn" onclick="closePwaTaskModal()">Cancelar</button>
@@ -1935,11 +1949,14 @@ function copyLink() {
 }
 
 // ===== PWA TASKS & MEETINGS =====
+let pwaTaskSubtasks = [];
+
 function openPwaTaskModal() {
     if (!currentRoom) return;
     document.getElementById('pwa-task-lead-name').textContent = `Para: ${currentRoom.lead_name || 'Lead'}`;
     document.getElementById('pwa-task-title').value = `Seguimiento con ${currentRoom.lead_name || 'Lead'}`;
     document.getElementById('pwa-task-desc').value = `Tarea creada desde el chat PWA.\nLead: ${currentRoom.lead_name || ''}\nEmail: ${currentRoom.lead_email || ''}`;
+    document.getElementById('pwa-task-notes').value = '';
     
     setPwaTaskType('business');
     setPwaTaskPriority('month');
@@ -1956,8 +1973,44 @@ function openPwaTaskModal() {
     document.getElementById('pwa-task-start-date').value = today;
     document.getElementById('pwa-task-due-date').value = '';
     
+    pwaTaskSubtasks = [];
+    renderPwaSubtasks();
+    
     calcPwaTaskEcon();
     document.getElementById('pwa-task-modal').classList.add('active');
+}
+
+function renderPwaSubtasks() {
+    const listEl = document.getElementById('pwa-subtasks-list');
+    const countEl = document.getElementById('pwa-subtask-count');
+    if (countEl) countEl.textContent = pwaTaskSubtasks.length;
+    if (listEl) {
+        listEl.innerHTML = pwaTaskSubtasks.map((st, i) => `
+            <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.02);padding:8px 12px;border:1px solid var(--card-border);border-radius:10px">
+                <input type="checkbox" ${st.status==='done'?'checked':''} onchange="togglePwaSubtask(${i})" style="width:16px;height:16px;cursor:pointer">
+                <span style="flex:1;font-size:0.82rem;${st.status==='done'?'text-decoration:line-through;color:var(--text-grey)':''}">${st.title}</span>
+                <button onclick="removePwaSubtask(${i})" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:0.9rem;padding:4px">✕</button>
+            </div>
+        `).join('');
+    }
+}
+
+function addPwaSubtask() {
+    const input = document.getElementById('pwa-new-subtask-input');
+    if (!input || !input.value.trim()) return;
+    pwaTaskSubtasks.push({ title: input.value.trim(), status: 'new', due_date: null, assigned_to: 'Gerard' });
+    input.value = '';
+    renderPwaSubtasks();
+}
+
+function removePwaSubtask(i) {
+    pwaTaskSubtasks.splice(i, 1);
+    renderPwaSubtasks();
+}
+
+function togglePwaSubtask(i) {
+    pwaTaskSubtasks[i].status = pwaTaskSubtasks[i].status === 'done' ? 'new' : 'done';
+    renderPwaSubtasks();
 }
 
 function setPwaTaskPriority(val) {
@@ -2002,6 +2055,7 @@ function closePwaTaskModal() {
 async function savePwaTask() {
     const title = document.getElementById('pwa-task-title').value.trim();
     const description = document.getElementById('pwa-task-desc').value.trim();
+    const notes = document.getElementById('pwa-task-notes').value.trim();
     const type = document.getElementById('pwa-task-type').value;
     const responsible = document.getElementById('pwa-task-responsible').value;
     const priority = document.getElementById('pwa-task-priority').value;
@@ -2027,7 +2081,8 @@ async function savePwaTask() {
     try {
         const taskData = {
             title: title,
-            notes: description,
+            description: description,
+            notes: notes,
             priority: priority,
             due_date: dueDate || null,
             status: status,
@@ -2042,8 +2097,15 @@ async function savePwaTask() {
             updated_at: new Date().toISOString()
         };
 
-        const { error } = await sb.from('tasks').insert([taskData]);
+        const { data, error } = await sb.from('tasks').insert([taskData]).select();
         if (error) throw error;
+        
+        const taskId = data && data[0] ? data[0].id : null;
+        if (taskId && pwaTaskSubtasks.length > 0) {
+            const subs = pwaTaskSubtasks.map(st => ({ ...st, task_id: taskId }));
+            const { error: subError } = await sb.from('subtasks').insert(subs);
+            if (subError) throw subError;
+        }
 
         // Registrar actividad
         await sb.from('chat_activities').insert({
