@@ -1,5 +1,5 @@
 // Chat Service Worker - Network First + Push Notifications + Badge
-const CACHE_VERSION = 'chat-v16-back-exit-icons-1718389300';
+const CACHE_VERSION = 'chat-v17-exit-screen-links-1718389500';
 
 self.addEventListener('install', event => {
     self.skipWaiting();

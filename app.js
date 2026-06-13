@@ -11513,6 +11513,20 @@ window.openChatRoom = async function(roomId) {
     if (input) setTimeout(() => input.focus(), 100);
 };
 
+function linkify(text) {
+    if (!text) return '';
+    let escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+    return escaped.replace(urlRegex, function(url) {
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;word-break:break-all">${url}</a>`;
+    });
+}
+
 function renderChatMessages(messages) {
     const container = document.getElementById('chat-messages-container');
     if (!container) return;
@@ -11558,7 +11572,7 @@ function renderChatMessages(messages) {
         return `<div class="dash-msg-wrapper" style="display:flex;flex-direction:column;align-items:${align};gap:2px" data-msg-id="${m.id}" data-msg-content="${safeContent}" data-msg-file="${m.file_url||''}" data-msg-fname="${m.file_name||''}">
             <div style="font-size:0.65rem;color:var(--text-grey);margin-bottom:2px;padding:0 4px">${m.sender_name || (isAdmin ? 'Tú' : _chatCurrentRoom?.lead_name || 'Lead')} · ${date} ${time}</div>
             <div style="max-width:70%;padding:10px 14px;border-radius:14px;background:${bubbleBg};color:${bubbleColor};border:1px solid ${bubbleBorder};font-size:0.86rem;line-height:1.45;word-break:break-word">
-                ${m.content || ''}${fileHtml}
+                ${linkify(m.content || '')}${fileHtml}
             </div>
         </div>`;
     }).join('');
@@ -13119,4 +13133,215 @@ document.addEventListener('DOMContentLoaded', () => {
     window.initializeSidebarCollapse();
     if (typeof loadBizData === 'function') loadBizData();
 });
+
+// ===== CHAT REPORT MODAL AND PDF GENERATOR =====
+window.openChatReportModal = function() {
+    const activeRoomId = _chatCurrentRoom ? _chatCurrentRoom.id : '';
+    
+    // Create the modal element
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'chat-report-modal';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.position = 'fixed';
+    modal.style.inset = '0';
+    modal.style.zIndex = '1000';
+    modal.style.background = 'rgba(0,0,0,0.6)';
+    modal.style.backdropFilter = 'blur(10px)';
+    modal.style.webkitBackdropFilter = 'blur(10px)';
+    
+    // Date ranges (default to last 7 days)
+    const now = new Date();
+    const past = new Date();
+    past.setDate(now.getDate() - 7);
+    
+    const formatDateTimeLocal = (date) => {
+        const pad = (num) => String(num).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
+    
+    const startVal = formatDateTimeLocal(past);
+    const endVal = formatDateTimeLocal(now);
+    
+    // Build options for lead select
+    const optionsHtml = _chatRoomsCache.map(r => 
+        `<option value="${r.id}" ${r.id === activeRoomId ? 'selected' : ''}>${r.lead_name || r.lead_email || 'Lead sin nombre'}</option>`
+    ).join('');
+    
+    modal.innerHTML = `
+        <div class="modal-box" style="max-width:420px;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:18px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,0.3)">
+            <div class="modal-header" style="padding:16px 20px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center">
+                <div style="display:flex;align-items:center;gap:12px">
+                    <div style="font-size:1.5rem">📄</div>
+                    <div>
+                        <h2 style="margin:0;font-size:1.1rem;font-weight:800;color:var(--text-main)">Generar Informe de Chat</h2>
+                        <span style="font-size:0.75rem;color:var(--text-grey);display:block;margin-top:2px">Exporta la conversación a PDF</span>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="document.getElementById('chat-report-modal').remove()" style="background:transparent;border:none;color:var(--text-grey);font-size:1.2rem;cursor:pointer">✕</button>
+            </div>
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:16px;padding:20px">
+                <!-- Lead Selector -->
+                <div>
+                    <label style="font-size:0.72rem;font-weight:700;color:var(--text-grey);display:block;margin-bottom:6px">👤 SELECCIONAR LEAD</label>
+                    <select id="report-lead-select" class="modal-input" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--card-border);background:var(--bg-tertiary);color:var(--text-main);font-family:inherit;outline:none">
+                        ${optionsHtml}
+                    </select>
+                </div>
+                
+                <!-- Date Range -->
+                <div style="display:flex;gap:12px">
+                    <div style="flex:1">
+                        <label style="font-size:0.72rem;font-weight:700;color:var(--text-grey);display:block;margin-bottom:6px">📅 DESDE</label>
+                        <input type="datetime-local" id="report-date-start" class="modal-input" value="${startVal}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--card-border);background:var(--bg-tertiary);color:var(--text-main);font-family:inherit;outline:none">
+                    </div>
+                    <div style="flex:1">
+                        <label style="font-size:0.72rem;font-weight:700;color:var(--text-grey);display:block;margin-bottom:6px">📅 HASTA</label>
+                        <input type="datetime-local" id="report-date-end" class="modal-input" value="${endVal}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--card-border);background:var(--bg-tertiary);color:var(--text-main);font-family:inherit;outline:none">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding:16px 20px;border-top:1px solid var(--border-color);display:flex;justify-content:flex-end;gap:10px;background:rgba(0,0,0,0.1)">
+                <button onclick="document.getElementById('chat-report-modal').remove()" style="padding:10px 18px;border-radius:10px;border:1px solid var(--card-border);background:transparent;color:var(--text-main);font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
+                <button onclick="generatePdfChatReport(event)" style="padding:10px 18px;border-radius:10px;background:var(--accent);color:white;font-weight:700;border:none;cursor:pointer;font-family:inherit">Generar PDF</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+};
+
+window.generatePdfChatReport = async function(event) {
+    const roomId = document.getElementById('report-lead-select').value;
+    const startDateVal = document.getElementById('report-date-start').value;
+    const endDateVal = document.getElementById('report-date-end').value;
+    
+    if (!roomId) {
+        alert('Por favor, selecciona un lead.');
+        return;
+    }
+    
+    const room = _chatRoomsCache.find(r => r.id === roomId);
+    if (!room) return;
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = 'Cargando...';
+    btn.disabled = true;
+    
+    try {
+        const { data: messages, error } = await _supabase
+            .from('chat_messages')
+            .select('*')
+            .eq('room_id', roomId)
+            .gte('created_at', new Date(startDateVal).toISOString())
+            .lte('created_at', new Date(endDateVal).toISOString())
+            .order('created_at', { ascending: true });
+            
+        if (error) throw error;
+        
+        if (!messages || messages.length === 0) {
+            alert('No se encontraron mensajes en el rango de fechas seleccionado.');
+            btn.textContent = originalText;
+            btn.disabled = false;
+            return;
+        }
+        
+        btn.textContent = 'Generando...';
+        
+        // Build report HTML container
+        const container = document.createElement('div');
+        container.style.padding = '45px';
+        container.style.fontFamily = "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+        container.style.color = '#111827';
+        container.style.backgroundColor = '#ffffff';
+        container.style.maxWidth = '800px';
+        container.style.margin = '0 auto';
+        
+        const headerHtml = `
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #6c5ce7;padding-bottom:20px;margin-bottom:30px">
+                <div>
+                    <h1 style="font-size:1.6rem;font-weight:800;color:#6c5ce7;margin:0 0 4px 0">INFORME DE CONVERSACIÓN</h1>
+                    <p style="font-size:0.85rem;color:#6b7280;margin:0">CerebroComercial AI — iadebarrio.com</p>
+                </div>
+                <div style="text-align:right">
+                    <p style="font-size:0.8rem;color:#374151;margin:0"><b>Fecha informe:</b> ${new Date().toLocaleDateString('es-ES')}</p>
+                    <p style="font-size:0.8rem;color:#374151;margin:2px 0 0 0"><b>Mensajes exportados:</b> ${messages.length}</p>
+                </div>
+            </div>
+            
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px 20px;margin-bottom:30px;display:flex;gap:20px">
+                <div style="flex:1">
+                    <h3 style="font-size:0.75rem;text-transform:uppercase;color:#9ca3af;margin:0 0 6px 0;letter-spacing:0.05em">Lead / Cliente</h3>
+                    <p style="font-size:0.95rem;font-weight:700;color:#111827;margin:0">${room.lead_name || 'Sin nombre'}</p>
+                    <p style="font-size:0.85rem;color:#4b5563;margin:4px 0 0 0">${room.lead_email || ''}</p>
+                </div>
+                <div style="flex:1">
+                    <h3 style="font-size:0.75rem;text-transform:uppercase;color:#9ca3af;margin:0 0 6px 0;letter-spacing:0.05em">Periodo del Reporte</h3>
+                    <p style="font-size:0.85rem;color:#111827;margin:0"><b>Desde:</b> ${new Date(startDateVal).toLocaleString('es-ES')}</p>
+                    <p style="font-size:0.85rem;color:#111827;margin:4px 0 0 0"><b>Hasta:</b> ${new Date(endDateVal).toLocaleString('es-ES')}</p>
+                </div>
+            </div>
+        `;
+        
+        let messagesHtml = '<div style="display:flex;flex-direction:column;gap:16px">';
+        messages.forEach(m => {
+            const isAdmin = m.sender_type === 'admin';
+            const senderName = m.sender_name || (isAdmin ? 'Tú (Administrador)' : room.lead_name || 'Lead');
+            const timeStr = new Date(m.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const bubbleBg = isAdmin ? '#f3f4f6' : '#eef2ff';
+            const borderLeft = isAdmin ? '4px solid #9ca3af' : '4px solid #6c5ce7';
+            
+            let attachmentHtml = '';
+            if (m.file_url) {
+                attachmentHtml = `<div style="margin-top:6px;font-size:0.8rem;color:#4f46e5;font-style:italic">📎 Adjunto: <a href="${m.file_url}" target="_blank" style="color:#4f46e5;text-decoration:underline">${m.file_name || 'Archivo'}</a></div>`;
+            }
+            
+            messagesHtml += `
+                <div style="background:${bubbleBg};border-left:${borderLeft};border-radius:0 12px 12px 0;padding:12px 16px;box-sizing:border-box">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                        <span style="font-size:0.8rem;font-weight:700;color:#374151">${senderName}</span>
+                        <span style="font-size:0.72rem;color:#9ca3af">${timeStr}</span>
+                    </div>
+                    <div style="font-size:0.88rem;line-height:1.5;color:#111827;white-space:pre-wrap;word-break:break-word">${m.content || ''}</div>
+                    ${attachmentHtml}
+                </div>
+            `;
+        });
+        messagesHtml += '</div>';
+        
+        container.innerHTML = headerHtml + messagesHtml;
+        
+        if (typeof html2pdf === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+        
+        const opt = {
+            margin:       12,
+            filename:     `Reporte-Chat-${(room.lead_name || 'Lead').replace(/\s+/g, '-')}-${new Date().toISOString().slice(0,10)}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        
+        await html2pdf().set(opt).from(container).save();
+        
+        const modalEl = document.getElementById('chat-report-modal');
+        if (modalEl) modalEl.remove();
+    } catch (e) {
+        console.error('Error generating PDF:', e);
+        alert('Error al generar el informe: ' + e.message);
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+};
 
