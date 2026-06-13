@@ -1,5 +1,5 @@
 // Admin Chat Service Worker - Network First + Push Notifications + Badge
-const CACHE_VERSION = 'admin-chat-v7-task-notes-subtasks-1718389200';
+const CACHE_VERSION = 'admin-chat-v8-layout-subtasks-1718389300';
 
 self.addEventListener('install', event => {
     self.skipWaiting();

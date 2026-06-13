@@ -8,7 +8,8 @@
     <meta name="theme-color" content="#0a0a0f">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/4712/4712035.png">
+    <link rel="icon" href="/chat-icon.png">
+    <link rel="apple-touch-icon" href="/chat-icon.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -604,7 +605,10 @@
     <div class="rooms-header">
         <div class="avatar" style="width:38px;height:38px;font-size:0.9rem">💬</div>
         <div class="rooms-title">Mis Chats</div>
-        <button class="header-install-btn" id="rooms-install-btn" onclick="showInstallModal()" title="Instalar app"><span class="install-icon">📲</span> Instalar</button>
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+            <button class="header-install-btn" id="rooms-install-btn" onclick="showInstallModal()" title="Instalar app"><span class="install-icon">📲</span> Instalar</button>
+            <button class="chat-back-btn" onclick="logoutLead()" title="Cerrar sesión" style="display:flex;align-items:center;justify-content:center">🚪</button>
+        </div>
     </div>
     <div class="rooms-list" id="rooms-list"></div>
 </div>
@@ -957,7 +961,19 @@ function openChatForRoom(room) {
         avatar.textContent = isGroup ? '👥' : 'G';
         avatar.style.background = isGroup ? 'linear-gradient(135deg,#6c5ce7,#a855f7)' : 'var(--accent)';
     }
-    if (backBtn) backBtn.style.display = hasMultipleRooms ? 'flex' : 'none';
+    if (backBtn) {
+        if (hasMultipleRooms) {
+            backBtn.style.display = 'flex';
+            backBtn.innerHTML = '←';
+            backBtn.title = 'Volver a mis chats';
+            backBtn.onclick = goBackToRooms;
+        } else {
+            backBtn.style.display = 'flex';
+            backBtn.innerHTML = '🚪';
+            backBtn.title = 'Cerrar sesión / Salir';
+            backBtn.onclick = logoutLead;
+        }
+    }
 
     // Clear unread for this room
     room.unread_count = 0;
@@ -978,6 +994,16 @@ function goBackToRooms() {
     if (subscription) { subscription.unsubscribe(); subscription = null; }
     currentRoom = null;
     reloadAndShowRooms();
+}
+
+function logoutLead() {
+    if (confirm('¿Deseas cerrar la sesión y salir del chat?')) {
+        try {
+            localStorage.removeItem('chat_token');
+        } catch(e) {}
+        setCookie('chat_token', '', -1);
+        window.location.href = 'index.html';
+    }
 }
 
 async function reloadAndShowRooms() {
