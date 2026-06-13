@@ -1,5 +1,5 @@
 // Chat Service Worker - Network First + Push Notifications + Badge
-const CACHE_VERSION = 'chat-v18-exit-screen-cleanup-1718389600';
+const CACHE_VERSION = 'chat-v19-no-token-screen-1718390800';
 
 self.addEventListener('install', event => {
     self.skipWaiting();

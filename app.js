@@ -12043,9 +12043,9 @@ window.handleChatFileUpload = async function(inputEl) {
 
     try {
         const path = `chat/${_chatCurrentRoom.id}/${Date.now()}_${file.name}`;
-        const { error: upErr } = await _supabase.storage.from('archivos').upload(path, file);
+        const { error: upErr } = await _supabase.storage.from('chat-files').upload(path, file);
         if (upErr) throw upErr;
-        const { data: urlData } = _supabase.storage.from('archivos').getPublicUrl(path);
+        const { data: urlData } = _supabase.storage.from('chat-files').getPublicUrl(path);
 
         await _supabase.from('chat_messages').insert({
             room_id: _chatCurrentRoom.id,
@@ -12152,9 +12152,9 @@ window.dashSendAudioRecording = async function() {
             const fileName = `audio_${Date.now()}.${ext}`;
             try {
                 const path = `chat/${_chatCurrentRoom.id}/${fileName}`;
-                const { error: upErr } = await _supabase.storage.from('archivos').upload(path, blob, { contentType: actualMime });
+                const { error: upErr } = await _supabase.storage.from('chat-files').upload(path, blob, { contentType: actualMime });
                 if (upErr) throw upErr;
-                const { data: urlData } = _supabase.storage.from('archivos').getPublicUrl(path);
+                const { data: urlData } = _supabase.storage.from('chat-files').getPublicUrl(path);
                 await _supabase.from('chat_messages').insert({
                     room_id: _chatCurrentRoom.id,
                     sender_type: 'admin',
@@ -13513,10 +13513,10 @@ window.generatePdfChatReport = async function(event) {
         
         btn.textContent = 'Subiendo a Storage...';
         
-        // Upload Blob automatically to Supabase Storage (archivos bucket)
+        // Upload Blob automatically to Supabase Storage (chat-files bucket)
         const storagePath = `informes/${reportFileName}`;
         const { error: uploadErr } = await _supabase.storage
-            .from('archivos')
+            .from('chat-files')
             .upload(storagePath, pdfBlob, {
                 contentType: 'application/pdf',
                 cacheControl: '3600',
@@ -13524,7 +13524,7 @@ window.generatePdfChatReport = async function(event) {
             });
         if (uploadErr) throw uploadErr;
         
-        const { data: urlData } = _supabase.storage.from('archivos').getPublicUrl(storagePath);
+        const { data: urlData } = _supabase.storage.from('chat-files').getPublicUrl(storagePath);
         const fileUrl = urlData?.publicUrl;
         
         // Refresh the storage view if it is open

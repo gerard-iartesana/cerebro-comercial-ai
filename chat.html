@@ -600,6 +600,15 @@
     <p>Este enlace de chat no existe o ha expirado. Contacta con nosotros para obtener un nuevo acceso.</p>
 </div>
 
+<!-- No Token Screen (Session Not Started) -->
+<div class="error-screen" id="no-token-screen" style="display:none;background:var(--bg-primary);backdrop-filter:blur(10px)">
+    <div style="width:70px;height:70px;border-radius:50%;background:rgba(108,92,231,0.1);border:1px solid rgba(108,92,231,0.25);display:flex;align-items:center;justify-content:center;margin-bottom:15px;box-shadow:0 8px 32px rgba(108,92,231,0.1)">
+        <span style="font-size:2rem">💬</span>
+    </div>
+    <h2 style="margin:0;font-size:1.4rem;font-weight:800;color:var(--text-main);letter-spacing:-0.02em">Sesión no iniciada</h2>
+    <p style="margin:10px 0 0 0;font-size:0.88rem;color:var(--text-grey);max-width:280px;text-align:center;line-height:1.6">Para acceder a tus chats, por favor abre el enlace que te enviamos por WhatsApp o email.</p>
+</div>
+
 <!-- Exit Screen -->
 <div class="error-screen" id="exit-screen" style="display:none;background:var(--bg-primary);backdrop-filter:blur(10px)">
     <div style="width:70px;height:70px;border-radius:50%;background:rgba(52,199,89,0.1);border:1px solid rgba(52,199,89,0.25);display:flex;align-items:center;justify-content:center;margin-bottom:10px;box-shadow:0 8px 32px rgba(52,199,89,0.1)">
@@ -797,6 +806,14 @@ function getCookie(name) {
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
+    // Explicitly hide any error/exit/no-token screens first (handling caching/bfcache restore states)
+    const exitEl = document.getElementById('exit-screen');
+    if (exitEl) exitEl.style.display = 'none';
+    const errorEl = document.getElementById('error-screen');
+    if (errorEl) errorEl.style.display = 'none';
+    const noTokenEl = document.getElementById('no-token-screen');
+    if (noTokenEl) noTokenEl.style.display = 'none';
+
     const params = new URLSearchParams(window.location.search);
     let token = params.get('token') || params.get('t');
     
@@ -817,7 +834,7 @@ async function init() {
         token = getCookie('chat_token') || localToken;
     }
 
-    if (!token) return showError();
+    if (!token) return showNoTokenScreen();
 
     try {
         // Step 1: Find the personal room by link_token
@@ -921,6 +938,12 @@ async function init() {
 function showError() {
     document.getElementById('loading-screen').style.display = 'none';
     document.getElementById('error-screen').style.display = 'flex';
+}
+
+function showNoTokenScreen() {
+    document.getElementById('loading-screen').style.display = 'none';
+    const noTokenEl = document.getElementById('no-token-screen');
+    if (noTokenEl) noTokenEl.style.display = 'flex';
 }
 
 function showRoomsScreen() {
