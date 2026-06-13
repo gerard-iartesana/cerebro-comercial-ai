@@ -199,13 +199,13 @@
     .action-btn {
         display: flex;
         align-items: center;
-        gap: 5px;
-        padding: 6px 12px;
+        gap: 6px;
+        padding: 8px 14px;
         border-radius: 20px;
         background: var(--bg-tertiary);
         border: 1px solid var(--card-border);
         color: var(--text-main);
-        font-size: 0.78rem;
+        font-size: 0.82rem;
         font-family: inherit;
         cursor: pointer;
         white-space: nowrap;
@@ -213,8 +213,44 @@
         flex-shrink: 0;
     }
     .action-btn:active { background: var(--accent); color: #fff; transform: scale(0.95); }
-    .action-btn span:first-child { font-size: 0.9rem; }
-    .action-label { font-weight: 600; font-size: 0.72rem; }
+    .action-btn span:first-child { font-size: 1.1rem; }
+    .action-label { font-weight: 600; font-size: 0.76rem; }
+    .emoji-picker {
+        display: none;
+        position: absolute;
+        bottom: 48px; left: 0;
+        background: var(--bg-secondary);
+        border: 1px solid var(--card-border);
+        border-radius: 16px;
+        padding: 10px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        z-index: 100;
+        width: 280px;
+        max-height: 220px;
+        overflow-y: auto;
+    }
+    .emoji-grid {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 2px;
+        font-size: 1.2rem;
+        text-align: center;
+        cursor: pointer;
+    }
+    .emoji-grid span:hover { transform: scale(1.25); }
+    .btn-emoji {
+        width: 40px; height: 40px;
+        border-radius: 50%;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--card-border);
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.1rem;
+        transition: all 0.2s;
+        flex-shrink: 0;
+        color: var(--text-grey);
+    }
+    .btn-emoji:active { background: var(--accent); }
     .chat-send-btn, .chat-attach-btn {
         width:42px; height:42px; border-radius:50%;
         display:flex; align-items:center; justify-content:center;
@@ -455,6 +491,12 @@
             <button class="rec-send" onclick="sendAudioRecording()">➤ Enviar</button>
         </div>
         <div class="chat-input-row">
+            <div style="position:relative;flex-shrink:0">
+                <button class="btn-emoji" onclick="toggleEmojiPicker(event)" title="Emojis">😊</button>
+                <div class="emoji-picker" id="emoji-picker">
+                    <div class="emoji-grid" id="emoji-grid"></div>
+                </div>
+            </div>
             <input type="text" id="msg-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')sendMsg()">
             <button class="chat-mic-btn" id="mic-btn" onclick="toggleDictation()" title="Dictar mensaje">🎙️</button>
             <button class="chat-send-btn" onclick="sendMsg()">➤</button>
@@ -1969,6 +2011,60 @@ function stopDictation() {
         recognition = null;
     }
 }
+
+// ===== EMOJI PICKER =====
+const EMOJI_CATEGORIES = {
+    '😊': ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','😋','😛','😜','🤪','😝','🤗','🤭','🤫','🤔','😐','😏','😒','🙄','😬','😌','😔','😪','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','😎','🤓','🧐','😕','😟','🙁','😮','😲','😳','🥺','😢','😭','😱','😤','😡','🤬','😈','💀','💩','🤡','👻','👽','🤖'],
+    '👋': ['👋','🤚','✋','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤝','🙏','💪','🤳','👀','👅','👄'],
+    '🐶': ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🐤','🦆','🦅','🦉','🐺','🐴','🦄','🐝','🦋','🐌','🐞','🐢','🐍','🐙','🐬','🐳','🌹','🌷','🌸','💐','🌈','☀️','🔥'],
+    '🍕': ['🍏','🍎','🍊','🍋','🍌','🍉','🍇','🍓','🍒','🍑','🍍','🍅','🥑','🍔','🍟','🍕','🌭','🌮','🍝','🍣','🍦','🎂','🍰','🍭','🍬','🍫','☕','🍵','🍺','🍻','🥂','🍷'],
+    '❤️': ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','💕','💞','💗','💖','💘','💝','💯','🔥','✨','⚡','🎉','🎊','✅','❌','⚠️','❓','❗']
+};
+let currentEmojiTab = '😊';
+
+function toggleEmojiPicker(e) {
+    if (e) e.stopPropagation();
+    const picker = document.getElementById('emoji-picker');
+    const isVisible = picker.style.display !== 'none' && picker.style.display !== '';
+    picker.style.display = isVisible ? 'none' : 'block';
+    if (!isVisible) renderEmojiTab(currentEmojiTab);
+}
+
+function renderEmojiTab(cat) {
+    currentEmojiTab = cat;
+    const picker = document.getElementById('emoji-picker');
+    const grid = document.getElementById('emoji-grid');
+    let tabsEl = picker.querySelector('.emoji-tabs');
+    if (!tabsEl) {
+        tabsEl = document.createElement('div');
+        tabsEl.className = 'emoji-tabs';
+        tabsEl.style.cssText = 'display:flex;gap:2px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--card-border);overflow-x:auto';
+        picker.insertBefore(tabsEl, grid);
+    }
+    tabsEl.innerHTML = Object.keys(EMOJI_CATEGORIES).map(k =>
+        `<span onclick="event.stopPropagation();renderEmojiTab('${k}')" style="cursor:pointer;padding:4px 6px;border-radius:6px;font-size:1.1rem;flex-shrink:0;${k===cat?'background:var(--accent-glow,rgba(108,92,231,0.2))':''}"> ${k}</span>`
+    ).join('');
+    grid.innerHTML = (EMOJI_CATEGORIES[cat] || []).map(e =>
+        `<span onclick="event.stopPropagation();insertEmoji('${e}')">${e}</span>`
+    ).join('');
+}
+
+function insertEmoji(emoji) {
+    const input = document.getElementById('msg-input');
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    input.value = input.value.substring(0, start) + emoji + input.value.substring(end);
+    input.focus();
+    input.selectionStart = input.selectionEnd = start + emoji.length;
+    document.getElementById('emoji-picker').style.display = 'none';
+}
+
+document.addEventListener('click', e => {
+    const picker = document.getElementById('emoji-picker');
+    if (picker && !picker.contains(e.target) && !e.target.classList.contains('btn-emoji')) {
+        picker.style.display = 'none';
+    }
+});
 
 // ===== INIT =====
 if (!checkSession()) {
