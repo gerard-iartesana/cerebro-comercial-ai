@@ -135,33 +135,65 @@
         .empty-state span { font-size: 2.5rem; }
         .empty-state p { font-size: 0.85rem; color: var(--text-grey); }
 
-        /* --- Input bar --- */
-        .chat-input-bar {
-            display: flex; align-items: center; gap: 8px;
-            padding: 12px 14px;
-            background: var(--bg-secondary);
+        /* --- Input area (two-line layout) --- */
+        .chat-input-area {
             border-top: 1px solid var(--card-border);
+            background: var(--bg-secondary, rgba(18,18,24,0.95));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             flex-shrink: 0;
             position: relative;
+            padding-bottom: env(safe-area-inset-bottom, 0);
         }
-        .chat-input-bar input[type="text"] {
-            flex: 1; background: var(--bg-tertiary);
-            border: 1px solid var(--card-border);
+        .chat-input-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px 6px;
+        }
+        .chat-input-row input {
+            flex: 1;
+            min-width: 0;
+            padding: 10px 16px;
             border-radius: 24px;
-            padding: 11px 16px;
+            background: var(--bg-tertiary, #1e1e2a);
+            border: 1px solid var(--card-border);
             color: var(--text-main);
             font-size: 0.88rem;
             font-family: inherit;
             outline: none;
             transition: border-color 0.2s;
-            min-width: 0;
         }
-        .chat-input-bar input[type="text"]:focus {
-            border-color: var(--accent);
+        .chat-input-row input:focus { border-color: var(--accent, #6c5ce7); }
+        .chat-input-row input::placeholder { color: var(--text-grey); }
+        .chat-actions-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 12px 10px;
+            overflow-x: auto;
         }
-        .chat-input-bar input[type="text"]::placeholder { color: var(--text-grey); }
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: var(--bg-tertiary, #1e1e2a);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            font-size: 0.78rem;
+            font-family: inherit;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+        .action-btn:active { background: var(--accent, #6c5ce7); color: #fff; transform: scale(0.95); }
+        .action-btn span:first-child { font-size: 0.9rem; }
+        .action-label { font-weight: 600; font-size: 0.72rem; }
 
-        .chat-input-bar .btn-icon {
+        .btn-icon {
             width: 40px; height: 40px;
             border-radius: 50%;
             border: none; cursor: pointer;
@@ -170,11 +202,11 @@
             transition: all 0.2s;
             flex-shrink: 0;
         }
-        .btn-attach, .btn-emoji {
+        .btn-emoji {
             background: var(--bg-tertiary);
             color: var(--text-grey);
         }
-        .btn-attach:hover, .btn-emoji:hover { background: var(--bg-primary); color: var(--text-main); }
+        .btn-emoji:hover { background: var(--bg-primary); color: var(--text-main); }
 
         .btn-send {
             background: var(--accent);
@@ -388,9 +420,13 @@
         }
 
         /* --- Audio recording --- */
-        .btn-audio-rec { color: #a855f7; transition: all 0.2s; }
-        .btn-audio-rec.recording { color: #ff4757; animation: pulse-rec 1s ease-in-out infinite; }
-        @keyframes pulse-rec { 0%,100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+        .action-btn.recording {
+            background: linear-gradient(135deg, #ff4757, #ff6b81) !important;
+            border-color: #ff4757 !important;
+            color: #fff !important;
+            animation: pulse-rec 1s ease-in-out infinite;
+        }
+        @keyframes pulse-rec { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 
         .audio-recording-bar {
             display: none;
@@ -569,7 +605,7 @@
     <!-- Messages -->
     <div class="chat-messages" id="chat-messages"></div>
 
-    <!-- Input -->
+    <!-- Audio Recording Bar -->
     <div class="audio-recording-bar" id="audio-rec-bar">
         <div class="rec-dot"></div>
         <span class="rec-timer" id="rec-timer">0:00</span>
@@ -577,24 +613,29 @@
         <button class="rec-cancel" onclick="cancelAudioRecording()">✕ Cancelar</button>
         <button class="rec-send" onclick="sendAudioRecording()">➤ Enviar</button>
     </div>
-    <div class="chat-input-bar">
-        <button class="btn-icon btn-attach" onclick="document.getElementById('file-input').click()" title="Adjuntar archivo">📎</button>
-        <input type="file" id="file-input" style="display:none" onchange="handleFileUpload(this)">
-        <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleFileUpload(this)">
-        <input type="file" id="video-input" accept="video/*" capture="environment" style="display:none" onchange="handleFileUpload(this)">
-        <button class="btn-icon" onclick="document.getElementById('photo-input').click()" title="Foto" style="font-size:1rem">📷</button>
-        <button class="btn-icon" onclick="document.getElementById('video-input').click()" title="Vídeo" style="font-size:1rem">🎥</button>
-        <div style="position:relative;flex-shrink:0">
-            <button class="btn-icon btn-emoji" onclick="toggleEmojiPicker()" title="Emojis">😊</button>
-            <div class="emoji-picker" id="emoji-picker">
-                <div class="emoji-grid" id="emoji-grid"></div>
+    <!-- Input Area -->
+    <div class="chat-input-area">
+        <div class="chat-input-row">
+            <div style="position:relative;flex-shrink:0">
+                <button class="btn-icon btn-emoji" onclick="toggleEmojiPicker()" title="Emojis">😊</button>
+                <div class="emoji-picker" id="emoji-picker">
+                    <div class="emoji-grid" id="emoji-grid"></div>
+                </div>
             </div>
+            <input type="text" id="msg-input" placeholder="Escribe un mensaje..." autocomplete="off"
+                onkeydown="if(event.key==='Enter')sendMessage()">
+            <button class="btn-icon btn-mic" id="mic-btn" onclick="toggleDictation()" title="Dictar mensaje">🎙️</button>
+            <button class="btn-icon btn-send" onclick="sendMessage()" title="Enviar">➤</button>
         </div>
-        <input type="text" id="msg-input" placeholder="Escribe un mensaje..." autocomplete="off"
-            onkeydown="if(event.key==='Enter')sendMessage()">
-        <button class="btn-icon btn-mic" id="mic-btn" onclick="toggleDictation()" title="Dictar mensaje">🎙️</button>
-        <button class="btn-icon btn-audio-rec" id="audio-rec-btn" onclick="toggleAudioRecording()" title="Grabar audio">🎤</button>
-        <button class="btn-icon btn-send" onclick="sendMessage()" title="Enviar">➤</button>
+        <div class="chat-actions-row">
+            <input type="file" id="file-input" style="display:none" onchange="handleFileUpload(this)">
+            <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleFileUpload(this)">
+            <input type="file" id="video-input" accept="video/*" capture="environment" style="display:none" onchange="handleFileUpload(this)">
+            <button class="action-btn" onclick="document.getElementById('file-input').click()" title="Adjuntar archivo"><span>📎</span><span class="action-label">Archivo</span></button>
+            <button class="action-btn" onclick="document.getElementById('photo-input').click()" title="Foto"><span>📷</span><span class="action-label">Foto</span></button>
+            <button class="action-btn" onclick="document.getElementById('video-input').click()" title="Vídeo"><span>🎥</span><span class="action-label">Vídeo</span></button>
+            <button class="action-btn" id="audio-rec-btn" onclick="toggleAudioRecording()" title="Grabar audio"><span>🎤</span><span class="action-label">Audio</span></button>
+        </div>
     </div>
     <!-- Lead Reminder Modal -->
     <div id="lead-reminder-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:var(--bg-primary);flex-direction:column">

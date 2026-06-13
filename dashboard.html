@@ -3772,26 +3772,28 @@
                         </div>
 
                         <!-- Input Bar (hidden until room selected) -->
-                        <div id="chat-input-bar" style="display:none;padding:12px 16px;border-top:1px solid var(--border-color);background:var(--bg-secondary);align-items:center;gap:8px">
-                            <label style="cursor:pointer;padding:8px;border-radius:8px;border:1px solid var(--card-border);background:transparent;display:flex;align-items:center;justify-content:center;font-size:1.1rem" title="Adjuntar archivo">
-                                📎
-                                <input type="file" accept="image/*,.pdf,.xlsx,.xls,.doc,.docx,.csv" onchange="handleChatFileUpload(this)" style="display:none">
-                            </label>
-                            <input type="file" id="dash-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleChatFileUpload(this)">
-                            <input type="file" id="dash-video-input" accept="video/*" capture="environment" style="display:none" onchange="handleChatFileUpload(this)">
-                            <button onclick="document.getElementById('dash-photo-input').click()" style="padding:8px;border-radius:8px;border:1px solid var(--card-border);background:transparent;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center" title="Foto">📷</button>
-                            <button onclick="document.getElementById('dash-video-input').click()" style="padding:8px;border-radius:8px;border:1px solid var(--card-border);background:transparent;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center" title="Vídeo">🎥</button>
-                            <div style="position:relative;flex-shrink:0">
-                                <button onclick="toggleEmojiPicker()" style="padding:8px;border-radius:8px;border:1px solid var(--card-border);background:transparent;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center" title="Emojis">😊</button>
-                                <div id="emoji-picker" style="display:none;position:absolute;bottom:48px;left:0;background:var(--bg-card);border:1px solid var(--card-border);border-radius:14px;padding:10px;box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:100;width:280px;max-height:200px;overflow-y:auto">
-                                    <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:2px;font-size:1.2rem;text-align:center" id="emoji-grid"></div>
+                        <div id="chat-input-bar" style="display:none;border-top:1px solid var(--border-color);background:var(--bg-secondary)">
+                            <div style="display:flex;align-items:center;gap:8px;padding:10px 16px 6px">
+                                <div style="position:relative;flex-shrink:0">
+                                    <button onclick="toggleEmojiPicker()" style="padding:8px;border-radius:8px;border:1px solid var(--card-border);background:transparent;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center" title="Emojis">😊</button>
+                                    <div id="emoji-picker" style="display:none;position:absolute;bottom:48px;left:0;background:var(--bg-card);border:1px solid var(--card-border);border-radius:14px;padding:10px;box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:100;width:280px;max-height:200px;overflow-y:auto">
+                                        <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:2px;font-size:1.2rem;text-align:center" id="emoji-grid"></div>
+                                    </div>
                                 </div>
+                                <input type="text" id="chat-msg-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')sendDashboardChatMsg()"
+                                    style="flex:1;min-width:0;padding:10px 16px;border-radius:12px;border:1px solid var(--card-border);background:var(--bg-primary);color:var(--text-main);outline:none;font-size:0.88rem;font-family:inherit">
+                                <button id="dashboard-mic-btn" onclick="toggleDashboardDictation()" title="Dictar" style="padding:8px;border-radius:8px;border:1px solid var(--card-border);background:transparent;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:all 0.15s">🎙️</button>
+                                <button class="btn-primary" onclick="sendDashboardChatMsg()" style="padding:10px 20px;border-radius:12px;font-size:0.82rem;font-weight:700">Enviar</button>
                             </div>
-                            <input type="text" id="chat-msg-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')sendDashboardChatMsg()"
-                                style="flex:1;padding:10px 16px;border-radius:12px;border:1px solid var(--card-border);background:var(--bg-primary);color:var(--text-main);outline:none;font-size:0.88rem;font-family:inherit">
-                            <button id="dashboard-mic-btn" onclick="toggleDashboardDictation()" title="Dictar mensaje" style="padding:10px;border-radius:12px;border:1px solid var(--card-border);background:transparent;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:all 0.15s">🎙️</button>
-                            <button id="dash-audio-rec-btn" onclick="dashToggleAudioRecording()" title="Grabar audio" style="padding:10px;border-radius:12px;border:1px solid var(--card-border);background:transparent;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:all 0.15s;color:#a855f7">🎤</button>
-                            <button class="btn-primary" onclick="sendDashboardChatMsg()" style="padding:10px 20px;border-radius:12px;font-size:0.82rem;font-weight:700">Enviar</button>
+                            <div style="display:flex;align-items:center;gap:6px;padding:4px 16px 10px;overflow-x:auto">
+                                <input type="file" accept="image/*,.pdf,.xlsx,.xls,.doc,.docx,.csv" id="dash-file-input" onchange="handleChatFileUpload(this)" style="display:none">
+                                <input type="file" id="dash-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleChatFileUpload(this)">
+                                <input type="file" id="dash-video-input" accept="video/*" capture="environment" style="display:none" onchange="handleChatFileUpload(this)">
+                                <button onclick="document.getElementById('dash-file-input').click()" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;background:var(--bg-primary);border:1px solid var(--card-border);color:var(--text-main);font-size:0.78rem;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0" title="Adjuntar"><span style="font-size:0.9rem">📎</span><span style="font-weight:600;font-size:0.72rem">Archivo</span></button>
+                                <button onclick="document.getElementById('dash-photo-input').click()" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;background:var(--bg-primary);border:1px solid var(--card-border);color:var(--text-main);font-size:0.78rem;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0" title="Foto"><span style="font-size:0.9rem">📷</span><span style="font-weight:600;font-size:0.72rem">Foto</span></button>
+                                <button onclick="document.getElementById('dash-video-input').click()" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;background:var(--bg-primary);border:1px solid var(--card-border);color:var(--text-main);font-size:0.78rem;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0" title="Vídeo"><span style="font-size:0.9rem">🎥</span><span style="font-weight:600;font-size:0.72rem">Vídeo</span></button>
+                                <button id="dash-audio-rec-btn" onclick="dashToggleAudioRecording()" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;background:var(--bg-primary);border:1px solid var(--card-border);color:#a855f7;font-size:0.78rem;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0" title="Audio"><span style="font-size:0.9rem">🎤</span><span style="font-weight:600;font-size:0.72rem">Audio</span></button>
+                            </div>
                         </div>
                     </div>
                 </div>
