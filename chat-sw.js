@@ -1,5 +1,5 @@
 // Chat Service Worker - Network First + Push Notifications + Badge
-const CACHE_VERSION = 'chat-v24-user-gesture-1718395200';
+const CACHE_VERSION = 'chat-v25-local-icon-diagnostic-1718395800';
 
 self.addEventListener('install', event => {
     self.skipWaiting();
@@ -52,8 +52,8 @@ self.addEventListener('push', event => {
     // Clean, universally supported options
     const options = {
         body: data.body || 'Tienes un mensaje nuevo',
-        icon: data.icon || 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png',
-        badge: data.badge || 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png',
+        icon: '/chat-icon.png',
+        badge: '/chat-icon.png',
         vibrate: [200, 100, 200],
         tag: 'chat-message-' + Date.now(), // unique tag so each message shows separately
         data: data.data || {},
