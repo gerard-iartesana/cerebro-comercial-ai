@@ -709,6 +709,10 @@
                         <span class="plus-menu-icon">📅</span>
                         <span class="plus-menu-text">Agendar Cita</span>
                     </button>
+                    <button class="plus-menu-item" onclick="openPwaReportModal(); closePwaPlusMenu();" style="color:#ff9500">
+                        <span class="plus-menu-icon">📄</span>
+                        <span class="plus-menu-text">Generar Informe</span>
+                    </button>
                 </div>
                 <div class="emoji-picker" id="emoji-picker">
                     <div class="emoji-grid" id="emoji-grid"></div>
@@ -2223,6 +2227,356 @@ async function savePwaMeeting() {
     } finally {
         saveBtn.disabled = false;
         saveBtn.textContent = 'Agendar Cita';
+    }
+}
+
+// ===== CHAT REPORT MODAL AND PDF GENERATOR =====
+function openPwaReportModal() {
+    if (!currentRoom) return;
+    const activeRoomId = currentRoom.id;
+    
+    // Create the modal element if not exists
+    let modal = document.getElementById('chat-report-modal');
+    if (modal) modal.remove();
+    
+    modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'chat-report-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.65);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;padding:24px';
+    
+    // Date ranges (default to last 7 days)
+    const now = new Date();
+    const past = new Date();
+    past.setDate(now.getDate() - 7);
+    
+    const formatDateTimeLocal = (date) => {
+        const pad = (num) => String(num).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
+    
+    const startVal = formatDateTimeLocal(past);
+    const endVal = formatDateTimeLocal(now);
+    
+    // Build options for lead select
+    const optionsHtml = rooms.map(r => 
+        `<option value="${r.id}" ${r.id === activeRoomId ? 'selected' : ''}>${r.lead_name || r.lead_email || 'Lead sin nombre'}</option>`
+    ).join('');
+    
+    modal.innerHTML = `
+        <div class="modal-box" style="max-width:420px;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:18px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,0.3)">
+            <div class="modal-header" style="padding:16px 20px;border-bottom:1px solid var(--card-border);display:flex;justify-content:space-between;align-items:center">
+                <div style="display:flex;align-items:center;gap:12px">
+                    <div style="font-size:1.5rem">📄</div>
+                    <div>
+                        <h2 style="margin:0;font-size:1.1rem;font-weight:800;color:var(--text-main)">Generar Informe de Chat</h2>
+                        <span style="font-size:0.75rem;color:var(--text-grey);display:block;margin-top:2px">Exporta la conversación a PDF</span>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="document.getElementById('chat-report-modal').remove()" style="background:transparent;border:none;color:var(--text-grey);font-size:1.2rem;cursor:pointer">✕</button>
+            </div>
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:16px;padding:20px;max-height:60vh;overflow-y:auto">
+                <!-- Lead Selector -->
+                <div>
+                    <label style="font-size:0.72rem;font-weight:700;color:var(--text-grey);display:block;margin-bottom:6px">👤 SELECCIONAR LEAD</label>
+                    <select id="report-lead-select" class="modal-input" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--card-border);background:var(--bg-tertiary);color:var(--text-main);font-family:inherit;outline:none">
+                        ${optionsHtml}
+                    </select>
+                </div>
+                
+                <!-- Date Range -->
+                <div style="display:flex;gap:12px">
+                    <div style="flex:1">
+                        <label style="font-size:0.72rem;font-weight:700;color:var(--text-grey);display:block;margin-bottom:6px">📅 DESDE</label>
+                        <input type="datetime-local" id="report-date-start" class="modal-input" value="${startVal}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--card-border);background:var(--bg-tertiary);color:var(--text-main);font-family:inherit;outline:none">
+                    </div>
+                    <div style="flex:1">
+                        <label style="font-size:0.72rem;font-weight:700;color:var(--text-grey);display:block;margin-bottom:6px">📅 HASTA</label>
+                        <input type="datetime-local" id="report-date-end" class="modal-input" value="${endVal}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--card-border);background:var(--bg-tertiary);color:var(--text-main);font-family:inherit;outline:none">
+                    </div>
+                </div>
+
+                <!-- Delivery Options -->
+                <div>
+                    <label style="font-size:0.72rem;font-weight:700;color:var(--text-grey);display:block;margin-bottom:8px">📦 OPCIONES DE ENVÍO / DESCARGA</label>
+                    <div style="display:flex;flex-direction:column;gap:10px">
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.85rem;color:var(--text-main);user-select:none">
+                            <input type="checkbox" id="report-opt-download" checked style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer">
+                            <span>📥 Descargar PDF localmente</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.85rem;color:var(--text-main);user-select:none">
+                            <input type="checkbox" id="report-opt-chat" style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer">
+                            <span>💬 Enviar al lead por este chat</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.85rem;color:var(--text-main);user-select:none">
+                            <input type="checkbox" id="report-opt-email" style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer">
+                            <span>📧 Enviar al lead por email</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding:16px 20px;border-top:1px solid var(--card-border);display:flex;justify-content:flex-end;gap:10px;background:rgba(0,0,0,0.1)">
+                <button onclick="document.getElementById('chat-report-modal').remove()" style="padding:10px 18px;border-radius:10px;border:1px solid var(--card-border);background:transparent;color:var(--text-main);font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
+                <button onclick="generatePwaChatReport(event)" style="padding:10px 18px;border-radius:10px;background:var(--accent);color:white;font-weight:700;border:none;cursor:pointer;font-family:inherit">Generar PDF</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+async function generatePwaChatReport(event) {
+    const roomId = document.getElementById('report-lead-select').value;
+    const startDateVal = document.getElementById('report-date-start').value;
+    const endDateVal = document.getElementById('report-date-end').value;
+    
+    if (!roomId) {
+        alert('Por favor, selecciona un lead.');
+        return;
+    }
+    
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) return;
+    
+    const optDownload = document.getElementById('report-opt-download').checked;
+    const optChat = document.getElementById('report-opt-chat').checked;
+    const optEmail = document.getElementById('report-opt-email').checked;
+    
+    if (optEmail && !room.lead_email) {
+        alert('El lead seleccionado no tiene un correo electrónico configurado para poder enviárselo por email.');
+        return;
+    }
+    
+    if (!optDownload && !optChat && !optEmail) {
+        alert('Por favor, selecciona al menos una opción de envío o descarga.');
+        return;
+    }
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = 'Cargando...';
+    btn.disabled = true;
+    
+    try {
+        const { data: messages, error } = await sb
+            .from('chat_messages')
+            .select('*')
+            .eq('room_id', roomId)
+            .gte('created_at', new Date(startDateVal).toISOString())
+            .lte('created_at', new Date(endDateVal).toISOString())
+            .order('created_at', { ascending: true });
+            
+        if (error) throw error;
+        
+        if (!messages || messages.length === 0) {
+            alert('No se encontraron mensajes en el rango de fechas seleccionado.');
+            btn.textContent = originalText;
+            btn.disabled = false;
+            return;
+        }
+        
+        btn.textContent = 'Generando...';
+        
+        // Build report HTML container
+        const container = document.createElement('div');
+        container.style.padding = '45px';
+        container.style.fontFamily = "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+        container.style.color = '#111827';
+        container.style.backgroundColor = '#ffffff';
+        container.style.maxWidth = '800px';
+        container.style.margin = '0 auto';
+        
+        const headerHtml = `
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #6c5ce7;padding-bottom:20px;margin-bottom:30px">
+                <div>
+                    <h1 style="font-size:1.6rem;font-weight:800;color:#6c5ce7;margin:0 0 4px 0">INFORME DE CONVERSACIÓN</h1>
+                    <p style="font-size:0.85rem;color:#6b7280;margin:0">CerebroComercial AI — iadebarrio.com</p>
+                </div>
+                <div style="text-align:right">
+                    <p style="font-size:0.8rem;color:#374151;margin:0"><b>Fecha informe:</b> ${new Date().toLocaleDateString('es-ES')}</p>
+                    <p style="font-size:0.8rem;color:#374151;margin:2px 0 0 0"><b>Mensajes exportados:</b> ${messages.length}</p>
+                </div>
+            </div>
+            
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px 20px;margin-bottom:30px;display:flex;gap:20px">
+                <div style="flex:1">
+                    <h3 style="font-size:0.75rem;text-transform:uppercase;color:#9ca3af;margin:0 0 6px 0;letter-spacing:0.05em">Lead / Cliente</h3>
+                    <p style="font-size:0.95rem;font-weight:700;color:#111827;margin:0">${room.lead_name || 'Sin nombre'}</p>
+                    <p style="font-size:0.85rem;color:#4b5563;margin:4px 0 0 0">${room.lead_email || ''}</p>
+                </div>
+                <div style="flex:1">
+                    <h3 style="font-size:0.75rem;text-transform:uppercase;color:#9ca3af;margin:0 0 6px 0;letter-spacing:0.05em">Periodo del Reporte</h3>
+                    <p style="font-size:0.85rem;color:#111827;margin:0"><b>Desde:</b> ${new Date(startDateVal).toLocaleString('es-ES')}</p>
+                    <p style="font-size:0.85rem;color:#111827;margin:4px 0 0 0"><b>Hasta:</b> ${new Date(endDateVal).toLocaleString('es-ES')}</p>
+                </div>
+            </div>
+        `;
+        
+        let messagesHtml = '<div style="display:flex;flex-direction:column;gap:16px">';
+        messages.forEach(m => {
+            const isAdmin = m.sender_type === 'admin';
+            const senderName = m.sender_name || (isAdmin ? 'Tú (Administrador)' : room.lead_name || 'Lead');
+            const timeStr = new Date(m.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const bubbleBg = isAdmin ? '#f3f4f6' : '#eef2ff';
+            const borderLeft = isAdmin ? '4px solid #9ca3af' : '4px solid #6c5ce7';
+            
+            let attachmentHtml = '';
+            if (m.file_url) {
+                attachmentHtml = `<div style="margin-top:6px;font-size:0.8rem;color:#4f46e5;font-style:italic">📎 Adjunto: <a href="${m.file_url}" target="_blank" style="color:#4f46e5;text-decoration:underline">${m.file_name || 'Archivo'}</a></div>`;
+            }
+            
+            messagesHtml += `
+                <div style="background:${bubbleBg};border-left:${borderLeft};border-radius:0 12px 12px 0;padding:12px 16px;box-sizing:border-box">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                        <span style="font-size:0.8rem;font-weight:700;color:#374151">${senderName}</span>
+                        <span style="font-size:0.72rem;color:#9ca3af">${timeStr}</span>
+                    </div>
+                    <div style="font-size:0.88rem;line-height:1.5;color:#111827;white-space:pre-wrap;word-break:break-word">${m.content || ''}</div>
+                    ${attachmentHtml}
+                </div>
+            `;
+        });
+        messagesHtml += '</div>';
+        
+        container.innerHTML = headerHtml + messagesHtml;
+        
+        if (typeof html2pdf === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+        
+        btn.textContent = 'Procesando PDF...';
+        
+        // Generate a clean filename and path for the report
+        const reportFileName = `Reporte-Chat-${(room.lead_name || 'Lead').replace(/\s+/g, '-')}-${Date.now()}.pdf`;
+        const opt = {
+            margin:       12,
+            filename:     reportFileName,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        
+        // Output PDF as a Blob in memory
+        const pdfBlob = await html2pdf().set(opt).from(container).output('blob');
+        
+        btn.textContent = 'Subiendo a Storage...';
+        
+        // Upload Blob automatically to Supabase Storage (chat-files bucket)
+        const storagePath = `informes/${reportFileName}`;
+        const { error: uploadErr } = await sb.storage
+            .from('chat-files')
+            .upload(storagePath, pdfBlob, {
+                contentType: 'application/pdf',
+                cacheControl: '3600',
+                upsert: true
+            });
+        if (uploadErr) throw uploadErr;
+        
+        const { data: urlData } = sb.storage.from('chat-files').getPublicUrl(storagePath);
+        const fileUrl = urlData?.publicUrl;
+        
+        // 1. Download local copy if requested
+        if (optDownload) {
+            btn.textContent = 'Descargando...';
+            const blobUrl = URL.createObjectURL(pdfBlob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = reportFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
+        }
+        
+        // 2. Send via Chat if requested
+        if (optChat) {
+            btn.textContent = 'Enviando por Chat...';
+            await sb.from('chat_messages').insert({
+                room_id: roomId,
+                sender_type: 'admin',
+                sender_name: adminName,
+                content: `📎 ${reportFileName}`,
+                file_url: fileUrl,
+                file_name: reportFileName
+            });
+            
+            await sb.from('chat_rooms').update({ 
+                last_message_at: new Date().toISOString(),
+                unread_count: (room.unread_count || 0) + 1
+            }).eq('id', roomId);
+            room.unread_count = (room.unread_count || 0) + 1;
+            room.last_message_at = new Date().toISOString();
+            
+            await sb.from('chat_activities').insert({
+                room_id: roomId,
+                lead_name: room.lead_name || 'Lead',
+                action: 'send_message',
+                desc: `Gerard (admin) envió el informe de chat: "${reportFileName}"`,
+                sender_type: 'admin'
+            });
+            
+            if (currentRoom && currentRoom.id === roomId) {
+                loadMessages();
+            }
+            
+            fetch(`${API_BASE}/push`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'send',
+                    room_id: roomId,
+                    title: `${adminName} — iadebarrio`,
+                    message: `📎 ${reportFileName}`
+                })
+            }).catch(() => {});
+        }
+        
+        // 3. Send via Email if requested
+        if (optEmail) {
+            btn.textContent = 'Enviando por Email...';
+            const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(pdfBlob);
+            });
+            
+            const emailRes = await fetch('/api/send-manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: room.lead_email,
+                    subject: `Informe de Chat — ${room.lead_name || 'Lead'}`,
+                    body: `Hola ${room.lead_name || 'cliente'},\n\nAdjunto a este correo encontrarás el informe de nuestra conversación de chat correspondiente al periodo solicitado.\n\nAtentamente,\nGerard Fanals`,
+                    attachments: [
+                        {
+                            filename: reportFileName,
+                            content: base64
+                        }
+                    ]
+                })
+            });
+            const emailData = await emailRes.json();
+            if (!emailRes.ok || !emailData.success) {
+                throw new Error(emailData.error || 'No se pudo enviar el correo.');
+            }
+        }
+        
+        showToast('Informe procesado con éxito ✅');
+        
+        const modalEl = document.getElementById('chat-report-modal');
+        if (modalEl) modalEl.remove();
+    } catch (e) {
+        console.error('Error generating PDF:', e);
+        alert('Error al generar el informe: ' + e.message);
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
     }
 }
 
