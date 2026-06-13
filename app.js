@@ -1776,7 +1776,7 @@ async function loadActivityLog() {
             _supabase.from('presupuestos').select('id, titulo, categoria, created_at, updated_at').order('created_at', { ascending: false }).limit(100),
             _supabase.from('contratos').select('id, titulo, cliente_nombre, estado, created_at, updated_at').order('created_at', { ascending: false }).limit(50),
             _supabase.from('outreach_email_logs').select('id, lead_id, lead_name, lead_email, subject, status, cadena_num, step_num, created_at').order('created_at', { ascending: false }).limit(200),
-            _supabase.from('meetings').select('id, title, date, start_time, type, created_at, updated_at').order('created_at', { ascending: false }).limit(100),
+            _supabase.from('meetings').select('id, contact_name, meeting_date, meeting_type, created_at, updated_at').order('created_at', { ascending: false }).limit(100),
             _supabase.from('tasks').select('id, title, status, created_at, updated_at').order('created_at', { ascending: false }).limit(100),
             _supabase.from('propuesta_seguimiento').select('id, lead_nombre, lead_email, columna, secuencia_activa, created_at, updated_at').order('created_at', { ascending: false }).limit(100),
             _supabase.from('chat_activities').select('*').order('created_at', { ascending: false }).limit(200)
@@ -1936,7 +1936,7 @@ async function loadActivityLog() {
 
         // Meetings events
         meetings.forEach(m => {
-            const typeLabels = { meeting: 'Reunión', call: 'Llamada', followup: 'Seguimiento', demo: 'Demo', other: 'Evento' };
+            const typeLabels = { discovery: 'Reunión', followup: 'Follow-up', closing: 'Cierre', support: 'Soporte' };
             events.push({
                 date: m.created_at,
                 icon: '📅',
@@ -1944,7 +1944,7 @@ async function loadActivityLog() {
                 action: 'Crear',
                 actionBg: 'rgba(88,86,214,0.1)',
                 actionColor: '#5856d6',
-                desc: `${typeLabels[m.type] || 'Evento'} creado: ${m.title || 'Sin título'}${m.date ? ' — ' + new Date(m.date).toLocaleDateString('es-ES', {day:'2-digit', month:'short'}) : ''}`,
+                desc: `Cita de tipo ${typeLabels[m.meeting_type] || 'Reunión'} agendada con ${m.contact_name || 'Lead'}${m.meeting_date ? ' para el ' + new Date(m.meeting_date).toLocaleDateString('es-ES', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : ''}`,
                 section: 'Calendario',
                 sectionBg: 'rgba(88,86,214,0.1)',
                 sectionColor: '#5856d6'

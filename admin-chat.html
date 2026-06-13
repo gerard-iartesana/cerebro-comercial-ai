@@ -545,12 +545,87 @@
             <button class="action-btn" onclick="document.getElementById('photo-input').click()" title="Foto"><span>📷</span><span class="action-label">Foto</span></button>
             <button class="action-btn" onclick="document.getElementById('video-input').click()" title="Vídeo"><span>🎥</span><span class="action-label">Vídeo</span></button>
             <button class="action-btn" id="audio-rec-btn" onclick="toggleAudioRecording()" title="Grabar audio"><span>🎤</span><span class="action-label">Audio</span></button>
+            <button class="action-btn" onclick="openPwaTaskModal()" title="Crear Tarea" style="color:#00c7be"><span>☑️</span><span class="action-label">Tarea</span></button>
+            <button class="action-btn" onclick="openPwaMeetingModal()" title="Crear Cita" style="color:#5856d6"><span>📅</span><span class="action-label">Cita</span></button>
         </div>
     </div>
 </div>
 
 <!-- TOAST -->
 <div class="toast-notification" id="toast-notification"></div>
+
+<!-- PWA TASK MODAL -->
+<div class="fullscreen-modal" id="pwa-task-modal">
+    <div class="modal-header">
+        <div class="modal-header-title">☑️ Crear Tarea</div>
+        <div class="modal-close" onclick="closePwaTaskModal()">✕</div>
+    </div>
+    <div class="modal-body" style="gap:12px;display:flex;flex-direction:column">
+        <div class="modal-subtitle" id="pwa-task-lead-name">Para: Lead</div>
+        
+        <div class="modal-section-label">Título de la Tarea</div>
+        <input type="text" id="pwa-task-title" class="modal-datetime" style="padding:12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;color:var(--text-main)" placeholder="Ej: Llamar por teléfono...">
+
+        <div class="modal-section-label">Descripción</div>
+        <textarea class="modal-textarea" id="pwa-task-desc" style="min-height:80px" placeholder="Detalles de la tarea..."></textarea>
+
+        <div class="modal-section-label">Prioridad</div>
+        <select id="pwa-task-priority" style="width:100%;padding:12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;color:var(--text-main);outline:none">
+            <option value="hoy">Hoy</option>
+            <option value="week">Esta semana</option>
+            <option value="month" selected>Este mes</option>
+        </select>
+
+        <div class="modal-section-label">Fecha límite</div>
+        <input type="date" class="modal-datetime" id="pwa-task-due-date">
+
+        <button class="modal-action-btn" id="pwa-task-save-btn" onclick="savePwaTask()">Guardar Tarea</button>
+    </div>
+</div>
+
+<!-- PWA MEETING MODAL -->
+<div class="fullscreen-modal" id="pwa-meeting-modal">
+    <div class="modal-header">
+        <div class="modal-header-title">📅 Agendar Cita</div>
+        <div class="modal-close" onclick="closePwaMeetingModal()">✕</div>
+    </div>
+    <div class="modal-body" style="gap:12px;display:flex;flex-direction:column">
+        <div class="modal-subtitle" id="pwa-meeting-lead-name">Para: Lead</div>
+
+        <div class="modal-section-label">Nombre del Contacto</div>
+        <input type="text" id="pwa-meeting-name" class="modal-datetime" style="padding:12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;color:var(--text-main)">
+
+        <div class="modal-section-label">Email</div>
+        <input type="email" id="pwa-meeting-email" class="modal-datetime" style="padding:12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;color:var(--text-main)">
+
+        <div class="modal-section-label">Teléfono</div>
+        <input type="tel" id="pwa-meeting-phone" class="modal-datetime" style="padding:12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;color:var(--text-main)">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+                <div class="modal-section-label">Fecha</div>
+                <input type="date" class="modal-datetime" id="pwa-meeting-date">
+            </div>
+            <div>
+                <div class="modal-section-label">Hora</div>
+                <input type="time" class="modal-datetime" id="pwa-meeting-time">
+            </div>
+        </div>
+
+        <div class="modal-section-label">Tipo</div>
+        <select id="pwa-meeting-type" style="width:100%;padding:12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;color:var(--text-main);outline:none">
+            <option value="discovery" selected>📅 Reunión (Discovery)</option>
+            <option value="followup">🔄 Follow-up</option>
+            <option value="closing">🤝 Cierre</option>
+            <option value="support">🛠️ Soporte</option>
+        </select>
+
+        <div class="modal-section-label">Notas</div>
+        <textarea class="modal-textarea" id="pwa-meeting-notes" style="min-height:60px" placeholder="Notas sobre la reunión..."></textarea>
+
+        <button class="modal-action-btn" id="pwa-meeting-save-btn" onclick="savePwaMeeting()">Agendar Cita</button>
+    </div>
+</div>
 
 <!-- REMINDER MODAL -->
 <div class="fullscreen-modal" id="reminder-modal">
@@ -1533,6 +1608,152 @@ function copyLink() {
     }).catch(() => {
         showToast('Error al copiar ❌');
     });
+}
+
+// ===== PWA TASKS & MEETINGS =====
+function openPwaTaskModal() {
+    if (!currentRoom) return;
+    document.getElementById('pwa-task-lead-name').textContent = `Para: ${currentRoom.lead_name || 'Lead'}`;
+    document.getElementById('pwa-task-title').value = `Seguimiento con ${currentRoom.lead_name || 'Lead'}`;
+    document.getElementById('pwa-task-desc').value = `Tarea creada desde el chat PWA.\nLead: ${currentRoom.lead_name || ''}\nEmail: ${currentRoom.lead_email || ''}`;
+    document.getElementById('pwa-task-priority').value = 'month';
+    document.getElementById('pwa-task-due-date').value = '';
+    document.getElementById('pwa-task-modal').classList.add('active');
+}
+
+function closePwaTaskModal() {
+    document.getElementById('pwa-task-modal').classList.remove('active');
+}
+
+async function savePwaTask() {
+    const title = document.getElementById('pwa-task-title').value.trim();
+    const description = document.getElementById('pwa-task-desc').value.trim();
+    const priority = document.getElementById('pwa-task-priority').value;
+    const dueDate = document.getElementById('pwa-task-due-date').value;
+
+    if (!title) {
+        showToast('El título es obligatorio ⚠️');
+        return;
+    }
+
+    const saveBtn = document.getElementById('pwa-task-save-btn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Guardando...';
+
+    try {
+        const taskData = {
+            title: title,
+            notes: description,
+            priority: priority,
+            due_date: dueDate || null,
+            status: 'new',
+            task_type: 'business',
+            responsible: 'Gerard',
+            start_date: new Date().toISOString().split('T')[0],
+            updated_at: new Date().toISOString()
+        };
+
+        const { error } = await sb.from('tasks').insert([taskData]);
+        if (error) throw error;
+
+        // Registrar actividad
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) creó una tarea: "${title}"`,
+            sender_type: 'admin'
+        });
+
+        showToast('Tarea guardada ✅');
+        closePwaTaskModal();
+    } catch(e) {
+        showToast('Error al guardar: ' + (e.message || e));
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Guardar Tarea';
+    }
+}
+
+async function openPwaMeetingModal() {
+    if (!currentRoom) return;
+    document.getElementById('pwa-meeting-lead-name').textContent = `Para: ${currentRoom.lead_name || 'Lead'}`;
+    document.getElementById('pwa-meeting-name').value = currentRoom.lead_name || '';
+    document.getElementById('pwa-meeting-email').value = currentRoom.lead_email || '';
+    document.getElementById('pwa-meeting-phone').value = '';
+    document.getElementById('pwa-meeting-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('pwa-meeting-time').value = '10:00';
+    document.getElementById('pwa-meeting-notes').value = '';
+    document.getElementById('pwa-meeting-type').value = 'discovery';
+
+    // Fetch phone from lead
+    if (currentRoom.lead_id) {
+        try {
+            const { data } = await sb.from('outreach_leads').select('phone').eq('id', currentRoom.lead_id).single();
+            if (data && data.phone) {
+                document.getElementById('pwa-meeting-phone').value = data.phone;
+            }
+        } catch(e) {}
+    }
+
+    document.getElementById('pwa-meeting-modal').classList.add('active');
+}
+
+function closePwaMeetingModal() {
+    document.getElementById('pwa-meeting-modal').classList.remove('active');
+}
+
+async function savePwaMeeting() {
+    const name = document.getElementById('pwa-meeting-name').value.trim();
+    const email = document.getElementById('pwa-meeting-email').value.trim();
+    const phone = document.getElementById('pwa-meeting-phone').value.trim();
+    const date = document.getElementById('pwa-meeting-date').value;
+    const time = document.getElementById('pwa-meeting-time').value;
+    const type = document.getElementById('pwa-meeting-type').value;
+    const notes = document.getElementById('pwa-meeting-notes').value.trim();
+
+    if (!name || !date || !time) {
+        showToast('Nombre, fecha y hora son obligatorios ⚠️');
+        return;
+    }
+
+    const saveBtn = document.getElementById('pwa-meeting-save-btn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Guardando...';
+
+    try {
+        const datetimeISO = new Date(`${date}T${time}`).toISOString();
+        const insertData = {
+            contact_name: name,
+            contact_email: email || null,
+            contact_phone: phone || null,
+            meeting_date: datetimeISO,
+            meeting_type: type,
+            status: 'pending',
+            notes: notes || null,
+            source: 'chat'
+        };
+
+        const { error } = await sb.from('meetings').insert([insertData]);
+        if (error) throw error;
+
+        // Registrar actividad
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) agendó una cita con ${name} para el ${date} a las ${time}`,
+            sender_type: 'admin'
+        });
+
+        showToast('Cita agendada ✅');
+        closePwaMeetingModal();
+    } catch(e) {
+        showToast('Error al agendar: ' + (e.message || e));
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Agendar Cita';
+    }
 }
 
 // ===== REMINDER MODAL =====
