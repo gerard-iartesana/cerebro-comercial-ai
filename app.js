@@ -11508,6 +11508,49 @@ function subscribeToChatRoom(roomId) {
         .subscribe();
 }
 
+
+// --- Dictado por voz (dashboard) ---
+let _dashRecognition = null;
+let _dashIsRecording = false;
+
+window.toggleDashboardDictation = function() {
+    if (_dashIsRecording) { _stopDashDictation(); return; }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { showToast('Tu navegador no soporta dictado por voz', true); return; }
+    _dashRecognition = new SR();
+    _dashRecognition.lang = 'es-ES';
+    _dashRecognition.continuous = true;
+    _dashRecognition.interimResults = true;
+    const input = document.getElementById('chat-msg-input');
+    const btn = document.getElementById('dashboard-mic-btn');
+    const startText = input ? input.value : '';
+    _dashRecognition.onstart = () => {
+        _dashIsRecording = true;
+        if (btn) { btn.style.background = 'linear-gradient(135deg,#ff4757,#ff6b81)'; btn.style.borderColor = '#ff4757'; btn.textContent = '⏹️'; btn.style.animation = 'micPulse 1s ease-in-out infinite'; }
+        if (input) input.placeholder = 'Escuchando...';
+    };
+    _dashRecognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) { transcript += event.results[i][0].transcript; }
+        if (input) input.value = startText + (startText ? ' ' : '') + transcript;
+    };
+    _dashRecognition.onerror = (event) => {
+        if (event.error === 'not-allowed') showToast('Permite el acceso al micrófono', true);
+        _stopDashDictation();
+    };
+    _dashRecognition.onend = () => { _stopDashDictation(); };
+    _dashRecognition.start();
+};
+
+function _stopDashDictation() {
+    _dashIsRecording = false;
+    const btn = document.getElementById('dashboard-mic-btn');
+    if (btn) { btn.style.background = 'transparent'; btn.style.borderColor = ''; btn.textContent = '🎙️'; btn.style.animation = ''; }
+    const input = document.getElementById('chat-msg-input');
+    if (input) input.placeholder = 'Escribe un mensaje...';
+    if (_dashRecognition) { try { _dashRecognition.stop(); } catch(e) {} _dashRecognition = null; }
+}
+
 // --- Enviar mensaje desde dashboard ---
 window.sendDashboardChatMsg = async function() {
     if (!_chatCurrentRoom) return;

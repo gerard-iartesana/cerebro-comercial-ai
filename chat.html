@@ -371,6 +371,21 @@
         }
         .pwa-banner .pwa-close:hover { background: rgba(255,255,255,0.06); color: var(--text-main); }
 
+        /* --- Mic button --- */
+        .btn-mic {
+            transition: all 0.15s;
+            border: 1px solid var(--card-border);
+        }
+        .btn-mic.recording {
+            background: linear-gradient(135deg, #ff4757, #ff6b81) !important;
+            border-color: #ff4757 !important;
+            animation: micPulse 1s ease-in-out infinite;
+        }
+        @keyframes micPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255,71,87,0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(255,71,87,0); }
+        }
+
         /* --- Responsive --- */
         @media (min-width: 600px) {
             body {
@@ -429,6 +444,7 @@
         </div>
         <input type="text" id="msg-input" placeholder="Escribe un mensaje..." autocomplete="off"
             onkeydown="if(event.key==='Enter')sendMessage()">
+        <button class="btn-icon btn-mic" id="mic-btn" onclick="toggleDictation()" title="Dictar mensaje">🎙️</button>
         <button class="btn-icon btn-send" onclick="sendMessage()" title="Enviar">➤</button>
     </div>
     <!-- Lead Reminder Modal -->
@@ -1207,6 +1223,70 @@ function showLeadToast(msg) {
     toast.style.opacity = '1';
     toast.style.display = 'block';
     setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => { toast.style.display = 'none'; }, 300); }, 2000);
+}
+// ===== VOICE DICTATION =====
+let recognition = null;
+let isRecording = false;
+
+function toggleDictation() {
+    if (isRecording) {
+        stopDictation();
+        return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        showLeadToast('Tu navegador no soporta dictado por voz');
+        return;
+    }
+    recognition = new SpeechRecognition();
+    recognition.lang = 'es-ES';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    
+    const input = document.getElementById('msg-input');
+    const btn = document.getElementById('mic-btn');
+    const startText = input.value;
+    
+    recognition.onstart = () => {
+        isRecording = true;
+        btn.classList.add('recording');
+        btn.textContent = '⏹️';
+        input.placeholder = 'Escuchando...';
+    };
+    
+    recognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+        }
+        input.value = startText + (startText ? ' ' : '') + transcript;
+    };
+    
+    recognition.onerror = (event) => {
+        console.warn('Speech error:', event.error);
+        if (event.error === 'not-allowed') showLeadToast('Permite el acceso al micrófono');
+        stopDictation();
+    };
+    
+    recognition.onend = () => {
+        stopDictation();
+    };
+    
+    recognition.start();
+}
+
+function stopDictation() {
+    isRecording = false;
+    const btn = document.getElementById('mic-btn');
+    if (btn) {
+        btn.classList.remove('recording');
+        btn.textContent = '🎙️';
+    }
+    document.getElementById('msg-input').placeholder = 'Escribe un mensaje...';
+    if (recognition) {
+        try { recognition.stop(); } catch(e) {}
+        recognition = null;
+    }
 }
 </script>
 </body>

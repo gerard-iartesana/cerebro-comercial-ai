@@ -302,6 +302,25 @@
         .chat-input-bar { padding-bottom: calc(14px + env(safe-area-inset-bottom)); padding-left: calc(16px + env(safe-area-inset-left)); padding-right: calc(16px + env(safe-area-inset-right)); }
         .modal-body { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
     }
+
+    /* ===== MIC BUTTON ===== */
+    .chat-mic-btn {
+        width:42px; height:42px; border-radius:50%;
+        display:flex; align-items:center; justify-content:center;
+        font-size:1.1rem; cursor:pointer; flex-shrink:0;
+        border:1px solid var(--card-border); background:var(--bg-tertiary);
+        color:var(--text-main); transition: all 0.15s;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .chat-mic-btn.recording {
+        background: linear-gradient(135deg, #ff4757, #ff6b81);
+        border-color: #ff4757;
+        animation: micPulse 1s ease-in-out infinite;
+    }
+    @keyframes micPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(255,71,87,0.4); }
+        50% { box-shadow: 0 0 0 10px rgba(255,71,87,0); }
+    }
 </style>
 </head>
 <body>
@@ -361,6 +380,7 @@
         <label class="chat-attach-btn" for="file-input">📎</label>
         <input type="file" id="file-input" style="display:none" onchange="handleFileUpload(this)">
         <input type="text" id="msg-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')sendMsg()">
+        <button class="chat-mic-btn" id="mic-btn" onclick="toggleDictation()" title="Dictar mensaje">🎙️</button>
         <button class="chat-send-btn" onclick="sendMsg()">➤</button>
     </div>
 </div>
@@ -1289,6 +1309,71 @@ async function createGroup() {
         openRoom(data.id);
     } catch(e) {
         showToast('Error: ' + (e.message || ''));
+    }
+}
+
+// ===== DICTATION (VOICE-TO-TEXT) =====
+let recognition = null;
+let isRecording = false;
+
+function toggleDictation() {
+    if (isRecording) {
+        stopDictation();
+        return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        showToast('Tu navegador no soporta dictado por voz');
+        return;
+    }
+    recognition = new SpeechRecognition();
+    recognition.lang = 'es-ES';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    const input = document.getElementById('msg-input');
+    const btn = document.getElementById('mic-btn');
+    const startText = input.value;
+
+    recognition.onstart = () => {
+        isRecording = true;
+        btn.classList.add('recording');
+        btn.textContent = '⏹️';
+        input.placeholder = 'Escuchando...';
+    };
+
+    recognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+        }
+        input.value = startText + (startText ? ' ' : '') + transcript;
+    };
+
+    recognition.onerror = (event) => {
+        console.warn('Speech error:', event.error);
+        if (event.error === 'not-allowed') showToast('Permite el acceso al micrófono');
+        stopDictation();
+    };
+
+    recognition.onend = () => {
+        stopDictation();
+    };
+
+    recognition.start();
+}
+
+function stopDictation() {
+    isRecording = false;
+    const btn = document.getElementById('mic-btn');
+    if (btn) {
+        btn.classList.remove('recording');
+        btn.textContent = '🎙️';
+    }
+    document.getElementById('msg-input').placeholder = 'Escribe un mensaje...';
+    if (recognition) {
+        try { recognition.stop(); } catch(e) {}
+        recognition = null;
     }
 }
 
