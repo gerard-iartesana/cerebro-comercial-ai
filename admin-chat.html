@@ -964,6 +964,15 @@ async function sendMsg() {
         }).eq('id', currentRoom.id);
         currentRoom.unread_count = (currentRoom.unread_count || 0) + 1;
 
+        // Registrar actividad
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) envió un mensaje: "${msg.substring(0, 100)}${msg.length > 100 ? '...' : ''}"`,
+            sender_type: 'admin'
+        });
+
         // Push to lead
         fetch(`${API_BASE}/push`, {
             method: 'POST',
@@ -1003,6 +1012,15 @@ async function handleFileUpload(inputEl) {
             unread_count: (currentRoom.unread_count || 0) + 1
         }).eq('id', currentRoom.id);
         currentRoom.unread_count = (currentRoom.unread_count || 0) + 1;
+
+        // Registrar actividad
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) envió un archivo: "${file.name}"`,
+            sender_type: 'admin'
+        });
 
         fetch(`${API_BASE}/push`, {
             method: 'POST',
@@ -1104,6 +1122,16 @@ async function sendAudioRecording() {
                     unread_count: (currentRoom.unread_count || 0) + 1
                 }).eq('id', currentRoom.id);
                 currentRoom.unread_count = (currentRoom.unread_count || 0) + 1;
+
+                // Registrar actividad
+                await sb.from('chat_activities').insert({
+                    room_id: currentRoom.id,
+                    lead_name: currentRoom.lead_name || 'Lead',
+                    action: 'send_message',
+                    desc: `Gerard (admin) envió una nota de voz`,
+                    sender_type: 'admin'
+                });
+
                 fetch(`${API_BASE}/push`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1230,10 +1258,28 @@ async function ctxCopy() {
 async function ctxDelete() {
     hideContextMenu();
     if (!_ctxMsgId) return;
-    // No confirmation needed - just delete
     try {
+        let deletedText = _ctxMsgContent || '';
+        if (_ctxMsgFile) {
+            const parts = _ctxMsgFile.split('/');
+            const fname = decodeURIComponent(parts[parts.length - 1]);
+            const shortName = fname.includes('_') ? fname.substring(fname.indexOf('_') + 1) : fname;
+            deletedText = `[Archivo] ${shortName}`;
+        }
+
         const { error } = await sb.from('chat_messages').delete().eq('id', _ctxMsgId);
         if (error) throw error;
+        
+        // Registrar actividad
+        const roomName = currentRoom?.lead_name || 'Lead';
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom?.id,
+            lead_name: roomName,
+            action: 'delete_message',
+            desc: `Gerard (admin) borró un mensaje en el chat con ${roomName}: "${deletedText.substring(0, 100)}${deletedText.length > 100 ? '...' : ''}"`,
+            sender_type: 'admin'
+        });
+
         const el = document.querySelector(`[data-msg-id="${_ctxMsgId}"]`);
         if (el) el.remove();
         showToast('Mensaje borrado ✅');
@@ -1284,6 +1330,19 @@ async function doForward(roomId, roomName) {
         const { error } = await sb.from('chat_messages').insert(insertData);
         if (error) throw error;
         await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', roomId);
+        
+        // Registrar actividad
+        let fwdDesc = insertData.content || '';
+        if (_ctxMsgFile) {
+            fwdDesc = `[Archivo] ${_ctxMsgFname || 'Adjunto'}`;
+        }
+        await sb.from('chat_activities').insert({
+            room_id: roomId,
+            lead_name: roomName,
+            action: 'send_message',
+            desc: `Gerard (admin) reenvió un mensaje a ${roomName}: "${fwdDesc.substring(0, 100)}${fwdDesc.length > 100 ? '...' : ''}"`,
+            sender_type: 'admin'
+        });
         showToast(`Reenviado a ${roomName} ✅`);
     } catch(e) {
         showToast('Error al reenviar: ' + (e.message || ''));
@@ -1533,6 +1592,15 @@ async function sendReminder() {
             unread_count: (currentRoom.unread_count || 0) + 1
         }).eq('id', currentRoom.id);
         currentRoom.unread_count = (currentRoom.unread_count || 0) + 1;
+
+        // Registrar actividad
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) envió un mensaje: "${msg.substring(0, 100)}${msg.length > 100 ? '...' : ''}"`,
+            sender_type: 'admin'
+        });
 
         // Push to lead
         fetch(`${API_BASE}/push`, {
