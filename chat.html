@@ -775,6 +775,7 @@ let deferredPrompt = null;
 let allRooms = [];
 let leadIdentity = null; // { name, lead_id }
 let hasMultipleRooms = false;
+let activeSwRegistration = null;
 
 // ===== LINKIFY HELPER =====
 function linkify(text) {
@@ -1802,6 +1803,7 @@ function registerServiceWorker() {
     navigator.serviceWorker.register('/chat-sw.js', { updateViaCache: 'none' }).then(reg => {
         // Subscribe to push notifications after SW is active/ready (prevents race conditions)
         navigator.serviceWorker.ready.then(readyReg => {
+            activeSwRegistration = readyReg; // Save globally to preserve user gesture on Safari iOS
             subscribeToPush(readyReg);
         }).catch(err => {
             console.error('Service worker ready error:', err);
@@ -1860,10 +1862,21 @@ async function subscribeToPush(swReg) {
             return;
         }
         
-        // If permission already granted, subscribe silently
+        // If permission already granted, try to subscribe silently (works on Android/Chrome)
         if (Notification.permission === 'granted') {
-            await doSubscribe(swReg);
-            return;
+            try {
+                const pushSub = await swReg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                });
+                console.log('Silent push subscription succeeded!', pushSub);
+                savePushSubscription(pushSub);
+                hidePushBell();
+                return;
+            } catch (silentErr) {
+                console.warn('Silent subscription failed (expected on iOS Safari):', silentErr);
+                // Fall through to show the push bell bar so user can tap it to trigger subscription via gesture
+            }
         }
         
         // Otherwise, show the bell button to request permission via user gesture
@@ -1877,17 +1890,36 @@ async function subscribeToPush(swReg) {
 
 // Called when user taps the bell
 async function requestPushPermission() {
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-        console.log('Notification permission denied');
+    try {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            console.log('Notification permission denied');
+            hidePushBell();
+            return;
+        }
+        
+        // Subscribe after permission granted (directly inside click handler using stored registration to satisfy Safari iOS user gesture)
+        if (activeSwRegistration) {
+            const pushSub = await activeSwRegistration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+            });
+            console.log('Push subscribed via user gesture!', pushSub);
+            savePushSubscription(pushSub);
+        } else {
+            console.warn('activeSwRegistration not ready yet, falling back to ready promise');
+            const reg = await navigator.serviceWorker.ready;
+            const pushSub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+            });
+            console.log('Push subscribed via fallback ready promise!', pushSub);
+            savePushSubscription(pushSub);
+        }
         hidePushBell();
-        return;
+    } catch (e) {
+        console.error('Push subscribe error inside user gesture:', e);
     }
-    
-    // Subscribe after permission granted
-    const reg = await navigator.serviceWorker.ready;
-    await doSubscribe(reg);
-    hidePushBell();
 }
 
 async function doSubscribe(swReg) {

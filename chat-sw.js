@@ -1,5 +1,5 @@
 // Chat Service Worker - Network First + Push Notifications + Badge
-const CACHE_VERSION = 'chat-v23-notification-reference-error-1718394600';
+const CACHE_VERSION = 'chat-v24-user-gesture-1718395200';
 
 self.addEventListener('install', event => {
     self.skipWaiting();
