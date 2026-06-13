@@ -1770,7 +1770,7 @@ async function loadActivityLog() {
 
     try {
         // Fetch ALL activity sources in parallel
-        const [leadsRes, propEnvRes, presRes, contratosRes, emailLogsRes, meetingsRes, tasksRes, seguimientosRes] = await Promise.all([
+        const [leadsRes, propEnvRes, presRes, contratosRes, emailLogsRes, meetingsRes, tasksRes, seguimientosRes, chatActsRes] = await Promise.all([
             _supabase.from('outreach_leads').select('id, first_name, last_name, email, company_name, status, created_at, updated_at').order('created_at', { ascending: false }).limit(200),
             _supabase.from('propuestas_enviadas').select('id, lead_nombre, lead_email, titulo, estado, enviado_at, created_at').order('created_at', { ascending: false }).limit(100),
             _supabase.from('presupuestos').select('id, titulo, categoria, created_at, updated_at').order('created_at', { ascending: false }).limit(100),
@@ -1778,7 +1778,8 @@ async function loadActivityLog() {
             _supabase.from('outreach_email_logs').select('id, lead_id, lead_name, lead_email, subject, status, cadena_num, step_num, created_at').order('created_at', { ascending: false }).limit(200),
             _supabase.from('meetings').select('id, title, date, start_time, type, created_at, updated_at').order('created_at', { ascending: false }).limit(100),
             _supabase.from('tasks').select('id, title, status, created_at, updated_at').order('created_at', { ascending: false }).limit(100),
-            _supabase.from('propuesta_seguimiento').select('id, lead_nombre, lead_email, columna, secuencia_activa, created_at, updated_at').order('created_at', { ascending: false }).limit(100)
+            _supabase.from('propuesta_seguimiento').select('id, lead_nombre, lead_email, columna, secuencia_activa, created_at, updated_at').order('created_at', { ascending: false }).limit(100),
+            _supabase.from('chat_activities').select('*').order('created_at', { ascending: false }).limit(200)
         ]);
 
         const leads = leadsRes.data || [];
@@ -1789,6 +1790,7 @@ async function loadActivityLog() {
         const meetings = meetingsRes.data || [];
         const tasks = tasksRes.data || [];
         const segRecords = seguimientosRes.data || [];
+        const chatActs = chatActsRes?.data || [];
 
         // Build unified events list
         const events = [];
@@ -1996,6 +1998,28 @@ async function loadActivityLog() {
                     sectionColor: '#5856d6'
                 });
             }
+        });
+
+        // Chat events
+        chatActs.forEach(ca => {
+            const isLead = ca.sender_type === 'lead';
+            const actionLabel = ca.action === 'delete_message' ? 'Borrado' : (ca.action === 'send_message' ? 'Enviado' : ca.action);
+            const actionBg = ca.action === 'delete_message' ? 'rgba(255,59,48,0.1)' : 'rgba(108,92,231,0.1)';
+            const actionColor = ca.action === 'delete_message' ? '#ff3b30' : '#6c5ce7';
+            const icon = ca.action === 'delete_message' ? '🗑️' : '💬';
+            
+            events.push({
+                date: ca.created_at,
+                icon: icon,
+                user: isLead ? (ca.lead_name || 'lead') : 'gerard',
+                action: actionLabel,
+                actionBg: actionBg,
+                actionColor: actionColor,
+                desc: ca.desc,
+                section: 'Chats',
+                sectionBg: 'rgba(108,92,231,0.1)',
+                sectionColor: '#6c5ce7'
+            });
         });
 
         // Sort by date descending
@@ -7379,6 +7403,55 @@ function openNewTaskModal() {
     document.getElementById('modal-task').style.display = 'flex';
 }
 
+window.openDashTaskModal = function() {
+    if (!_chatCurrentRoom) return;
+    
+    // First call standard reset
+    openNewTaskModal();
+    
+    // Customize with lead data
+    const titleEl = document.getElementById('task-title');
+    const descEl = document.getElementById('task-description');
+    const notesEl = document.getElementById('task-notes');
+    
+    if (titleEl) titleEl.value = `Seguimiento con ${_chatCurrentRoom.lead_name || 'Lead'}`;
+    if (descEl) descEl.value = `Tarea creada desde el chat.\nLead: ${_chatCurrentRoom.lead_name || ''}\nEmail: ${_chatCurrentRoom.lead_email || ''}`;
+    if (notesEl) notesEl.value = `Contacto: ${_chatCurrentRoom.lead_name || ''} (${_chatCurrentRoom.lead_email || ''})`;
+};
+
+window.openDashMeetingModal = async function() {
+    if (!_chatCurrentRoom) return;
+    
+    // Open the standard modal
+    openNewMeetingModal();
+    
+    // Reset and Prefill fields
+    const nameEl = document.getElementById('mtg-name');
+    const emailEl = document.getElementById('mtg-email');
+    const phoneEl = document.getElementById('mtg-phone');
+    const sourceEl = document.getElementById('mtg-source');
+    
+    if (nameEl) nameEl.value = _chatCurrentRoom.lead_name || '';
+    if (emailEl) emailEl.value = _chatCurrentRoom.lead_email || '';
+    if (sourceEl) sourceEl.value = 'chat';
+    if (phoneEl) phoneEl.value = ''; // Reset first
+    
+    if (_chatCurrentRoom.lead_id) {
+        try {
+            const { data } = await _supabase
+                .from('outreach_leads')
+                .select('phone')
+                .eq('id', _chatCurrentRoom.lead_id)
+                .single();
+            if (data && phoneEl && data.phone) {
+                phoneEl.value = data.phone;
+            }
+        } catch(e) {
+            console.warn('Error fetching lead phone:', e);
+        }
+    }
+};
+
 async function openTaskModal(id) {
     if (!id) { openNewTaskModal(); return; }
     const task = allTasks.find(t => t.id === id);
@@ -11598,8 +11671,26 @@ window.dashCtxDelete = async function() {
     document.getElementById('dash-ctx-menu').style.display = 'none';
     if (!_dashCtxMsgId) return;
     try {
+        let deletedText = _dashCtxContent || '';
+        if (_dashCtxFile) {
+            const parts = _dashCtxFile.split('/');
+            const fname = decodeURIComponent(parts[parts.length - 1]);
+            const shortName = fname.includes('_') ? fname.substring(fname.indexOf('_') + 1) : fname;
+            deletedText = `[Archivo] ${shortName}`;
+        }
+        
         const { error } = await _supabase.from('chat_messages').delete().eq('id', _dashCtxMsgId);
         if (error) throw error;
+        
+        const roomName = _chatCurrentRoom?.lead_name || 'Lead';
+        await _supabase.from('chat_activities').insert({
+            room_id: _chatCurrentRoom?.id,
+            lead_name: roomName,
+            action: 'delete_message',
+            desc: `Gerard (admin) borró un mensaje en el chat con ${roomName}: "${deletedText.substring(0, 100)}${deletedText.length > 100 ? '...' : ''}"`,
+            sender_type: 'admin'
+        });
+
         const el = document.querySelector(`[data-msg-id="${_dashCtxMsgId}"]`);
         if (el) el.remove();
         showToast('Mensaje borrado ✅');
@@ -11634,6 +11725,20 @@ window.dashDoForward = async function(roomId, roomName) {
         if (_dashCtxFile) { insertData.file_url = _dashCtxFile; insertData.file_name = _dashCtxFname; }
         await _supabase.from('chat_messages').insert(insertData);
         await _supabase.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', roomId);
+        
+        // Registrar actividad
+        let fwdDesc = insertData.content || '';
+        if (_dashCtxFile) {
+            fwdDesc = `[Archivo] ${_dashCtxFname || 'Adjunto'}`;
+        }
+        await _supabase.from('chat_activities').insert({
+            room_id: roomId,
+            lead_name: roomName,
+            action: 'send_message',
+            desc: `Gerard (admin) reenvió un mensaje a ${roomName}: "${fwdDesc.substring(0, 100)}${fwdDesc.length > 100 ? '...' : ''}"`,
+            sender_type: 'admin'
+        });
+
         showToast(`Reenviado a ${roomName} ✅`);
     } catch(e) { showToast('Error: ' + (e.message || '')); }
 };
@@ -11760,6 +11865,15 @@ window.sendDashboardChatMsg = async function() {
         _chatCurrentRoom.last_message_at = new Date().toISOString();
         renderChatRoomsList(_chatRoomsCache);
         
+        // Registrar actividad
+        await _supabase.from('chat_activities').insert({
+            room_id: _chatCurrentRoom.id,
+            lead_name: _chatCurrentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) envió un mensaje: "${msg.substring(0, 100)}${msg.length > 100 ? '...' : ''}"`,
+            sender_type: 'admin'
+        });
+
         // Send push notification to lead
         sendPushToLead(_chatCurrentRoom.id, msg);
     } catch(e) {
@@ -11793,6 +11907,16 @@ window.handleChatFileUpload = async function(inputEl) {
             unread_count: (_chatCurrentRoom.unread_count || 0) + 1
         }).eq('id', _chatCurrentRoom.id);
         _chatCurrentRoom.unread_count = (_chatCurrentRoom.unread_count || 0) + 1;
+        
+        // Registrar actividad
+        await _supabase.from('chat_activities').insert({
+            room_id: _chatCurrentRoom.id,
+            lead_name: _chatCurrentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) envió un archivo: "${file.name}"`,
+            sender_type: 'admin'
+        });
+
         showToast('Archivo enviado');
         sendPushToLead(_chatCurrentRoom.id, `📎 ${file.name}`);
     } catch(e) {
@@ -11891,6 +12015,16 @@ window.dashSendAudioRecording = async function() {
                     unread_count: (_chatCurrentRoom.unread_count || 0) + 1
                 }).eq('id', _chatCurrentRoom.id);
                 _chatCurrentRoom.unread_count = (_chatCurrentRoom.unread_count || 0) + 1;
+                
+                // Registrar actividad
+                await _supabase.from('chat_activities').insert({
+                    room_id: _chatCurrentRoom.id,
+                    lead_name: _chatCurrentRoom.lead_name || 'Lead',
+                    action: 'send_message',
+                    desc: `Gerard (admin) envió una nota de voz`,
+                    sender_type: 'admin'
+                });
+
                 renderChatRoomsList(_chatRoomsCache);
                 sendPushToLead(_chatCurrentRoom.id, '🎤 Audio');
             } catch(e) {

@@ -1148,6 +1148,16 @@ async function sendMessage() {
             content: text
         });
         await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+        
+        // Registrar actividad
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `El lead envió un mensaje: "${text.substring(0, 100)}${text.length > 100 ? '...' : ''}"`,
+            sender_type: 'lead'
+        });
+
         // Auto-cancel pending scheduled messages when lead replies
         cancelPendingScheduled();
         // Push notification to admin
@@ -1188,6 +1198,16 @@ async function handleFileUpload(inputEl) {
             file_name: file.name
         });
         await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+        
+        // Registrar actividad
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `El lead envió un archivo: "${file.name}"`,
+            sender_type: 'lead'
+        });
+
         cancelPendingScheduled();
         // Push to admin
         fetch(`${API_BASE}/push`, {
@@ -1305,6 +1325,16 @@ async function sendAudioRecording() {
                     file_name: fileName
                 });
                 await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+                
+                // Registrar actividad
+                await sb.from('chat_activities').insert({
+                    room_id: currentRoom.id,
+                    lead_name: currentRoom.lead_name || 'Lead',
+                    action: 'send_message',
+                    desc: `El lead envió una nota de voz`,
+                    sender_type: 'lead'
+                });
+
                 cancelPendingScheduled();
                 fetch(`${API_BASE}/push`, {
                     method: 'POST',
@@ -1432,10 +1462,27 @@ async function ctxCopy() {
 async function ctxDelete() {
     hideContextMenu();
     if (!_ctxMsgId) return;
-    // No confirmation needed - just delete
     try {
+        let deletedText = _ctxMsgContent || '';
+        if (_ctxMsgFile) {
+            const parts = _ctxMsgFile.split('/');
+            const fname = decodeURIComponent(parts[parts.length - 1]);
+            const shortName = fname.includes('_') ? fname.substring(fname.indexOf('_') + 1) : fname;
+            deletedText = `[Archivo] ${shortName}`;
+        }
+        
         const { error } = await sb.from('chat_messages').delete().eq('id', _ctxMsgId);
         if (error) throw error;
+        
+        // Registrar actividad
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'delete_message',
+            desc: `El lead borró su mensaje: "${deletedText.substring(0, 100)}${deletedText.length > 100 ? '...' : ''}"`,
+            sender_type: 'lead'
+        });
+
         const el = document.querySelector(`[data-msg-id="${_ctxMsgId}"]`);
         if (el) el.remove();
         showLeadToast('Mensaje borrado ✅');
