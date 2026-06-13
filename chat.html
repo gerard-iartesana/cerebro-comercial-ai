@@ -616,8 +616,8 @@
             <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
     </div>
-    <h2 style="margin:0;font-size:1.4rem;font-weight:800;color:var(--text-main);letter-spacing:-0.02em">Sesión Cerrada</h2>
-    <p style="margin:0;font-size:0.88rem;color:var(--text-grey);max-width:280px;text-align:center;line-height:1.6">Has cerrado la sesión de forma segura.<br>Ya puedes volver a la pantalla de tu dispositivo o cerrar esta ventana.</p>
+    <h2 style="margin:0;font-size:1.4rem;font-weight:800;color:var(--text-main);letter-spacing:-0.02em">Hasta pronto</h2>
+    <p style="margin:0;font-size:0.88rem;color:var(--text-grey);max-width:280px;text-align:center;line-height:1.6">Has salido del chat de forma segura.<br>Ya puedes volver a la pantalla de tu dispositivo o cerrar esta ventana.</p>
     <button class="chat-back-btn" onclick="try{window.close();}catch(e){}" style="margin-top:10px;padding:12px 24px;width:auto;border-radius:12px;font-size:0.85rem;font-weight:700;background:var(--bg-tertiary);border:1px solid var(--card-border);color:var(--text-main);cursor:pointer;transition:all 0.2s" onmouseenter="this.style.background='var(--bg-hover)'" onmouseleave="this.style.background='var(--bg-tertiary)'">Cerrar ventana</button>
 </div>
 
@@ -1065,11 +1065,9 @@ function goBackToRooms() {
 }
 
 function logoutLead() {
-    if (confirm('¿Deseas cerrar la sesión y salir del chat?')) {
-        try {
-            localStorage.removeItem('chat_token');
-        } catch(e) {}
-        setCookie('chat_token', '', -1);
+    if (confirm('¿Deseas salir del chat?')) {
+        // We do NOT clear localStorage.removeItem('chat_token') or setCookie('chat_token', '', -1).
+        // This keeps the user logged in for when they open the app next time.
         
         // Hide other screens
         document.getElementById('chat-app').style.display = 'none';
@@ -1079,6 +1077,8 @@ function logoutLead() {
         if (loadingEl) loadingEl.style.display = 'none';
         const errorEl = document.getElementById('error-screen');
         if (errorEl) errorEl.style.display = 'none';
+        const noTokenEl = document.getElementById('no-token-screen');
+        if (noTokenEl) noTokenEl.style.display = 'none';
         
         // Show exit screen
         const exitEl = document.getElementById('exit-screen');

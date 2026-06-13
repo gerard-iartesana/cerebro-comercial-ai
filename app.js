@@ -2830,7 +2830,7 @@ window.sendStorageFile = function(url, fileName) {
             document.getElementById('send-file-modal').remove();
             
             if (_chatCurrentRoom && _chatCurrentRoom.id === roomId) {
-                loadMessages();
+                window.openChatRoom(roomId);
             }
             
             sendPushToLead(roomId, `📎 ${fileName}`);
@@ -13576,7 +13576,7 @@ window.generatePdfChatReport = async function(event) {
             });
             
             if (_chatCurrentRoom && _chatCurrentRoom.id === roomId) {
-                loadMessages();
+                window.openChatRoom(roomId);
             }
             sendPushToLead(roomId, `📎 ${reportFileName}`);
         }
