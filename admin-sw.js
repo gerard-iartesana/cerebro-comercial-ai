@@ -1,5 +1,5 @@
 // Admin Chat Service Worker - Network First + Push Notifications + Badge
-const CACHE_VERSION = 'admin-chat-v5-safari-login-1718384400';
+const CACHE_VERSION = 'admin-chat-v6-plus-menu-1718388000';
 
 self.addEventListener('install', event => {
     self.skipWaiting();

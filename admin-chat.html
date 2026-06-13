@@ -196,32 +196,83 @@
     }
     .chat-input-row input:focus { border-color: var(--accent); }
     .chat-input-row input::placeholder { color: var(--text-grey); }
-    .chat-actions-row {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 16px 12px;
-        overflow-x: auto;
-    }
-    .action-btn {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 14px;
-        border-radius: 20px;
-        background: var(--bg-tertiary);
+    /* Plus Button & Popup Menu */
+    .btn-plus {
+        width: 38px; height: 38px; border-radius: 50%;
         border: 1px solid var(--card-border);
+        background: var(--bg-tertiary);
         color: var(--text-main);
-        font-size: 0.82rem;
-        font-family: inherit;
-        cursor: pointer;
-        white-space: nowrap;
-        transition: all 0.15s;
-        flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1rem; cursor: pointer; transition: all 0.15s;
+        -webkit-tap-highlight-color: transparent;
     }
-    .action-btn:active { background: var(--accent); color: #fff; transform: scale(0.95); }
-    .action-btn span:first-child { font-size: 1.1rem; }
-    .action-label { font-weight: 600; font-size: 0.76rem; }
+    .btn-plus:active {
+        transform: scale(0.92);
+        background: rgba(255,255,255,0.05);
+    }
+    .pwa-plus-menu {
+        position: absolute;
+        bottom: calc(100% + 10px);
+        left: 0;
+        background: var(--bg-secondary);
+        border: 1px solid var(--card-border);
+        border-radius: 18px;
+        padding: 6px;
+        display: none;
+        flex-direction: column;
+        gap: 2px;
+        width: 190px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        z-index: 1000;
+        animation: plusMenuFade 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .pwa-plus-menu.active {
+        display: flex;
+    }
+    @keyframes plusMenuFade {
+        from { transform: translateY(10px) scale(0.95); opacity: 0; }
+        to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .plus-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border: none;
+        background: transparent;
+        color: var(--text-main);
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+        border-radius: 10px;
+        width: 100%;
+        transition: background 0.15s;
+        font-family: inherit;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .plus-menu-item:active {
+        background: rgba(255, 255, 255, 0.08);
+    }
+    .plus-menu-icon {
+        font-size: 1.05rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+    }
+    .task-type-pill {
+        flex: 1; text-align: center;
+        padding: 8px 12px; border: 1.5px solid var(--card-border);
+        background: transparent; border-radius: 10px;
+        font-size: 0.8rem; font-weight: 600; cursor: pointer;
+        color: var(--text-grey); transition: all 0.2s;
+        font-family: inherit;
+    }
+    .task-type-pill.active {
+        border-color: var(--accent); background: var(--accent);
+        color: white;
+    }
     .emoji-picker {
         display: none;
         position: absolute;
@@ -630,8 +681,35 @@
             <button class="rec-send" onclick="sendAudioRecording()">➤ Enviar</button>
         </div>
         <div class="chat-input-row">
-            <div style="position:relative;flex-shrink:0">
+            <div style="position:relative;flex-shrink:0;display:flex;gap:6px">
                 <button class="btn-emoji" onclick="toggleEmojiPicker(event)" title="Emojis">😊</button>
+                <button class="btn-plus" onclick="togglePwaPlusMenu(event)" title="Más opciones">➕</button>
+                <div class="pwa-plus-menu" id="pwa-plus-menu">
+                    <button class="plus-menu-item" onclick="document.getElementById('file-input').click(); closePwaPlusMenu();">
+                        <span class="plus-menu-icon">📁</span>
+                        <span class="plus-menu-text">Archivo</span>
+                    </button>
+                    <button class="plus-menu-item" onclick="document.getElementById('photo-input').click(); closePwaPlusMenu();">
+                        <span class="plus-menu-icon">📷</span>
+                        <span class="plus-menu-text">Foto / Cámara</span>
+                    </button>
+                    <button class="plus-menu-item" onclick="document.getElementById('video-input').click(); closePwaPlusMenu();">
+                        <span class="plus-menu-icon">🎥</span>
+                        <span class="plus-menu-text">Vídeo</span>
+                    </button>
+                    <button class="plus-menu-item" onclick="toggleAudioRecording(); closePwaPlusMenu();">
+                        <span class="plus-menu-icon">🎤</span>
+                        <span class="plus-menu-text">Audio / Voz</span>
+                    </button>
+                    <button class="plus-menu-item" onclick="openPwaTaskModal(); closePwaPlusMenu();" style="color:#00c7be">
+                        <span class="plus-menu-icon">☑️</span>
+                        <span class="plus-menu-text">Crear Tarea</span>
+                    </button>
+                    <button class="plus-menu-item" onclick="openPwaMeetingModal(); closePwaPlusMenu();" style="color:#5856d6">
+                        <span class="plus-menu-icon">📅</span>
+                        <span class="plus-menu-text">Agendar Cita</span>
+                    </button>
+                </div>
                 <div class="emoji-picker" id="emoji-picker">
                     <div class="emoji-grid" id="emoji-grid"></div>
                 </div>
@@ -639,17 +717,11 @@
             <input type="text" id="msg-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')sendMsg()">
             <button class="chat-mic-btn" id="mic-btn" onclick="toggleDictation()" title="Dictar mensaje">🎙️</button>
             <button class="chat-send-btn" onclick="sendMsg()">➤</button>
-        </div>
-        <div class="chat-actions-row">
+            
+            <!-- Hidden inputs for uploads -->
             <input type="file" id="file-input" style="display:none" onchange="handleFileUpload(this)">
             <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleFileUpload(this)">
             <input type="file" id="video-input" accept="video/*" capture="environment" style="display:none" onchange="handleFileUpload(this)">
-            <button class="action-btn" onclick="document.getElementById('file-input').click()" title="Adjuntar"><span>📎</span><span class="action-label">Archivo</span></button>
-            <button class="action-btn" onclick="document.getElementById('photo-input').click()" title="Foto"><span>📷</span><span class="action-label">Foto</span></button>
-            <button class="action-btn" onclick="document.getElementById('video-input').click()" title="Vídeo"><span>🎥</span><span class="action-label">Vídeo</span></button>
-            <button class="action-btn" id="audio-rec-btn" onclick="toggleAudioRecording()" title="Grabar audio"><span>🎤</span><span class="action-label">Audio</span></button>
-            <button class="action-btn" onclick="openPwaTaskModal()" title="Crear Tarea" style="color:#00c7be"><span>☑️</span><span class="action-label">Tarea</span></button>
-            <button class="action-btn" onclick="openPwaMeetingModal()" title="Crear Cita" style="color:#5856d6"><span>📅</span><span class="action-label">Cita</span></button>
         </div>
     </div>
 </div>
@@ -659,7 +731,7 @@
 
 <!-- PWA TASK MODAL -->
 <div class="modal-overlay" id="pwa-task-modal" onclick="if(event.target===this)closePwaTaskModal()">
-    <div class="modal-box">
+    <div class="modal-box" style="max-width:540px">
         <div class="modal-header">
             <h2>☑️ Crear Tarea</h2>
             <button class="modal-close" onclick="closePwaTaskModal()">✕</button>
@@ -674,22 +746,90 @@
 
             <div>
                 <label class="task-field-label">📄 DESCRIPCIÓN</label>
-                <textarea class="modal-input" id="pwa-task-desc" style="min-height:80px;resize:vertical" placeholder="Detalles de la tarea..."></textarea>
+                <textarea class="modal-input" id="pwa-task-desc" style="min-height:70px;resize:vertical" placeholder="Detalles de la tarea..."></textarea>
+            </div>
+
+            <div>
+                <label class="task-field-label">💼 TIPO DE TAREA</label>
+                <div class="task-priority-pills" id="pwa-task-type-container" style="gap:6px">
+                    <button class="task-type-pill active" data-type="business" onclick="setPwaTaskType('business')">💼 Negocio</button>
+                    <button class="task-type-pill" data-type="personal" onclick="setPwaTaskType('personal')">👤 Personal</button>
+                    <button class="task-type-pill" data-type="application" onclick="setPwaTaskType('application')">💻 Aplicación</button>
+                </div>
+                <input type="hidden" id="pwa-task-type" value="business">
+            </div>
+
+            <div>
+                <label class="task-field-label">👥 RESPONSABLE DEL PROYECTO</label>
+                <select id="pwa-task-responsible" class="modal-input">
+                    <option value="Gerard">Gerard</option>
+                </select>
+            </div>
+
+            <div style="border: 1px dashed var(--card-border); padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.01)">
+                <label class="task-field-label" style="color:var(--accent);margin-bottom:8px">💰 VALORACIÓN ECONÓMICA</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+                    <div>
+                        <label class="task-field-label" style="font-size:0.65rem">Precio/hora (€)</label>
+                        <input type="number" id="pwa-task-hourly-rate" class="modal-input" value="53" oninput="calcPwaTaskEcon()">
+                    </div>
+                    <div>
+                        <label class="task-field-label" style="font-size:0.65rem">Descuento (%)</label>
+                        <input type="number" id="pwa-task-discount" class="modal-input" value="0" min="0" max="100" oninput="calcPwaTaskEcon()">
+                    </div>
+                </div>
+                <div id="pwa-task-effective-price" style="font-size:0.75rem;color:var(--text-grey);margin-bottom:8px">Precio efectivo: <strong>53.00€/h</strong></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <div>
+                        <label class="task-field-label" style="font-size:0.65rem">Horas previstas</label>
+                        <input type="number" id="pwa-task-hours-est" class="modal-input" value="0" min="0" oninput="calcPwaTaskEcon()">
+                        <div id="pwa-task-total-est" style="font-size:0.72rem;color:var(--accent);font-weight:700;margin-top:4px">💰 Total: 0.00€</div>
+                    </div>
+                    <div>
+                        <label class="task-field-label" style="font-size:0.65rem">Horas reales</label>
+                        <input type="number" id="pwa-task-hours-actual" class="modal-input" placeholder="—" min="0" oninput="calcPwaTaskEcon()">
+                        <div id="pwa-task-total-actual" style="font-size:0.72rem;color:#34c759;font-weight:700;margin-top:4px">💰 Total: —</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div>
+                    <label class="task-field-label">ESTADO</label>
+                    <select id="pwa-task-status" class="modal-input">
+                        <option value="new">🔵 Nueva</option>
+                        <option value="started">🟡 Empezada</option>
+                        <option value="done">✅ Finalizada</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="task-field-label">HORA LÍMITE</label>
+                    <input type="time" id="pwa-task-time" class="modal-input">
+                </div>
             </div>
 
             <div>
                 <label class="task-field-label">📌 PRIORIDAD</label>
-                <div class="task-priority-pills" id="pwa-task-priority-container">
-                    <button class="task-prio-pill" data-prio="hoy" onclick="setPwaTaskPriority('hoy')">Hoy</button>
-                    <button class="task-prio-pill" data-prio="week" onclick="setPwaTaskPriority('week')">Semana</button>
-                    <button class="task-prio-pill active" data-prio="month" onclick="setPwaTaskPriority('month')">Mes</button>
+                <div class="task-priority-pills" id="pwa-task-priority-container" style="gap:6px">
+                    <button class="task-prio-pill" data-prio="none" onclick="setPwaTaskPriority('none')" style="padding:6px 8px;font-size:0.75rem">Sin pr.</button>
+                    <button class="task-prio-pill" data-prio="day" onclick="setPwaTaskPriority('day')" style="padding:6px 8px;font-size:0.75rem">Día</button>
+                    <button class="task-prio-pill" data-prio="week" onclick="setPwaTaskPriority('week')" style="padding:6px 8px;font-size:0.75rem">Semana</button>
+                    <button class="task-prio-pill" data-prio="15days" onclick="setPwaTaskPriority('15days')" style="padding:6px 8px;font-size:0.75rem">15 d</button>
+                    <button class="task-prio-pill active" data-prio="month" onclick="setPwaTaskPriority('month')" style="padding:6px 8px;font-size:0.75rem">Mes</button>
+                    <button class="task-prio-pill" data-prio="quarter" onclick="setPwaTaskPriority('quarter')" style="padding:6px 8px;font-size:0.75rem">Trim.</button>
                 </div>
                 <input type="hidden" id="pwa-task-priority" value="month">
             </div>
 
-            <div>
-                <label class="task-field-label">🔴 FECHA LÍMITE</label>
-                <input type="date" class="modal-input" id="pwa-task-due-date">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div>
+                    <label class="task-field-label">🟢 FECHA DE INICIO</label>
+                    <input type="date" class="modal-input" id="pwa-task-start-date">
+                </div>
+                <div>
+                    <label class="task-field-label">🔴 FECHA LÍMITE</label>
+                    <input type="date" class="modal-input" id="pwa-task-due-date">
+                </div>
             </div>
         </div>
         <div class="modal-footer">
@@ -701,7 +841,7 @@
 
 <!-- PWA MEETING MODAL -->
 <div class="modal-overlay" id="pwa-meeting-modal" onclick="if(event.target===this)closePwaMeetingModal()">
-    <div class="modal-box">
+    <div class="modal-box" style="max-width:540px">
         <div class="modal-header">
             <h2>📅 Agendar Cita</h2>
             <button class="modal-close" onclick="closePwaMeetingModal()">✕</button>
@@ -714,14 +854,15 @@
                 <input type="text" id="pwa-meeting-name" class="modal-input">
             </div>
 
-            <div>
-                <label class="task-field-label">📧 EMAIL</label>
-                <input type="email" id="pwa-meeting-email" class="modal-input">
-            </div>
-
-            <div>
-                <label class="task-field-label">📱 TELÉFONO</label>
-                <input type="tel" id="pwa-meeting-phone" class="modal-input">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div>
+                    <label class="task-field-label">📧 EMAIL</label>
+                    <input type="email" id="pwa-meeting-email" class="modal-input">
+                </div>
+                <div>
+                    <label class="task-field-label">📱 TELÉFONO</label>
+                    <input type="tel" id="pwa-meeting-phone" class="modal-input">
+                </div>
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -735,13 +876,34 @@
                 </div>
             </div>
 
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div>
+                    <label class="task-field-label">💼 TIPO</label>
+                    <select id="pwa-meeting-type" class="modal-input">
+                        <option value="discovery" selected>📅 Reunión (Discovery)</option>
+                        <option value="followup">🔄 Follow-up</option>
+                        <option value="closing">🤝 Cierre</option>
+                        <option value="support">🛠️ Soporte</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="task-field-label">⏳ ESTADO</label>
+                    <select id="pwa-meeting-status" class="modal-input">
+                        <option value="pending" selected>⏳ Pendiente</option>
+                        <option value="confirmed">✅ Confirmada</option>
+                        <option value="done">✔️ Realizada</option>
+                        <option value="cancelled">❌ Cancelada</option>
+                    </select>
+                </div>
+            </div>
+
             <div>
-                <label class="task-field-label">💼 TIPO</label>
-                <select id="pwa-meeting-type" class="modal-input">
-                    <option value="discovery" selected>📅 Reunión (Discovery)</option>
-                    <option value="followup">🔄 Follow-up</option>
-                    <option value="closing">🤝 Cierre</option>
-                    <option value="support">🛠️ Soporte</option>
+                <label class="task-field-label">🌐 ORIGEN</label>
+                <select id="pwa-meeting-source" class="modal-input">
+                    <option value="manual">✍️ Manual</option>
+                    <option value="web">🌐 Web</option>
+                    <option value="cerebro">🧠 Cerebro AI</option>
+                    <option value="chat" selected>💬 Chat</option>
                 </select>
             </div>
 
@@ -1778,8 +1940,23 @@ function openPwaTaskModal() {
     document.getElementById('pwa-task-lead-name').textContent = `Para: ${currentRoom.lead_name || 'Lead'}`;
     document.getElementById('pwa-task-title').value = `Seguimiento con ${currentRoom.lead_name || 'Lead'}`;
     document.getElementById('pwa-task-desc').value = `Tarea creada desde el chat PWA.\nLead: ${currentRoom.lead_name || ''}\nEmail: ${currentRoom.lead_email || ''}`;
+    
+    setPwaTaskType('business');
     setPwaTaskPriority('month');
+    
+    document.getElementById('pwa-task-responsible').value = 'Gerard';
+    document.getElementById('pwa-task-hourly-rate').value = '53';
+    document.getElementById('pwa-task-discount').value = '0';
+    document.getElementById('pwa-task-hours-est').value = '0';
+    document.getElementById('pwa-task-hours-actual').value = '';
+    document.getElementById('pwa-task-status').value = 'new';
+    document.getElementById('pwa-task-time').value = '';
+    
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('pwa-task-start-date').value = today;
     document.getElementById('pwa-task-due-date').value = '';
+    
+    calcPwaTaskEcon();
     document.getElementById('pwa-task-modal').classList.add('active');
 }
 
@@ -1790,6 +1967,34 @@ function setPwaTaskPriority(val) {
     });
 }
 
+function setPwaTaskType(val) {
+    document.getElementById('pwa-task-type').value = val;
+    document.querySelectorAll('#pwa-task-type-container .task-type-pill').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-type') === val);
+    });
+}
+
+function calcPwaTaskEcon() {
+    const rate = parseFloat(document.getElementById('pwa-task-hourly-rate').value) || 0;
+    const discount = parseFloat(document.getElementById('pwa-task-discount').value) || 0;
+    const hoursEst = parseFloat(document.getElementById('pwa-task-hours-est').value) || 0;
+    const hoursActualVal = document.getElementById('pwa-task-hours-actual').value;
+    const hoursActual = hoursActualVal !== '' ? parseFloat(hoursActualVal) : 0;
+    
+    const effective = rate * (1 - discount / 100);
+    document.getElementById('pwa-task-effective-price').innerHTML = `Precio efectivo: <strong>${effective.toFixed(2)}€/h</strong>`;
+    
+    const totalEst = effective * hoursEst;
+    document.getElementById('pwa-task-total-est').textContent = `💰 Total: ${totalEst.toFixed(2)}€`;
+    
+    if (hoursActualVal !== '') {
+        const totalActual = effective * hoursActual;
+        document.getElementById('pwa-task-total-actual').textContent = `💰 Total: ${totalActual.toFixed(2)}€`;
+    } else {
+        document.getElementById('pwa-task-total-actual').textContent = `💰 Total: —`;
+    }
+}
+
 function closePwaTaskModal() {
     document.getElementById('pwa-task-modal').classList.remove('active');
 }
@@ -1797,8 +2002,18 @@ function closePwaTaskModal() {
 async function savePwaTask() {
     const title = document.getElementById('pwa-task-title').value.trim();
     const description = document.getElementById('pwa-task-desc').value.trim();
+    const type = document.getElementById('pwa-task-type').value;
+    const responsible = document.getElementById('pwa-task-responsible').value;
     const priority = document.getElementById('pwa-task-priority').value;
-    const dueDate = document.getElementById('pwa-task-due-date').value;
+    const hourlyRate = parseFloat(document.getElementById('pwa-task-hourly-rate').value) || 53;
+    const discount = parseFloat(document.getElementById('pwa-task-discount').value) || 0;
+    const hoursEst = parseFloat(document.getElementById('pwa-task-hours-est').value) || 0;
+    const hoursActualVal = document.getElementById('pwa-task-hours-actual').value;
+    const hoursActual = hoursActualVal !== '' ? parseFloat(hoursActualVal) : null;
+    const status = document.getElementById('pwa-task-status').value;
+    const taskTime = document.getElementById('pwa-task-time').value || null;
+    const startDate = document.getElementById('pwa-task-start-date').value || null;
+    const dueDate = document.getElementById('pwa-task-due-date').value || null;
 
     if (!title) {
         showToast('El título es obligatorio ⚠️');
@@ -1815,10 +2030,15 @@ async function savePwaTask() {
             notes: description,
             priority: priority,
             due_date: dueDate || null,
-            status: 'new',
-            task_type: 'business',
-            responsible: 'Gerard',
-            start_date: new Date().toISOString().split('T')[0],
+            status: status,
+            task_type: type,
+            responsible: responsible,
+            hourly_rate: hourlyRate,
+            discount: discount,
+            hours_estimated: hoursEst,
+            hours_actual: hoursActual,
+            task_time: taskTime,
+            start_date: startDate || new Date().toISOString().split('T')[0],
             updated_at: new Date().toISOString()
         };
 
@@ -1854,6 +2074,8 @@ async function openPwaMeetingModal() {
     document.getElementById('pwa-meeting-time').value = '10:00';
     document.getElementById('pwa-meeting-notes').value = '';
     document.getElementById('pwa-meeting-type').value = 'discovery';
+    document.getElementById('pwa-meeting-status').value = 'pending';
+    document.getElementById('pwa-meeting-source').value = 'chat';
 
     // Fetch phone from lead
     if (currentRoom.lead_id) {
@@ -1879,6 +2101,8 @@ async function savePwaMeeting() {
     const date = document.getElementById('pwa-meeting-date').value;
     const time = document.getElementById('pwa-meeting-time').value;
     const type = document.getElementById('pwa-meeting-type').value;
+    const status = document.getElementById('pwa-meeting-status').value;
+    const source = document.getElementById('pwa-meeting-source').value;
     const notes = document.getElementById('pwa-meeting-notes').value.trim();
 
     if (!name || !date || !time) {
@@ -1898,9 +2122,9 @@ async function savePwaMeeting() {
             contact_phone: phone || null,
             meeting_date: datetimeISO,
             meeting_type: type,
-            status: 'pending',
-            notes: notes || null,
-            source: 'chat'
+            status: status,
+            source: source,
+            notes: notes || null
         };
 
         const { error } = await sb.from('meetings').insert([insertData]);
@@ -2699,7 +2923,10 @@ function toggleEmojiPicker(e) {
     const picker = document.getElementById('emoji-picker');
     const isVisible = picker.style.display !== 'none' && picker.style.display !== '';
     picker.style.display = isVisible ? 'none' : 'block';
-    if (!isVisible) renderEmojiTab(currentEmojiTab);
+    if (!isVisible) {
+        renderEmojiTab(currentEmojiTab);
+        closePwaPlusMenu();
+    }
 }
 
 function renderEmojiTab(cat) {
@@ -2731,10 +2958,33 @@ function insertEmoji(emoji) {
     document.getElementById('emoji-picker').style.display = 'none';
 }
 
+// ===== PWA PLUS MENU =====
+function togglePwaPlusMenu(e) {
+    if (e) e.stopPropagation();
+    const menu = document.getElementById('pwa-plus-menu');
+    const isVisible = menu.classList.contains('active');
+    if (isVisible) {
+        menu.classList.remove('active');
+    } else {
+        menu.classList.add('active');
+        const picker = document.getElementById('emoji-picker');
+        if (picker) picker.style.display = 'none';
+    }
+}
+
+function closePwaPlusMenu() {
+    const menu = document.getElementById('pwa-plus-menu');
+    if (menu) menu.classList.remove('active');
+}
+
 document.addEventListener('click', e => {
     const picker = document.getElementById('emoji-picker');
-    if (picker && !picker.contains(e.target) && !e.target.classList.contains('btn-emoji')) {
+    if (picker && !picker.contains(e.target) && !e.target.closest('.btn-emoji')) {
         picker.style.display = 'none';
+    }
+    const menu = document.getElementById('pwa-plus-menu');
+    if (menu && !menu.contains(e.target) && !e.target.closest('.btn-plus')) {
+        menu.classList.remove('active');
     }
 });
 
