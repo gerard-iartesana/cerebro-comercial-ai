@@ -850,7 +850,7 @@ async function loadMessages() {
             if (isImg) {
                 fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" onclick="window.open('${m.file_url}','_blank')">`;
             } else if (isAudio) {
-                fileHtml = `<audio controls preload="auto"><source src="${m.file_url}" type="${fn.endsWith('.webm')?'audio/webm':'audio/mp4'}">Tu navegador no soporta este audio. <a href="${m.file_url}" target="_blank">Descargar</a></audio>`;
+                fileHtml = `<audio controls preload="auto"><source src="${m.file_url}">Tu navegador no soporta este audio. <a href="${m.file_url}" target="_blank">Descargar</a></audio>`;
             } else if (isVideo) {
                 fileHtml = `<video controls src="${m.file_url}" preload="metadata" playsinline style="max-height:280px;border-radius:10px"></video>`;
             } else {
@@ -894,7 +894,7 @@ function subscribeToMessages() {
                 if (isImg) {
                     fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" onclick="window.open('${m.file_url}','_blank')">`;
                 } else if (isAudio) {
-                    fileHtml = `<audio controls preload="auto"><source src="${m.file_url}" type="${fn.endsWith('.webm')?'audio/webm':'audio/mp4'}">Tu navegador no soporta este audio. <a href="${m.file_url}" target="_blank">Descargar</a></audio>`;
+                    fileHtml = `<audio controls preload="auto"><source src="${m.file_url}">Tu navegador no soporta este audio. <a href="${m.file_url}" target="_blank">Descargar</a></audio>`;
                 } else if (isVideo) {
                     fileHtml = `<video controls src="${m.file_url}" preload="metadata" playsinline style="max-height:280px;border-radius:10px"></video>`;
                 } else {
@@ -1003,7 +1003,13 @@ async function toggleAudioRecording() {
     }
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        audioRecorder = new MediaRecorder(stream, { mimeType: getSupportedAudioMime() });
+        const mime = getSupportedAudioMime();
+        const opts = mime ? { mimeType: mime } : {};
+        try {
+            audioRecorder = new MediaRecorder(stream, opts);
+        } catch(e2) {
+            audioRecorder = new MediaRecorder(stream);
+        }
         audioChunks = [];
         audioRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
         audioRecorder.onstop = () => { stream.getTracks().forEach(t => t.stop()); };
@@ -1045,12 +1051,13 @@ async function sendAudioRecording() {
             document.getElementById('audio-rec-btn')?.classList.remove('recording');
             document.getElementById('audio-rec-bar')?.classList.remove('active');
             if (!audioChunks.length || !currentRoom) { resolve(); return; }
-            const ext = getSupportedAudioMime().includes('webm') ? 'webm' : 'mp4';
-            const blob = new Blob(audioChunks, { type: getSupportedAudioMime() });
+            const actualMime = audioRecorder.mimeType || 'audio/mp4';
+            const ext = actualMime.includes('webm') ? 'webm' : actualMime.includes('ogg') ? 'ogg' : 'mp4';
+            const blob = new Blob(audioChunks, { type: actualMime });
             const fileName = `audio_${Date.now()}.${ext}`;
             try {
                 const path = `chat/${currentRoom.id}/${fileName}`;
-                const { error: upErr } = await sb.storage.from('chat-files').upload(path, blob, { contentType: blob.type });
+                const { error: upErr } = await sb.storage.from('chat-files').upload(path, blob, { contentType: actualMime });
                 if (upErr) throw upErr;
                 const { data: urlData } = sb.storage.from('chat-files').getPublicUrl(path);
                 await sb.from('chat_messages').insert({
@@ -1079,10 +1086,11 @@ async function sendAudioRecording() {
 }
 
 function getSupportedAudioMime() {
-    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) return 'audio/webm;codecs=opus';
-    if (MediaRecorder.isTypeSupported('audio/webm')) return 'audio/webm';
-    if (MediaRecorder.isTypeSupported('audio/mp4')) return 'audio/mp4';
-    return 'audio/webm';
+    const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac', 'audio/ogg;codecs=opus'];
+    for (const t of types) {
+        try { if (MediaRecorder.isTypeSupported(t)) return t; } catch(e) {}
+    }
+    return '';
 }
 
 // ===== PWA + PUSH =====

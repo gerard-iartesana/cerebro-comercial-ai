@@ -11473,7 +11473,7 @@ function renderChatMessages(messages) {
             if (isImg) {
                 fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" style="max-width:260px;border-radius:10px;margin-top:6px;cursor:pointer" onclick="window.open('${m.file_url}','_blank')">`;
             } else if (isAudio) {
-                fileHtml = `<audio controls preload="auto" style="max-width:260px;margin-top:6px"><source src="${m.file_url}" type="${fn.endsWith('.webm')?'audio/webm':'audio/mp4'}">Tu navegador no soporta este audio. <a href="${m.file_url}" target="_blank">Descargar</a></audio>`;
+                fileHtml = `<audio controls preload="auto" style="max-width:260px;margin-top:6px"><source src="${m.file_url}">Tu navegador no soporta este audio. <a href="${m.file_url}" target="_blank">Descargar</a></audio>`;
             } else if (isVideo) {
                 fileHtml = `<video controls src="${m.file_url}" preload="metadata" playsinline style="max-width:260px;max-height:200px;border-radius:10px;margin-top:6px"></video>`;
             } else {
@@ -11523,7 +11523,7 @@ function subscribeToChatRoom(roomId) {
                 if (isImg) {
                     fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" style="max-width:260px;border-radius:10px;margin-top:6px;cursor:pointer" onclick="window.open('${m.file_url}','_blank')">`;
                 } else if (isAudio) {
-                    fileHtml = `<audio controls preload="auto" style="max-width:260px;margin-top:6px"><source src="${m.file_url}" type="${fn.endsWith('.webm')?'audio/webm':'audio/mp4'}">Tu navegador no soporta este audio. <a href="${m.file_url}" target="_blank">Descargar</a></audio>`;
+                    fileHtml = `<audio controls preload="auto" style="max-width:260px;margin-top:6px"><source src="${m.file_url}">Tu navegador no soporta este audio. <a href="${m.file_url}" target="_blank">Descargar</a></audio>`;
                 } else if (isVideo) {
                     fileHtml = `<video controls src="${m.file_url}" preload="metadata" playsinline style="max-width:260px;max-height:200px;border-radius:10px;margin-top:6px"></video>`;
                 } else {
@@ -11722,7 +11722,12 @@ window.dashToggleAudioRecording = async function() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const mime = dashGetAudioMime();
-        _dashAudioRecorder = new MediaRecorder(stream, { mimeType: mime });
+        const opts = mime ? { mimeType: mime } : {};
+        try {
+            _dashAudioRecorder = new MediaRecorder(stream, opts);
+        } catch(e2) {
+            _dashAudioRecorder = new MediaRecorder(stream);
+        }
         _dashAudioChunks = [];
         _dashAudioRecorder.ondataavailable = e => { if (e.data.size > 0) _dashAudioChunks.push(e.data); };
         _dashAudioRecorder.onstop = () => { stream.getTracks().forEach(t => t.stop()); };
@@ -11770,12 +11775,13 @@ window.dashSendAudioRecording = async function() {
             if (bar) bar.style.display = 'none';
             
             if (!_dashAudioChunks.length || !_chatCurrentRoom) { resolve(); return; }
-            const ext = dashGetAudioMime().includes('webm') ? 'webm' : 'mp4';
-            const blob = new Blob(_dashAudioChunks, { type: dashGetAudioMime() });
+            const actualMime = _dashAudioRecorder.mimeType || 'audio/mp4';
+            const ext = actualMime.includes('webm') ? 'webm' : actualMime.includes('ogg') ? 'ogg' : 'mp4';
+            const blob = new Blob(_dashAudioChunks, { type: actualMime });
             const fileName = `audio_${Date.now()}.${ext}`;
             try {
                 const path = `chat/${_chatCurrentRoom.id}/${fileName}`;
-                const { error: upErr } = await _supabase.storage.from('archivos').upload(path, blob, { contentType: blob.type });
+                const { error: upErr } = await _supabase.storage.from('archivos').upload(path, blob, { contentType: actualMime });
                 if (upErr) throw upErr;
                 const { data: urlData } = _supabase.storage.from('archivos').getPublicUrl(path);
                 await _supabase.from('chat_messages').insert({
@@ -11804,10 +11810,11 @@ window.dashSendAudioRecording = async function() {
 };
 
 function dashGetAudioMime() {
-    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) return 'audio/webm;codecs=opus';
-    if (MediaRecorder.isTypeSupported('audio/webm')) return 'audio/webm';
-    if (MediaRecorder.isTypeSupported('audio/mp4')) return 'audio/mp4';
-    return 'audio/webm';
+    const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac', 'audio/ogg;codecs=opus'];
+    for (const t of types) {
+        try { if (MediaRecorder.isTypeSupported(t)) return t; } catch(e) {}
+    }
+    return '';
 }
 
 // --- Push Notification to Lead ---
