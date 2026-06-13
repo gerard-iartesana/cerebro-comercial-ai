@@ -69,12 +69,11 @@
     /* ===== ROOMS LIST ===== */
     #rooms-screen { background: var(--bg-primary); position: relative; }
     .fab-nuevo-chat {
-        position: absolute; bottom: 24px; right: 20px;
         width: 56px; height: 56px; border-radius: 50%;
         background: linear-gradient(135deg, #6c5ce7, #a855f7);
         color: #fff; font-size: 1.5rem;
         box-shadow: 0 4px 20px rgba(108,92,231,0.5);
-        z-index: 10; border: none; cursor: pointer;
+        border: none; cursor: pointer;
         display: flex; align-items: center; justify-content: center;
         transition: transform 0.15s;
         -webkit-tap-highlight-color: transparent;
@@ -337,7 +336,10 @@
     <div class="rooms-list" id="rooms-list">
         <div class="rooms-empty">Cargando conversaciones...</div>
     </div>
-    <button class="fab-nuevo-chat" onclick="openCreateLeadModal()" title="Nuevo Chat">+</button>
+    <div style="position:absolute;bottom:24px;right:20px;display:flex;flex-direction:column;gap:10px;z-index:10">
+        <button class="fab-nuevo-chat" onclick="openCreateGroupModal()" style="width:48px;height:48px;font-size:1.1rem" title="Nuevo grupo">👥</button>
+        <button class="fab-nuevo-chat" onclick="openCreateLeadModal()" title="Nuevo chat">+</button>
+    </div>
 </div>
 
 <!-- CHAT SCREEN -->
@@ -408,6 +410,12 @@
     </div>
     <div class="modal-body">
         <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="position:relative">
+                <label class="create-lead-label">🔍 Buscar Lead en CRM</label>
+                <input class="create-lead-input" id="create-lead-search" type="text" placeholder="Busca por nombre, empresa o email..." autocomplete="off" oninput="searchLeads(this.value)" onblur="setTimeout(()=>{const c=document.getElementById('create-lead-results');if(c)c.style.display='none'},200)">
+                <div id="create-lead-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:12px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.5);margin-top:4px"></div>
+            </div>
+            <div id="create-lead-selected" style="display:none;background:rgba(108,92,231,0.12);border:1px solid rgba(108,92,231,0.25);border-radius:10px;padding:10px 14px;font-size:0.8rem;color:var(--accent);font-weight:600;align-items:center;justify-content:space-between"></div>
             <div>
                 <label class="create-lead-label" for="create-lead-name">Nombre *</label>
                 <input class="create-lead-input" id="create-lead-name" type="text" placeholder="Nombre del lead" required>
@@ -426,6 +434,33 @@
             </div>
         </div>
         <button class="modal-action-btn" onclick="createLeadRoom()">Crear Chat</button>
+    </div>
+</div>
+
+<!-- CREATE GROUP MODAL -->
+<div class="fullscreen-modal" id="create-group-modal">
+    <div class="modal-header">
+        <div class="modal-header-title">👥 Nuevo Grupo</div>
+        <div class="modal-close" onclick="closeCreateGroupModal()">✕</div>
+    </div>
+    <div class="modal-body">
+        <div style="display:flex;flex-direction:column;gap:14px">
+            <div>
+                <label class="create-lead-label">Nombre del grupo *</label>
+                <input class="create-lead-input" id="create-group-name" type="text" placeholder="Ej: Leads restaurantes">
+            </div>
+            <div>
+                <label class="create-lead-label">Descripción</label>
+                <input class="create-lead-input" id="create-group-desc" type="text" placeholder="Descripción del grupo">
+            </div>
+            <div>
+                <label class="create-lead-label">Añadir miembros</label>
+                <input class="create-lead-input" id="group-member-search" type="text" placeholder="Buscar leads..." oninput="searchGroupMembers(this.value)" autocomplete="off">
+                <div id="group-member-results" style="display:none;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:12px;max-height:180px;overflow-y:auto;margin-top:4px"></div>
+            </div>
+            <div id="group-members-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+        <button class="modal-action-btn" onclick="createGroup()">Crear Grupo</button>
     </div>
 </div>
 
@@ -1026,8 +1061,89 @@ async function sendScheduled() {
     }
 }
 
+// ===== LEAD SEARCH =====
+let leadSearchCache = [];
+let selectedLeadId = null;
+
+async function searchLeads(query) {
+    const container = document.getElementById('create-lead-results');
+    if (!container) return;
+    const q = query.toLowerCase().trim();
+    if (!q) { container.style.display = 'none'; return; }
+    
+    if (!leadSearchCache.length) {
+        try {
+            const { data } = await sb.from('outreach_leads').select('id, first_name, last_name, company_name, email, phone').order('first_name');
+            leadSearchCache = (data || []).map(l => ({
+                id: l.id,
+                nombre: [l.first_name, l.last_name].filter(Boolean).join(' '),
+                empresa: l.company_name || '',
+                email: l.email || '',
+                telefono: l.phone || ''
+            }));
+        } catch(e) { console.warn('Error loading leads:', e); }
+    }
+    
+    const filtered = leadSearchCache.filter(l =>
+        l.nombre.toLowerCase().includes(q) ||
+        l.empresa.toLowerCase().includes(q) ||
+        l.email.toLowerCase().includes(q)
+    ).slice(0, 8);
+    
+    if (!filtered.length) {
+        container.innerHTML = '<div style="padding:12px 16px;font-size:0.8rem;color:var(--text-grey)">Sin resultados</div>';
+        container.style.display = 'block';
+        return;
+    }
+    
+    container.innerHTML = filtered.map(l => `
+        <div onclick="selectLead('${l.id}')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--card-border)" ontouchstart="this.style.background='rgba(255,255,255,0.05)'" ontouchend="this.style.background='transparent'">
+            <div style="width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.75rem">${(l.nombre||'?')[0].toUpperCase()}</div>
+            <div style="flex:1;min-width:0">
+                <div style="font-size:0.82rem;font-weight:700">${l.nombre || 'Sin nombre'}</div>
+                <div style="font-size:0.7rem;color:var(--text-grey)">${l.empresa || ''} ${l.email ? '· ' + l.email : ''}</div>
+            </div>
+        </div>
+    `).join('');
+    container.style.display = 'block';
+}
+
+function selectLead(id) {
+    const lead = leadSearchCache.find(l => l.id === id);
+    if (!lead) return;
+    selectedLeadId = id;
+    document.getElementById('create-lead-name').value = lead.nombre;
+    document.getElementById('create-lead-company').value = lead.empresa;
+    document.getElementById('create-lead-email').value = lead.email;
+    document.getElementById('create-lead-phone').value = lead.telefono;
+    document.getElementById('create-lead-results').style.display = 'none';
+    document.getElementById('create-lead-search').value = '';
+    const badge = document.getElementById('create-lead-selected');
+    if (badge) {
+        badge.style.display = 'flex';
+        badge.innerHTML = `<span>✅ ${lead.nombre}</span><span onclick="clearLeadSelection()" style="cursor:pointer;font-size:1rem">✕</span>`;
+    }
+}
+
+function clearLeadSelection() {
+    selectedLeadId = null;
+    const badge = document.getElementById('create-lead-selected');
+    if (badge) badge.style.display = 'none';
+}
+
 // ===== CREATE LEAD =====
 function openCreateLeadModal() {
+    selectedLeadId = null;
+    leadSearchCache = [];
+    const badge = document.getElementById('create-lead-selected');
+    if (badge) badge.style.display = 'none';
+    document.getElementById('create-lead-search').value = '';
+    document.getElementById('create-lead-name').value = '';
+    document.getElementById('create-lead-company').value = '';
+    document.getElementById('create-lead-email').value = '';
+    document.getElementById('create-lead-phone').value = '';
+    const results = document.getElementById('create-lead-results');
+    if (results) results.style.display = 'none';
     document.getElementById('create-lead-modal').classList.add('active');
 }
 function closeCreateLeadModal() {
@@ -1039,13 +1155,15 @@ async function createLeadRoom() {
     const company = document.getElementById('create-lead-company')?.value.trim() || '';
     const email = document.getElementById('create-lead-email')?.value.trim() || '';
     const phone = document.getElementById('create-lead-phone')?.value.trim() || '';
+    const insertData = {
+        lead_name: name,
+        lead_company: company,
+        lead_email: email,
+        lead_phone: phone
+    };
+    if (selectedLeadId) insertData.lead_id = selectedLeadId;
     try {
-        const { data, error } = await sb.from('chat_rooms').insert({
-            lead_name: name,
-            lead_company: company,
-            lead_email: email,
-            lead_phone: phone
-        }).select().single();
+        const { data, error } = await sb.from('chat_rooms').insert(insertData).select().single();
         if (error) throw error;
         closeCreateLeadModal();
         showToast('Chat con ' + name + ' creado ✅');
@@ -1053,6 +1171,124 @@ async function createLeadRoom() {
         openRoom(data.id);
     } catch(e) {
         showToast('Error al crear: ' + (e.message || ''));
+    }
+}
+
+// ===== CREATE GROUP =====
+let groupMembers = [];
+
+function openCreateGroupModal() {
+    groupMembers = [];
+    renderGroupMembers();
+    document.getElementById('create-group-name').value = '';
+    document.getElementById('create-group-desc').value = '';
+    document.getElementById('group-member-search').value = '';
+    const results = document.getElementById('group-member-results');
+    if (results) results.style.display = 'none';
+    document.getElementById('create-group-modal').classList.add('active');
+}
+function closeCreateGroupModal() { document.getElementById('create-group-modal').classList.remove('active'); }
+
+async function searchGroupMembers(query) {
+    const container = document.getElementById('group-member-results');
+    if (!container) return;
+    const q = query.toLowerCase().trim();
+    if (!q) { container.style.display = 'none'; return; }
+    
+    // Reuse leadSearchCache, load if empty
+    if (!leadSearchCache.length) {
+        try {
+            const { data } = await sb.from('outreach_leads').select('id, first_name, last_name, company_name, email, phone').order('first_name');
+            leadSearchCache = (data || []).map(l => ({
+                id: l.id,
+                nombre: [l.first_name, l.last_name].filter(Boolean).join(' '),
+                empresa: l.company_name || '',
+                email: l.email || '',
+                telefono: l.phone || ''
+            }));
+        } catch(e) {}
+    }
+    // Also add existing chat rooms
+    const existingIds = leadSearchCache.map(l => l.id);
+    rooms.forEach(r => {
+        if (!existingIds.includes(r.id)) {
+            leadSearchCache.push({ id: r.id, nombre: r.lead_name || '', empresa: r.lead_company || '', email: r.lead_email || '', telefono: '' });
+        }
+    });
+    
+    const filtered = leadSearchCache.filter(l =>
+        !groupMembers.find(m => m.id === l.id) &&
+        (l.nombre.toLowerCase().includes(q) || l.empresa.toLowerCase().includes(q) || l.email.toLowerCase().includes(q))
+    ).slice(0, 6);
+    
+    if (!filtered.length) {
+        container.innerHTML = '<div style="padding:12px;font-size:0.8rem;color:var(--text-grey)">Sin resultados</div>';
+        container.style.display = 'block';
+        return;
+    }
+    
+    container.innerHTML = filtered.map(l => `
+        <div onclick="addGroupMember('${l.id}','${(l.nombre||'').replace(/'/g,"\\'")}')"
+             style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--card-border)"
+             ontouchstart="this.style.background='rgba(255,255,255,0.05)'" ontouchend="this.style.background='transparent'">
+            <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.7rem">${(l.nombre||'?')[0].toUpperCase()}</div>
+            <div style="font-size:0.82rem;font-weight:600">${l.nombre}</div>
+        </div>
+    `).join('');
+    container.style.display = 'block';
+}
+
+function addGroupMember(id, nombre) {
+    if (groupMembers.find(m => m.id === id)) return;
+    groupMembers.push({ id, nombre });
+    renderGroupMembers();
+    document.getElementById('group-member-search').value = '';
+    document.getElementById('group-member-results').style.display = 'none';
+}
+
+function removeGroupMember(id) {
+    groupMembers = groupMembers.filter(m => m.id !== id);
+    renderGroupMembers();
+}
+
+function renderGroupMembers() {
+    const container = document.getElementById('group-members-list');
+    if (!container) return;
+    container.innerHTML = groupMembers.map(m => `
+        <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.3);border-radius:20px;font-size:0.78rem;font-weight:600;color:var(--accent)">
+            ${m.nombre}
+            <span onclick="removeGroupMember('${m.id}')" style="cursor:pointer;font-size:0.9rem">✕</span>
+        </span>
+    `).join('');
+}
+
+async function createGroup() {
+    const name = document.getElementById('create-group-name')?.value.trim();
+    if (!name) { showToast('El nombre es obligatorio'); return; }
+    if (groupMembers.length < 1) { showToast('Añade al menos un miembro'); return; }
+    const desc = document.getElementById('create-group-desc')?.value.trim() || '';
+    try {
+        // Create the group room
+        const { data, error } = await sb.from('chat_rooms').insert({
+            lead_name: name,
+            lead_company: desc,
+            lead_email: groupMembers.map(m => m.nombre).join(', '),
+            is_group: true
+        }).select().single();
+        if (error) throw error;
+        // Store group members as metadata (as a system message)
+        await sb.from('chat_messages').insert({
+            room_id: data.id,
+            sender_type: 'system',
+            sender_name: 'Sistema',
+            content: '👥 Grupo creado: ' + groupMembers.map(m => m.nombre).join(', ')
+        });
+        closeCreateGroupModal();
+        showToast('Grupo "' + name + '" creado ✅');
+        await loadRooms();
+        openRoom(data.id);
+    } catch(e) {
+        showToast('Error: ' + (e.message || ''));
     }
 }
 
