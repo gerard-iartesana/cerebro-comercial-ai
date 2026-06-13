@@ -1,5 +1,5 @@
 // Chat Service Worker - Network First + Push Notifications + Badge
-const CACHE_VERSION = 'chat-v20-exit-without-logout-1718391600';
+const CACHE_VERSION = 'chat-v21-ready-subscription-1718393500';
 
 self.addEventListener('install', event => {
     self.skipWaiting();
@@ -49,22 +49,28 @@ self.addEventListener('push', event => {
         }
     }
 
+    // Clean, universally supported options
     const options = {
         body: data.body || 'Tienes un mensaje nuevo',
         icon: data.icon || 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png',
         badge: data.badge || 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png',
         vibrate: [200, 100, 200],
-        tag: 'chat-message-' + Date.now(), // unique tag so each message shows
-        renotify: true,
-        requireInteraction: true, // keep notification visible until user interacts
+        tag: 'chat-message-' + Date.now(), // unique tag so each message shows separately
         data: data.data || {},
     };
 
+    // Safely add requireInteraction only if supported to avoid iOS Safari issues
+    if ('requireInteraction' in Notification.prototype) {
+        options.requireInteraction = true;
+    }
+
     event.waitUntil(
         Promise.all([
-            self.registration.showNotification(data.title || 'Nuevo mensaje', options),
+            self.registration.showNotification(data.title || 'Nuevo mensaje', options)
+                .catch(err => console.error('showNotification error:', err)),
             // Set app badge with unread count
             updateBadge()
+                .catch(err => console.error('updateBadge error:', err))
         ])
     );
 });
