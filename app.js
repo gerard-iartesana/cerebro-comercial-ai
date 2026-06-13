@@ -11481,7 +11481,8 @@ function renderChatMessages(messages) {
             }
         }
 
-        return `<div style="display:flex;flex-direction:column;align-items:${align};gap:2px">
+        const safeContent = (m.content || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+        return `<div class="dash-msg-wrapper" style="display:flex;flex-direction:column;align-items:${align};gap:2px" data-msg-id="${m.id}" data-msg-content="${safeContent}" data-msg-file="${m.file_url||''}" data-msg-fname="${m.file_name||''}">
             <div style="font-size:0.65rem;color:var(--text-grey);margin-bottom:2px;padding:0 4px">${m.sender_name || (isAdmin ? 'Tú' : _chatCurrentRoom?.lead_name || 'Lead')} · ${date} ${time}</div>
             <div style="max-width:70%;padding:10px 14px;border-radius:14px;background:${bubbleBg};color:${bubbleColor};border:1px solid ${bubbleBorder};font-size:0.86rem;line-height:1.45;word-break:break-word">
                 ${m.content || ''}${fileHtml}
@@ -11531,8 +11532,14 @@ function subscribeToChatRoom(roomId) {
                 }
             }
 
+            const safeContent = (m.content || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
             const div = document.createElement('div');
+            div.className = 'dash-msg-wrapper';
             div.style.cssText = `display:flex;flex-direction:column;align-items:${align};gap:2px`;
+            div.dataset.msgId = m.id;
+            div.dataset.msgContent = safeContent;
+            div.dataset.msgFile = m.file_url || '';
+            div.dataset.msgFname = m.file_name || '';
             div.innerHTML = `
                 <div style="font-size:0.65rem;color:var(--text-grey);margin-bottom:2px;padding:0 4px">${m.sender_name || (isAdmin ? 'Tú' : _chatCurrentRoom?.lead_name || 'Lead')} · ${date} ${time}</div>
                 <div style="max-width:70%;padding:10px 14px;border-radius:14px;background:${bubbleBg};color:${bubbleColor};border:1px solid ${bubbleBorder};font-size:0.86rem;line-height:1.45;word-break:break-word">${m.content || ''}${fileHtml}</div>
@@ -11543,6 +11550,92 @@ function subscribeToChatRoom(roomId) {
         .subscribe();
 }
 
+
+// --- Dashboard Message Context Menu ---
+let _dashCtxMsgId = null, _dashCtxContent = '', _dashCtxFile = '', _dashCtxFname = '';
+
+(function initDashContextMenu() {
+    const menu = document.createElement('div');
+    menu.id = 'dash-ctx-menu';
+    menu.style.cssText = 'position:fixed;z-index:9999;background:var(--bg-surface,#1e1e2a);border:1px solid var(--border-color,#2a2a3d);border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,0.5);padding:6px 0;min-width:170px;display:none;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)';
+    menu.innerHTML = `
+        <div class="dash-ctx-item" style="display:flex;align-items:center;gap:10px;padding:11px 18px;font-size:0.82rem;cursor:pointer" onclick="dashCtxCopy()">📋 Copiar</div>
+        <div class="dash-ctx-item" style="display:flex;align-items:center;gap:10px;padding:11px 18px;font-size:0.82rem;cursor:pointer" onclick="dashCtxForward()">↩️ Reenviar</div>
+        <div class="dash-ctx-item" style="display:flex;align-items:center;gap:10px;padding:11px 18px;font-size:0.82rem;cursor:pointer;color:#ff4757" onclick="dashCtxDelete()">🗑️ Borrar</div>
+    `;
+    document.body.appendChild(menu);
+
+    document.addEventListener('contextmenu', e => {
+        const wrapper = e.target.closest('.dash-msg-wrapper');
+        if (!wrapper) return;
+        e.preventDefault();
+        _dashCtxMsgId = wrapper.dataset.msgId;
+        _dashCtxContent = wrapper.dataset.msgContent || '';
+        _dashCtxFile = wrapper.dataset.msgFile || '';
+        _dashCtxFname = wrapper.dataset.msgFname || '';
+        menu.style.display = 'block';
+        const mw = menu.offsetWidth, mh = menu.offsetHeight;
+        menu.style.left = Math.min(e.clientX, window.innerWidth - mw - 12) + 'px';
+        menu.style.top = (e.clientY - mh - 8 < 8 ? e.clientY + 8 : e.clientY - mh - 8) + 'px';
+    });
+
+    document.addEventListener('click', e => {
+        if (!menu.contains(e.target)) menu.style.display = 'none';
+    });
+})();
+
+window.dashCtxCopy = async function() {
+    document.getElementById('dash-ctx-menu').style.display = 'none';
+    const text = _dashCtxContent.replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+    try {
+        await navigator.clipboard.writeText(text || _dashCtxFile);
+        showToast('Copiado ✅');
+    } catch { showToast('No se pudo copiar'); }
+};
+
+window.dashCtxDelete = async function() {
+    document.getElementById('dash-ctx-menu').style.display = 'none';
+    if (!_dashCtxMsgId || !confirm('¿Borrar este mensaje?')) return;
+    try {
+        const { error } = await _supabase.from('chat_messages').delete().eq('id', _dashCtxMsgId);
+        if (error) throw error;
+        const el = document.querySelector(`[data-msg-id="${_dashCtxMsgId}"]`);
+        if (el) el.remove();
+        showToast('Mensaje borrado ✅');
+    } catch(e) { showToast('Error: ' + (e.message || '')); }
+};
+
+window.dashCtxForward = async function() {
+    document.getElementById('dash-ctx-menu').style.display = 'none';
+    const { data: rooms } = await _supabase.from('chat_rooms').select('*').order('last_message_at', { ascending: false }).limit(20);
+    if (!rooms?.length) { showToast('No hay chats'); return; }
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center';
+    overlay.innerHTML = `<div style="background:var(--bg-surface,#1e1e2a);border:1px solid var(--border-color,#2a2a3d);border-radius:18px;padding:20px;max-width:360px;width:90%;max-height:400px;overflow-y:auto">
+        <h3 style="margin:0 0 12px;font-size:1rem">Reenviar a...</h3>
+        ${rooms.filter(r => !_chatCurrentRoom || r.id !== _chatCurrentRoom.id).map(r =>
+            `<div style="padding:12px;cursor:pointer;border-radius:10px;font-size:0.85rem" onmouseover="this.style.background='rgba(108,92,231,0.15)'" onmouseout="this.style.background=''" onclick="dashDoForward('${r.id}','${(r.lead_name||r.group_name||'Chat').replace(/'/g,"\\'")}')"
+            >${r.is_group?'👥':'💬'} ${r.lead_name||r.group_name||'Chat'}</div>`
+        ).join('')}
+        <button onclick="this.closest('div').parentElement.remove()" style="margin-top:12px;padding:10px;border-radius:12px;background:var(--bg-tertiary,#2a2a3d);border:1px solid var(--border-color,#3a3a4d);color:#e8e6f0;font-size:0.82rem;cursor:pointer;width:100%">Cancelar</button>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+};
+
+window.dashDoForward = async function(roomId, roomName) {
+    document.querySelector('[style*="position:fixed;inset:0"]')?.remove();
+    try {
+        const insertData = {
+            room_id: roomId, sender_type: 'admin', sender_name: 'Gerard',
+            content: _dashCtxContent.replace(/&#39;/g, "'").replace(/&quot;/g, '"') || '',
+        };
+        if (_dashCtxFile) { insertData.file_url = _dashCtxFile; insertData.file_name = _dashCtxFname; }
+        await _supabase.from('chat_messages').insert(insertData);
+        await _supabase.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', roomId);
+        showToast(`Reenviado a ${roomName} ✅`);
+    } catch(e) { showToast('Error: ' + (e.message || '')); }
+};
 
 // --- Dictado por voz (dashboard) ---
 let _dashRecognition = null;

@@ -463,6 +463,28 @@
             cursor: pointer;
         }
 
+        /* Context menu */
+        .msg-context-menu {
+            position: fixed; z-index: 9999;
+            background: var(--bg-secondary, rgba(18,18,24,0.97)); border: 1px solid var(--card-border);
+            border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+            padding: 6px 0; min-width: 160px; display: none;
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        }
+        .msg-context-menu.active { display: block; }
+        .msg-ctx-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 11px 18px; font-size: 0.82rem; color: var(--text-main);
+            cursor: pointer; transition: background 0.12s; font-family: inherit;
+        }
+        .msg-ctx-item:first-child { border-radius: 14px 14px 0 0; }
+        .msg-ctx-item:last-child { border-radius: 0 0 14px 14px; }
+        .msg-ctx-item:active { background: rgba(108,92,231,0.15); }
+        .msg-ctx-item.danger { color: #ff4757; }
+        .msg-ctx-item span:first-child { font-size: 1rem; }
+        .msg-wrapper { user-select: none; -webkit-user-select: none; }
+        .msg-wrapper.ctx-active .msg-bubble { outline: 2px solid var(--accent, #6c5ce7); outline-offset: -2px; }
+
         /* --- Toast (centered Apple style) --- */
         #lead-toast {
             position:fixed; top:50%; left:50%;
@@ -1092,8 +1114,9 @@ function renderMessages(messages) {
             }
         }
 
+        const safeContent = (m.content || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
         html += `
-            <div class="msg-wrapper ${cls}">
+            <div class="msg-wrapper ${cls}" data-msg-id="${m.id}" data-msg-content="${safeContent}" data-msg-file="${m.file_url||''}" data-msg-sender="${m.sender_type}">
                 <div class="msg-meta">${senderName} · ${time}</div>
                 <div class="msg-bubble">${m.content || ''}${fileHtml}</div>
             </div>`;
@@ -1305,6 +1328,110 @@ function getSupportedAudioMime() {
     return ''; // Let browser choose its default
 }
 
+// ===== MESSAGE CONTEXT MENU =====
+let _ctxMsgId = null, _ctxMsgContent = '', _ctxMsgFile = '', _ctxSender = '';
+let _longPressTimer = null;
+
+function initContextMenu() {
+    const menu = document.createElement('div');
+    menu.className = 'msg-context-menu';
+    menu.id = 'msg-ctx-menu';
+    menu.innerHTML = `
+        <div class="msg-ctx-item" onclick="ctxCopy()"><span>📋</span> Copiar</div>
+        <div class="msg-ctx-item danger" onclick="ctxDelete()"><span>🗑️</span> Borrar</div>
+    `;
+    document.body.appendChild(menu);
+
+    const container = document.getElementById('chat-messages');
+    if (!container) return;
+
+    container.addEventListener('touchstart', e => {
+        const wrapper = e.target.closest('.msg-wrapper');
+        if (!wrapper) return;
+        _longPressTimer = setTimeout(() => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            showContextMenu(wrapper, touch.clientX, touch.clientY);
+            navigator.vibrate?.(30);
+        }, 500);
+    }, { passive: false });
+    container.addEventListener('touchend', () => clearTimeout(_longPressTimer));
+    container.addEventListener('touchmove', () => clearTimeout(_longPressTimer));
+
+    container.addEventListener('contextmenu', e => {
+        const wrapper = e.target.closest('.msg-wrapper');
+        if (!wrapper) return;
+        e.preventDefault();
+        showContextMenu(wrapper, e.clientX, e.clientY);
+    });
+
+    document.addEventListener('click', e => {
+        const menu = document.getElementById('msg-ctx-menu');
+        if (menu && !menu.contains(e.target)) hideContextMenu();
+    });
+    document.addEventListener('touchstart', e => {
+        const menu = document.getElementById('msg-ctx-menu');
+        if (menu && menu.classList.contains('active') && !menu.contains(e.target)) hideContextMenu();
+    });
+}
+
+function showContextMenu(wrapper, x, y) {
+    hideContextMenu();
+    _ctxMsgId = wrapper.dataset.msgId;
+    _ctxMsgContent = wrapper.dataset.msgContent || '';
+    _ctxMsgFile = wrapper.dataset.msgFile || '';
+    _ctxSender = wrapper.dataset.msgSender || '';
+    wrapper.classList.add('ctx-active');
+
+    const menu = document.getElementById('msg-ctx-menu');
+    // Only show delete for own messages
+    const deleteBtn = menu.querySelector('.danger');
+    if (deleteBtn) deleteBtn.style.display = _ctxSender === 'lead' ? 'flex' : 'none';
+    menu.classList.add('active');
+
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    let left = Math.min(x, window.innerWidth - mw - 12);
+    let top = y - mh - 8;
+    if (top < 8) top = y + 8;
+    menu.style.left = Math.max(8, left) + 'px';
+    menu.style.top = top + 'px';
+}
+
+function hideContextMenu() {
+    const menu = document.getElementById('msg-ctx-menu');
+    if (menu) menu.classList.remove('active');
+    document.querySelectorAll('.msg-wrapper.ctx-active').forEach(el => el.classList.remove('ctx-active'));
+}
+
+async function ctxCopy() {
+    hideContextMenu();
+    const text = _ctxMsgContent.replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+    if (text) {
+        try { await navigator.clipboard.writeText(text); showLeadToast('Texto copiado ✅'); }
+        catch { showLeadToast('No se pudo copiar'); }
+    } else if (_ctxMsgFile) {
+        try { await navigator.clipboard.writeText(_ctxMsgFile); showLeadToast('Enlace copiado ✅'); }
+        catch { showLeadToast('No se pudo copiar'); }
+    }
+}
+
+async function ctxDelete() {
+    hideContextMenu();
+    if (!_ctxMsgId) return;
+    if (!confirm('¿Borrar este mensaje?')) return;
+    try {
+        const { error } = await sb.from('chat_messages').delete().eq('id', _ctxMsgId);
+        if (error) throw error;
+        const el = document.querySelector(`[data-msg-id="${_ctxMsgId}"]`);
+        if (el) el.remove();
+        showLeadToast('Mensaje borrado ✅');
+    } catch(e) {
+        showLeadToast('Error al borrar');
+    }
+}
+
+setTimeout(initContextMenu, 500);
+
 // ===== AUTO-CANCEL SCHEDULED MESSAGES ON LEAD REPLY =====
 async function cancelPendingScheduled() {
     if (!currentRoom) return;
@@ -1428,6 +1555,7 @@ function subscribeToMessages() {
             const cls = isAdmin ? 'admin' : 'lead';
             const time = new Date(m.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
             const senderName = m.sender_name || (isAdmin ? 'Gerard' : currentRoom.lead_name || 'Tú');
+            const safeContent = (m.content || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
 
             let fileHtml = '';
             if (m.file_url) {
@@ -1448,6 +1576,10 @@ function subscribeToMessages() {
 
             const div = document.createElement('div');
             div.className = `msg-wrapper ${cls}`;
+            div.dataset.msgId = m.id;
+            div.dataset.msgContent = (m.content || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+            div.dataset.msgFile = m.file_url || '';
+            div.dataset.msgSender = m.sender_type;
             div.innerHTML = `
                 <div class="msg-meta">${senderName} · ${time}</div>
                 <div class="msg-bubble">${m.content || ''}${fileHtml}</div>
