@@ -11774,7 +11774,140 @@ window.createChatRoom = async function() {
     }
 };
 
-// --- Copiar link de acceso ---
+// --- Crear grupo de chat ---
+let _groupMembers = [];
+
+window.showCreateGroupModal = async function() {
+    _groupMembers = [];
+    _chatLeadsCache = [];
+    try {
+        const { data: crmLeads } = await _supabase.from('outreach_leads').select('id, first_name, last_name, company_name, email, phone').order('first_name');
+        const merged = [];
+        const seen = new Set();
+        (crmLeads || []).forEach(l => {
+            const nombre = [l.first_name, l.last_name].filter(Boolean).join(' ') || '';
+            const key = (l.email || nombre).toLowerCase();
+            if (key && !seen.has(key)) {
+                seen.add(key);
+                merged.push({ id: l.id, nombre, empresa: l.company_name || '', email: l.email || '' });
+            }
+        });
+        _chatLeadsCache = merged;
+    } catch(e) { console.warn('Could not load leads:', e); }
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'create-group-modal';
+    modal.innerHTML = `
+        <div class="modal-box" style="max-width:520px">
+            <div class="modal-header">
+                <h2 style="font-size:1.1rem;font-weight:800">👥 Nuevo Grupo</h2>
+                <button class="modal-close" onclick="document.getElementById('create-group-modal').remove()">✕</button>
+            </div>
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+                <div>
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Nombre del grupo *</label>
+                    <input type="text" id="new-group-name" class="modal-input" placeholder="Ej: Leads restaurantes" style="width:100%">
+                </div>
+                <div>
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">Descripción</label>
+                    <input type="text" id="new-group-desc" class="modal-input" placeholder="Descripción del grupo" style="width:100%">
+                </div>
+                <div style="position:relative">
+                    <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:6px;display:block">🔍 Añadir miembros</label>
+                    <input type="text" id="new-group-search" class="modal-input" placeholder="Buscar por nombre, empresa o email..." style="width:100%" oninput="filterGroupMemberSearch(this.value)" onfocus="filterGroupMemberSearch(this.value)" autocomplete="off">
+                    <div id="new-group-search-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:12px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.3);margin-top:4px"></div>
+                </div>
+                <div id="new-group-members" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+                <button class="btn-primary" onclick="createChatGroup()" style="width:100%;padding:12px;border-radius:12px;font-weight:700;font-size:0.88rem;margin-top:6px;background:linear-gradient(135deg,#0ea5e9,#06b6d4)">Crear Grupo</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+    document.getElementById('new-group-search')?.addEventListener('blur', () => {
+        setTimeout(() => { const r = document.getElementById('new-group-search-results'); if(r) r.style.display='none'; }, 200);
+    });
+};
+
+window.filterGroupMemberSearch = function(query) {
+    const container = document.getElementById('new-group-search-results');
+    if (!container) return;
+    const q = query.toLowerCase().trim();
+    if (!q) { container.style.display = 'none'; return; }
+    const filtered = _chatLeadsCache.filter(l =>
+        !_groupMembers.find(m => m.id === l.id) &&
+        ((l.nombre || '').toLowerCase().includes(q) || (l.empresa || '').toLowerCase().includes(q) || (l.email || '').toLowerCase().includes(q))
+    ).slice(0, 8);
+    if (!filtered.length) {
+        container.innerHTML = '<div style="padding:12px 16px;font-size:0.8rem;color:var(--text-grey)">Sin resultados</div>';
+        container.style.display = 'block'; return;
+    }
+    container.innerHTML = filtered.map(l => `
+        <div onclick="addGroupMember('${l.id}')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background 0.15s;border-bottom:1px solid var(--border-color)" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+            <div style="width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.75rem">${(l.nombre||'?')[0].toUpperCase()}</div>
+            <div style="flex:1;min-width:0">
+                <div style="font-size:0.82rem;font-weight:700;color:var(--text-main)">${l.nombre || 'Sin nombre'}</div>
+                <div style="font-size:0.7rem;color:var(--text-grey)">${l.empresa || ''} ${l.email ? '· ' + l.email : ''}</div>
+            </div>
+        </div>
+    `).join('');
+    container.style.display = 'block';
+};
+
+window.addGroupMember = function(id) {
+    const lead = _chatLeadsCache.find(l => l.id === id);
+    if (!lead || _groupMembers.find(m => m.id === id)) return;
+    _groupMembers.push(lead);
+    _renderGroupPills();
+    const s = document.getElementById('new-group-search'); if (s) s.value = '';
+    const r = document.getElementById('new-group-search-results'); if (r) r.style.display = 'none';
+};
+
+window.removeGroupMember = function(id) {
+    _groupMembers = _groupMembers.filter(m => m.id !== id);
+    _renderGroupPills();
+};
+
+function _renderGroupPills() {
+    const c = document.getElementById('new-group-members');
+    if (!c) return;
+    c.innerHTML = _groupMembers.map(m => `
+        <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(14,165,233,0.12);border:1px solid rgba(14,165,233,0.25);border-radius:20px;font-size:0.78rem;font-weight:600;color:#0ea5e9">
+            ${m.nombre}
+            <span onclick="removeGroupMember('${m.id}')" style="cursor:pointer;font-size:0.9rem;opacity:0.7">✕</span>
+        </span>
+    `).join('');
+}
+
+window.createChatGroup = async function() {
+    const name = document.getElementById('new-group-name')?.value.trim();
+    if (!name) { showToast('El nombre del grupo es obligatorio', true); return; }
+    if (_groupMembers.length < 1) { showToast('Añade al menos un miembro', true); return; }
+    const desc = document.getElementById('new-group-desc')?.value.trim() || '';
+    try {
+        const { data, error } = await _supabase.from('chat_rooms').insert({
+            lead_name: name,
+            lead_company: desc,
+            lead_email: _groupMembers.map(m => m.nombre).join(', '),
+            is_group: true
+        }).select().single();
+        if (error) throw error;
+        await _supabase.from('chat_messages').insert({
+            room_id: data.id, sender_type: 'system', sender_name: 'Sistema',
+            content: '👥 Grupo creado: ' + _groupMembers.map(m => m.nombre).join(', ')
+        });
+        document.getElementById('create-group-modal')?.remove();
+        showToast('Grupo "' + name + '" creado');
+        await loadChatRooms();
+        openChatRoom(data.id);
+    } catch(e) {
+        console.error('[Chat] Error creating group:', e.message || e);
+        showToast('Error: ' + (e.message || 'No se pudo crear'), true);
+    }
+};
+
+
 window.copyChatLink = function() {
     if (!_chatCurrentRoom) return;
     const url = `${window.location.origin}/chat?token=${_chatCurrentRoom.link_token}`;

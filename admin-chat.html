@@ -172,8 +172,8 @@
     }
     .msg-bubble a { color: #a8b4ff; }
     .chat-input-bar {
-        display:flex; align-items:center; gap:8px;
-        padding: 10px 12px;
+        display:flex; align-items:center; gap:10px;
+        padding: 12px 16px;
         border-top: 1px solid var(--card-border);
         background: var(--bg-secondary);
     }
@@ -299,7 +299,7 @@
     /* ===== SAFE AREAS ===== */
     @supports(padding-top: env(safe-area-inset-top)) {
         .rooms-header, .chat-header, .modal-header { padding-top: calc(12px + env(safe-area-inset-top)); }
-        .chat-input-bar { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+        .chat-input-bar { padding-bottom: calc(14px + env(safe-area-inset-bottom)); padding-left: calc(16px + env(safe-area-inset-left)); padding-right: calc(16px + env(safe-area-inset-right)); }
         .modal-body { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
     }
 </style>
@@ -336,8 +336,8 @@
     <div class="rooms-list" id="rooms-list">
         <div class="rooms-empty">Cargando conversaciones...</div>
     </div>
-    <div style="position:absolute;bottom:24px;right:20px;display:flex;flex-direction:column;gap:10px;z-index:10">
-        <button class="fab-nuevo-chat" onclick="openCreateGroupModal()" style="width:48px;height:48px;font-size:1.1rem" title="Nuevo grupo">👥</button>
+    <div style="position:absolute;bottom:24px;right:20px;display:flex;flex-direction:row;gap:12px;z-index:10">
+        <button class="fab-nuevo-chat" onclick="openCreateGroupModal()" style="background:linear-gradient(135deg,#0ea5e9,#06b6d4);box-shadow:0 4px 20px rgba(14,165,233,0.45)" title="Nuevo grupo">👥</button>
         <button class="fab-nuevo-chat" onclick="openCreateLeadModal()" title="Nuevo chat">+</button>
     </div>
 </div>
