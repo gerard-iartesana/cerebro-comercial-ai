@@ -11393,7 +11393,7 @@ window.openChatRoom = async function(roomId) {
     const header = document.getElementById('chat-active-header');
     const inputBar = document.getElementById('chat-input-bar');
     if (header) header.style.display = 'flex';
-    if (inputBar) inputBar.style.display = 'flex';
+    if (inputBar) inputBar.style.display = 'block';
 
     // Update header info
     const isGroup = room.is_group;
