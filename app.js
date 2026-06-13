@@ -11512,6 +11512,50 @@ function subscribeToChatRoom(roomId) {
 // --- Dictado por voz (dashboard) ---
 let _dashRecognition = null;
 let _dashIsRecording = false;
+let _dashMicRetry = 0;
+
+window.showDashMicHelp = function() {
+    let modal = document.getElementById('dash-mic-help-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'dash-mic-help-modal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;padding:24px';
+        modal.innerHTML = `
+            <div style="background:linear-gradient(180deg,#1e1e2a 0%,#16161e 100%);border:1px solid rgba(255,255,255,0.1);border-radius:24px;max-width:340px;width:100%;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.6);animation:micModalPop 0.35s cubic-bezier(0.34,1.56,0.64,1)">
+                <div style="padding:28px 24px 16px;text-align:center">
+                    <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#ff4757,#ff6b81);display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin:0 auto 16px;box-shadow:0 8px 24px rgba(255,71,87,0.3)">🎙️</div>
+                    <h3 style="font-size:1.15rem;font-weight:800;color:#e8e6f0;letter-spacing:-0.02em">Activar Micrófono</h3>
+                    <p style="font-size:0.8rem;color:#8b8a97;margin-top:6px;line-height:1.4">Para dictar mensajes por voz, necesitas permitir el acceso al micrófono</p>
+                </div>
+                <div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:8px">
+                    <div style="display:flex;align-items:flex-start;gap:14px;padding:14px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06)">
+                        <div style="width:26px;height:26px;border-radius:50%;background:#6c5ce7;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;flex-shrink:0">1</div>
+                        <div style="font-size:0.82rem;line-height:1.5;color:#e8e6f0">Pulsa el botón <strong>🎙️</strong> del chat</div>
+                    </div>
+                    <div style="display:flex;align-items:flex-start;gap:14px;padding:14px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06)">
+                        <div style="width:26px;height:26px;border-radius:50%;background:#6c5ce7;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;flex-shrink:0">2</div>
+                        <div style="font-size:0.82rem;line-height:1.5;color:#e8e6f0">Cuando aparezca el aviso, pulsa <strong>"Permitir"</strong></div>
+                    </div>
+                    <div style="display:flex;align-items:flex-start;gap:14px;padding:14px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06)">
+                        <div style="width:26px;height:26px;border-radius:50%;background:#6c5ce7;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;flex-shrink:0">3</div>
+                        <div style="font-size:0.82rem;line-height:1.5;color:#e8e6f0">Pulsa <strong>🎙️ otra vez</strong> y empieza a hablar</div>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('dash-mic-help-modal').style.display='none'" style="display:block;width:calc(100% - 40px);margin:0 20px 20px;padding:14px;border-radius:14px;background:linear-gradient(135deg,#ff4757,#ff6b81);border:none;color:#fff;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:center">Entendido</button>
+            </div>
+        `;
+        // Add animation keyframe if not present
+        if (!document.getElementById('mic-modal-style')) {
+            const style = document.createElement('style');
+            style.id = 'mic-modal-style';
+            style.textContent = '@keyframes micModalPop { from { opacity:0; transform:scale(0.85); } to { opacity:1; transform:scale(1); } }';
+            document.head.appendChild(style);
+        }
+        document.body.appendChild(modal);
+    } else {
+        modal.style.display = 'flex';
+    }
+};
 
 window.toggleDashboardDictation = function() {
     if (_dashIsRecording) { _stopDashDictation(); return; }
@@ -11526,6 +11570,7 @@ window.toggleDashboardDictation = function() {
     const startText = input ? input.value : '';
     _dashRecognition.onstart = () => {
         _dashIsRecording = true;
+        _dashMicRetry = 0;
         if (btn) { btn.style.background = 'linear-gradient(135deg,#ff4757,#ff6b81)'; btn.style.borderColor = '#ff4757'; btn.textContent = '⏹️'; btn.style.animation = 'micPulse 1s ease-in-out infinite'; }
         if (input) input.placeholder = 'Escuchando...';
     };
@@ -11535,11 +11580,19 @@ window.toggleDashboardDictation = function() {
         if (input) input.value = startText + (startText ? ' ' : '') + transcript;
     };
     _dashRecognition.onerror = (event) => {
-        if (event.error === 'not-allowed') showToast('Permite el acceso al micrófono', true);
+        console.warn('Speech error:', event.error);
         _stopDashDictation();
+        if (event.error === 'not-allowed') {
+            if (_dashMicRetry === 0) { showDashMicHelp(); }
+            else { showToast('Permite el acceso al micrófono en Ajustes', true); }
+            _dashMicRetry++;
+        } else if (event.error === 'aborted' || event.error === 'audio-capture') {
+            if (_dashMicRetry < 2) { _dashMicRetry++; setTimeout(() => toggleDashboardDictation(), 300); }
+        }
     };
-    _dashRecognition.onend = () => { _stopDashDictation(); };
-    _dashRecognition.start();
+    _dashRecognition.onend = () => { if (_dashIsRecording) _stopDashDictation(); };
+    try { _dashRecognition.start(); }
+    catch(e) { if (_dashMicRetry < 2) { _dashMicRetry++; setTimeout(() => toggleDashboardDictation(), 500); } }
 };
 
 function _stopDashDictation() {

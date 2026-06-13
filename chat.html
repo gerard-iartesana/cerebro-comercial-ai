@@ -492,6 +492,32 @@
             <button onclick="sendLeadScheduled()" style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#6c5ce7,#a855f7);border:none;color:#fff;font-size:0.92rem;font-weight:700;cursor:pointer;font-family:inherit">⏰ Programar Envío</button>
         </div>
     </div>
+
+    <!-- Mic Help Modal -->
+    <div id="mic-help-modal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.65);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);align-items:center;justify-content:center;padding:24px">
+        <div style="background:linear-gradient(180deg,#1e1e2a 0%,#16161e 100%);border:1px solid rgba(255,255,255,0.1);border-radius:24px;max-width:340px;width:100%;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.6);animation:modalPop 0.35s cubic-bezier(0.34,1.56,0.64,1)">
+            <div style="padding:28px 24px 16px;text-align:center">
+                <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#ff4757,#ff6b81);display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin:0 auto 16px;box-shadow:0 8px 24px rgba(255,71,87,0.3)">🎙️</div>
+                <h3 style="font-size:1.15rem;font-weight:800;letter-spacing:-0.02em">Activar Micrófono</h3>
+                <p style="font-size:0.8rem;color:var(--text-grey);margin-top:6px;line-height:1.4">Para dictar mensajes por voz, necesitas permitir el acceso al micrófono</p>
+            </div>
+            <div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:flex-start;gap:14px;padding:14px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06)">
+                    <div style="width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;flex-shrink:0">1</div>
+                    <div style="font-size:0.82rem;line-height:1.5">Pulsa el botón <strong>🎙️</strong> del chat</div>
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:14px;padding:14px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06)">
+                    <div style="width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;flex-shrink:0">2</div>
+                    <div style="font-size:0.82rem;line-height:1.5">Cuando aparezca el aviso, pulsa <strong>"Permitir"</strong></div>
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:14px;padding:14px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06)">
+                    <div style="width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;flex-shrink:0">3</div>
+                    <div style="font-size:0.82rem;line-height:1.5">Pulsa <strong>🎙️ otra vez</strong> y empieza a hablar</div>
+                </div>
+            </div>
+            <button onclick="closeMicHelp()" style="display:block;width:calc(100% - 40px);margin:0 20px 20px;padding:14px;border-radius:14px;background:linear-gradient(135deg,#ff4757,#ff6b81);border:none;color:#fff;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:center">Entendido</button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -1227,12 +1253,17 @@ function showLeadToast(msg) {
 // ===== VOICE DICTATION =====
 let recognition = null;
 let isRecording = false;
+let micRetryCount = 0;
+
+function showMicHelp() {
+    document.getElementById('mic-help-modal').style.display = 'flex';
+}
+function closeMicHelp() {
+    document.getElementById('mic-help-modal').style.display = 'none';
+}
 
 function toggleDictation() {
-    if (isRecording) {
-        stopDictation();
-        return;
-    }
+    if (isRecording) { stopDictation(); return; }
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
         showLeadToast('Tu navegador no soporta dictado por voz');
@@ -1249,6 +1280,7 @@ function toggleDictation() {
     
     recognition.onstart = () => {
         isRecording = true;
+        micRetryCount = 0;
         btn.classList.add('recording');
         btn.textContent = '⏹️';
         input.placeholder = 'Escuchando...';
@@ -1264,15 +1296,34 @@ function toggleDictation() {
     
     recognition.onerror = (event) => {
         console.warn('Speech error:', event.error);
-        if (event.error === 'not-allowed') showLeadToast('Permite el acceso al micrófono');
         stopDictation();
+        if (event.error === 'not-allowed') {
+            if (micRetryCount === 0) {
+                showMicHelp();
+            } else {
+                showLeadToast('Permite el acceso al micrófono en Ajustes');
+            }
+            micRetryCount++;
+        } else if (event.error === 'aborted' || event.error === 'audio-capture') {
+            if (micRetryCount < 2) {
+                micRetryCount++;
+                setTimeout(() => toggleDictation(), 300);
+            }
+        }
     };
     
     recognition.onend = () => {
-        stopDictation();
+        if (isRecording) stopDictation();
     };
     
-    recognition.start();
+    try {
+        recognition.start();
+    } catch(e) {
+        if (micRetryCount < 2) {
+            micRetryCount++;
+            setTimeout(() => toggleDictation(), 500);
+        }
+    }
 }
 
 function stopDictation() {
