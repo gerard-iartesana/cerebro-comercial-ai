@@ -12071,6 +12071,56 @@ window._copyAllGroupLinks = function(groupName, membersStr) {
 };
 
 
+window.deleteChatRoom = function() {
+    if (!_chatCurrentRoom) return;
+    const roomName = _chatCurrentRoom.lead_name || 'este chat';
+    const existing = document.getElementById('delete-chat-modal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'delete-chat-modal';
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div class="modal-box" style="max-width:380px;text-align:center">
+            <div style="padding:28px 24px 16px">
+                <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#ff4757,#ff6b81);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto 14px;box-shadow:0 8px 24px rgba(255,71,87,0.3)">🗑️</div>
+                <h3 style="font-size:1.1rem;font-weight:800;color:var(--text-main)">Eliminar chat</h3>
+                <p style="font-size:0.82rem;color:var(--text-grey);margin-top:8px;line-height:1.5">¿Seguro que quieres eliminar el chat con <strong style="color:var(--text-main)">${roomName}</strong>? Se borrarán todos los mensajes.</p>
+            </div>
+            <div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:8px">
+                <button onclick="confirmDeleteChatRoom()" style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#ff4757,#ff6b81);border:none;color:#fff;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit">Eliminar</button>
+                <button onclick="document.getElementById('delete-chat-modal').remove()" style="width:100%;padding:14px;border-radius:14px;background:var(--bg-card);border:1px solid var(--card-border);color:var(--text-main);font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+};
+
+window.confirmDeleteChatRoom = async function() {
+    if (!_chatCurrentRoom) return;
+    const roomId = _chatCurrentRoom.id;
+    document.getElementById('delete-chat-modal')?.remove();
+    try {
+        await _supabase.from('chat_room_members').delete().eq('room_id', roomId);
+        await _supabase.from('chat_scheduled_messages').delete().eq('room_id', roomId);
+        await _supabase.from('chat_messages').delete().eq('room_id', roomId);
+        const { error } = await _supabase.from('chat_rooms').delete().eq('id', roomId);
+        if (error) throw error;
+        showToast('Chat eliminado ✅');
+        _chatCurrentRoom = null;
+        const header = document.getElementById('chat-active-header');
+        const inputBar = document.getElementById('chat-input-bar');
+        if (header) header.style.display = 'none';
+        if (inputBar) inputBar.style.display = 'none';
+        const emptyState = document.getElementById('chat-empty-state');
+        if (emptyState) emptyState.style.display = 'flex';
+        document.getElementById('chat-messages-container').innerHTML = '';
+        await loadChatRooms();
+    } catch(e) {
+        showToast('Error al eliminar: ' + (e.message || ''), true);
+    }
+};
+
 window.copyChatLink = function() {
     if (!_chatCurrentRoom) return;
     const url = `${window.location.origin}/chat?token=${_chatCurrentRoom.link_token}`;

@@ -377,6 +377,7 @@
             <div class="chat-header-action" onclick="copyLink()" title="Copiar link">🔗</div>
             <div class="chat-header-action" onclick="openReminderModal()" title="Recordatorio">🔔</div>
             <div class="chat-header-action" onclick="openScheduleModal()" title="Programar">⏰</div>
+            <div class="chat-header-action" onclick="deleteCurrentRoom()" title="Eliminar chat" style="color:#ff4757">🗑️</div>
         </div>
     </div>
     <div class="chat-messages" id="chat-messages"></div>
@@ -633,6 +634,53 @@ function goBack() {
     if (messagesSub) { messagesSub.unsubscribe(); messagesSub = null; }
     currentRoom = null;
     loadRooms();
+}
+
+async function deleteCurrentRoom() {
+    if (!currentRoom) return;
+    const roomName = currentRoom.lead_name || 'este chat';
+    
+    // Show Apple-style confirmation modal
+    let modal = document.getElementById('delete-confirm-modal');
+    if (modal) modal.remove();
+    modal = document.createElement('div');
+    modal.id = 'delete-confirm-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.65);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;padding:24px';
+    modal.innerHTML = `
+        <div style="background:linear-gradient(180deg,#1e1e2a 0%,#16161e 100%);border:1px solid rgba(255,255,255,0.1);border-radius:24px;max-width:320px;width:100%;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.6);animation:modalPop 0.35s cubic-bezier(0.34,1.56,0.64,1)">
+            <div style="padding:28px 24px 16px;text-align:center">
+                <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#ff4757,#ff6b81);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto 14px;box-shadow:0 8px 24px rgba(255,71,87,0.3)">🗑️</div>
+                <h3 style="font-size:1.1rem;font-weight:800;letter-spacing:-0.02em;color:#e8e6f0">Eliminar chat</h3>
+                <p style="font-size:0.82rem;color:#8b8a97;margin-top:8px;line-height:1.5">¿Seguro que quieres eliminar el chat con <strong style="color:#e8e6f0">${roomName}</strong>? Se borrarán todos los mensajes.</p>
+            </div>
+            <div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:8px">
+                <button onclick="confirmDeleteRoom()" style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#ff4757,#ff6b81);border:none;color:#fff;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit">Eliminar</button>
+                <button onclick="document.getElementById('delete-confirm-modal').remove()" style="width:100%;padding:14px;border-radius:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#e8e6f0;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+async function confirmDeleteRoom() {
+    if (!currentRoom) return;
+    const roomId = currentRoom.id;
+    document.getElementById('delete-confirm-modal')?.remove();
+    try {
+        // Delete members if group
+        await sb.from('chat_room_members').delete().eq('room_id', roomId);
+        // Delete scheduled messages
+        await sb.from('chat_scheduled_messages').delete().eq('room_id', roomId);
+        // Delete messages
+        await sb.from('chat_messages').delete().eq('room_id', roomId);
+        // Delete room
+        const { error } = await sb.from('chat_rooms').delete().eq('id', roomId);
+        if (error) throw error;
+        showToast('Chat eliminado ✅');
+        goBack();
+    } catch(e) {
+        showToast('Error al eliminar: ' + (e.message || ''));
+    }
 }
 
 async function loadMessages() {
