@@ -1799,7 +1799,7 @@ window.addEventListener('focus', clearAppBadge);
 // ===== PWA =====
 function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
-    navigator.serviceWorker.register('/chat-sw.js').then(reg => {
+    navigator.serviceWorker.register('/chat-sw.js', { updateViaCache: 'none' }).then(reg => {
         // Subscribe to push notifications after SW is active/ready (prevents race conditions)
         navigator.serviceWorker.ready.then(readyReg => {
             subscribeToPush(readyReg);
