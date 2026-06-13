@@ -142,6 +142,7 @@
             background: var(--bg-secondary);
             border-top: 1px solid var(--card-border);
             flex-shrink: 0;
+            position: relative;
         }
         .chat-input-bar input[type="text"] {
             flex: 1; background: var(--bg-tertiary);
@@ -386,6 +387,43 @@
             50% { box-shadow: 0 0 0 10px rgba(255,71,87,0); }
         }
 
+        /* --- Audio recording --- */
+        .btn-audio-rec { color: #a855f7; transition: all 0.2s; }
+        .btn-audio-rec.recording { color: #ff4757; animation: pulse-rec 1s ease-in-out infinite; }
+        @keyframes pulse-rec { 0%,100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+
+        .audio-recording-bar {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 0; right: 0;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(108,92,231,0.15));
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(168,85,247,0.3);
+            align-items: center;
+            gap: 12px;
+            animation: slideUp 0.2s ease;
+        }
+        .audio-recording-bar.active { display: flex; }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .rec-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff4757; animation: blink-rec 1s infinite; }
+        @keyframes blink-rec { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .rec-timer { font-size: 0.82rem; font-weight: 700; color: var(--text-main); font-variant-numeric: tabular-nums; }
+        .rec-cancel { padding: 6px 14px; border-radius: 10px; background: rgba(255,71,87,0.15); border: 1px solid rgba(255,71,87,0.3); color: #ff4757; font-size: 0.78rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+        .rec-send { padding: 6px 14px; border-radius: 10px; background: linear-gradient(135deg,#6c5ce7,#a855f7); border: none; color: #fff; font-size: 0.78rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+
+        .msg-bubble audio, .msg-bubble video {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-top: 4px;
+        }
+        .msg-bubble video {
+            max-height: 280px;
+            cursor: pointer;
+        }
+
         /* --- Toast (centered Apple style) --- */
         #lead-toast {
             position:fixed; top:50%; left:50%;
@@ -532,9 +570,20 @@
     <div class="chat-messages" id="chat-messages"></div>
 
     <!-- Input -->
+    <div class="audio-recording-bar" id="audio-rec-bar">
+        <div class="rec-dot"></div>
+        <span class="rec-timer" id="rec-timer">0:00</span>
+        <div style="flex:1"></div>
+        <button class="rec-cancel" onclick="cancelAudioRecording()">✕ Cancelar</button>
+        <button class="rec-send" onclick="sendAudioRecording()">➤ Enviar</button>
+    </div>
     <div class="chat-input-bar">
         <button class="btn-icon btn-attach" onclick="document.getElementById('file-input').click()" title="Adjuntar archivo">📎</button>
         <input type="file" id="file-input" style="display:none" onchange="handleFileUpload(this)">
+        <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleFileUpload(this)">
+        <input type="file" id="video-input" accept="video/*" capture="environment" style="display:none" onchange="handleFileUpload(this)">
+        <button class="btn-icon" onclick="document.getElementById('photo-input').click()" title="Foto" style="font-size:1rem">📷</button>
+        <button class="btn-icon" onclick="document.getElementById('video-input').click()" title="Vídeo" style="font-size:1rem">🎥</button>
         <div style="position:relative;flex-shrink:0">
             <button class="btn-icon btn-emoji" onclick="toggleEmojiPicker()" title="Emojis">😊</button>
             <div class="emoji-picker" id="emoji-picker">
@@ -544,6 +593,7 @@
         <input type="text" id="msg-input" placeholder="Escribe un mensaje..." autocomplete="off"
             onkeydown="if(event.key==='Enter')sendMessage()">
         <button class="btn-icon btn-mic" id="mic-btn" onclick="toggleDictation()" title="Dictar mensaje">🎙️</button>
+        <button class="btn-icon btn-audio-rec" id="audio-rec-btn" onclick="toggleAudioRecording()" title="Grabar audio">🎤</button>
         <button class="btn-icon btn-send" onclick="sendMessage()" title="Enviar">➤</button>
     </div>
     <!-- Lead Reminder Modal -->
@@ -983,10 +1033,19 @@ function renderMessages(messages) {
 
         let fileHtml = '';
         if (m.file_url) {
-            const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.file_name || '');
-            fileHtml = isImg
-                ? `<img src="${m.file_url}" alt="${m.file_name}" onclick="window.open('${m.file_url}','_blank')">`
-                : `<a href="${m.file_url}" target="_blank">📄 ${m.file_name || 'Archivo'}</a>`;
+            const fn = (m.file_name || '').toLowerCase();
+            const isImg = /\.(jpg|jpeg|png|gif|webp|heic)$/i.test(fn);
+            const isAudio = /\.(webm|mp3|ogg|m4a|wav|mp4)$/i.test(fn) && fn.startsWith('audio_');
+            const isVideo = /\.(mp4|mov|webm|avi|mkv)$/i.test(fn) && !fn.startsWith('audio_');
+            if (isImg) {
+                fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" onclick="window.open('${m.file_url}','_blank')" style="max-width:100%;border-radius:10px;cursor:pointer;margin-top:4px">`;
+            } else if (isAudio) {
+                fileHtml = `<audio controls src="${m.file_url}" preload="metadata" style="max-width:100%;margin-top:4px"></audio>`;
+            } else if (isVideo) {
+                fileHtml = `<video controls src="${m.file_url}" preload="metadata" style="max-width:100%;max-height:280px;border-radius:10px;margin-top:4px" playsinline></video>`;
+            } else {
+                fileHtml = `<a href="${m.file_url}" target="_blank">📄 ${m.file_name || 'Archivo'}</a>`;
+            }
         }
 
         html += `
@@ -1079,6 +1138,117 @@ async function handleFileUpload(inputEl) {
         alert('Error al subir archivo');
     }
     inputEl.value = '';
+}
+
+// ===== AUDIO RECORDING =====
+let audioRecorder = null;
+let audioChunks = [];
+let audioRecordingTimer = null;
+let audioRecordingSeconds = 0;
+
+async function toggleAudioRecording() {
+    const btn = document.getElementById('audio-rec-btn');
+    if (audioRecorder && audioRecorder.state === 'recording') {
+        sendAudioRecording();
+        return;
+    }
+    
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioRecorder = new MediaRecorder(stream, { mimeType: getSupportedAudioMime() });
+        audioChunks = [];
+        
+        audioRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+        audioRecorder.onstop = () => {
+            stream.getTracks().forEach(t => t.stop());
+        };
+        
+        audioRecorder.start();
+        btn.classList.add('recording');
+        document.getElementById('audio-rec-bar').classList.add('active');
+        
+        audioRecordingSeconds = 0;
+        updateRecTimer();
+        audioRecordingTimer = setInterval(() => {
+            audioRecordingSeconds++;
+            updateRecTimer();
+            if (audioRecordingSeconds >= 300) sendAudioRecording(); // Max 5 min
+        }, 1000);
+    } catch(e) {
+        console.error('Mic error:', e);
+        alert('No se pudo acceder al micrófono. Verifica los permisos.');
+    }
+}
+
+function updateRecTimer() {
+    const mins = Math.floor(audioRecordingSeconds / 60);
+    const secs = audioRecordingSeconds % 60;
+    const el = document.getElementById('rec-timer');
+    if (el) el.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function cancelAudioRecording() {
+    if (audioRecorder && audioRecorder.state !== 'inactive') {
+        audioRecorder.stop();
+    }
+    clearInterval(audioRecordingTimer);
+    audioChunks = [];
+    document.getElementById('audio-rec-btn')?.classList.remove('recording');
+    document.getElementById('audio-rec-bar')?.classList.remove('active');
+}
+
+async function sendAudioRecording() {
+    if (!audioRecorder || audioRecorder.state === 'inactive') return;
+    
+    return new Promise(resolve => {
+        audioRecorder.onstop = async () => {
+            audioRecorder.stream?.getTracks().forEach(t => t.stop());
+            clearInterval(audioRecordingTimer);
+            document.getElementById('audio-rec-btn')?.classList.remove('recording');
+            document.getElementById('audio-rec-bar')?.classList.remove('active');
+            
+            if (!audioChunks.length || !currentRoom) { resolve(); return; }
+            
+            const ext = getSupportedAudioMime().includes('webm') ? 'webm' : 'mp4';
+            const blob = new Blob(audioChunks, { type: getSupportedAudioMime() });
+            const fileName = `audio_${Date.now()}.${ext}`;
+            
+            try {
+                const path = `chat/${currentRoom.id}/${fileName}`;
+                const { error: upErr } = await sb.storage.from('chat-files').upload(path, blob, { contentType: blob.type });
+                if (upErr) throw upErr;
+                
+                const { data: urlData } = sb.storage.from('chat-files').getPublicUrl(path);
+                
+                await sb.from('chat_messages').insert({
+                    room_id: currentRoom.id,
+                    sender_type: 'lead',
+                    sender_name: currentRoom._member_name || currentRoom.lead_name || 'Lead',
+                    content: '',
+                    file_url: urlData.publicUrl,
+                    file_name: fileName
+                });
+                await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+                cancelPendingScheduled();
+                fetch(`${API_BASE}/push`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'send', room_id: 'admin-global', title: currentRoom.lead_name || 'Lead', message: '🎤 Audio' })
+                }).catch(() => {});
+            } catch(e) {
+                console.error('Audio upload error:', e);
+            }
+            resolve();
+        };
+        audioRecorder.stop();
+    });
+}
+
+function getSupportedAudioMime() {
+    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) return 'audio/webm;codecs=opus';
+    if (MediaRecorder.isTypeSupported('audio/webm')) return 'audio/webm';
+    if (MediaRecorder.isTypeSupported('audio/mp4')) return 'audio/mp4';
+    return 'audio/webm';
 }
 
 // ===== AUTO-CANCEL SCHEDULED MESSAGES ON LEAD REPLY =====
@@ -1207,10 +1377,19 @@ function subscribeToMessages() {
 
             let fileHtml = '';
             if (m.file_url) {
-                const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.file_name || '');
-                fileHtml = isImg
-                    ? `<img src="${m.file_url}" alt="${m.file_name}" onclick="window.open('${m.file_url}','_blank')">`
-                    : `<a href="${m.file_url}" target="_blank">📄 ${m.file_name || 'Archivo'}</a>`;
+                const fn = (m.file_name || '').toLowerCase();
+                const isImg = /\.(jpg|jpeg|png|gif|webp|heic)$/i.test(fn);
+                const isAudio = /\.(webm|mp3|ogg|m4a|wav|mp4)$/i.test(fn) && fn.startsWith('audio_');
+                const isVideo = /\.(mp4|mov|webm|avi|mkv)$/i.test(fn) && !fn.startsWith('audio_');
+                if (isImg) {
+                    fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" onclick="window.open('${m.file_url}','_blank')" style="max-width:100%;border-radius:10px;cursor:pointer;margin-top:4px">`;
+                } else if (isAudio) {
+                    fileHtml = `<audio controls src="${m.file_url}" preload="metadata" style="max-width:100%;margin-top:4px"></audio>`;
+                } else if (isVideo) {
+                    fileHtml = `<video controls src="${m.file_url}" preload="metadata" style="max-width:100%;max-height:280px;border-radius:10px;margin-top:4px" playsinline></video>`;
+                } else {
+                    fileHtml = `<a href="${m.file_url}" target="_blank">📄 ${m.file_name || 'Archivo'}</a>`;
+                }
             }
 
             const div = document.createElement('div');
