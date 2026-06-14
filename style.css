@@ -164,6 +164,15 @@ html, body {
 .macos-alert-btn.btn-danger:hover {
     background: #e0392e;
 }
+.macos-alert-btn.btn-success {
+    background: var(--accent-green);
+    color: white;
+    box-shadow: 0 4px 12px rgba(52,199,89,0.3);
+}
+.macos-alert-btn.btn-success:hover {
+    background: #30d158;
+    transform: translateY(-1px);
+}
 
 /* Prompt Modal Specifics */
 .macos-prompt-input-wrapper {

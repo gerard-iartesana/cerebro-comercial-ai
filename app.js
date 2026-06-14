@@ -3035,11 +3035,27 @@ function closeAlert() {
 
 // macOS Confirm Dialog (Promise-based)
 let _confirmResolve = null;
-function showConfirm(title, desc, icon = '🗑️', actionText = 'Eliminar') {
+function showConfirm(title, desc, icon = '🗑️', actionText = 'Eliminar', type = 'danger') {
     document.getElementById('confirm-title').textContent = title;
     document.getElementById('confirm-desc').textContent = desc;
     document.getElementById('confirm-icon').textContent = icon;
-    document.querySelector('#confirm-modal .btn-danger').textContent = actionText;
+    
+    // Dynamically set button text and classes based on type
+    const actionBtn = document.querySelector('#confirm-modal .macos-alert-actions button:last-child');
+    if (actionBtn) {
+        actionBtn.textContent = actionText;
+        actionBtn.className = 'macos-alert-btn'; // reset classes
+        if (type === 'danger') {
+            actionBtn.classList.add('btn-danger');
+        } else if (type === 'success') {
+            actionBtn.classList.add('btn-success');
+        } else if (type === 'primary') {
+            actionBtn.classList.add('btn-primary-purple');
+        } else {
+            actionBtn.classList.add('btn-danger');
+        }
+    }
+    
     document.getElementById('confirm-modal').classList.add('active');
     return new Promise(resolve => { _confirmResolve = resolve; });
 }
@@ -14047,7 +14063,7 @@ window.createDesktopDocRequest = async function() {
 };
 
 window.approveDesktopDoc = async function(requestId, docName) {
-    if (!confirm(`¿Aprobar el documento "${docName}"?`)) return;
+    if (!await showConfirm('Aprobar Documento', `¿Aprobar el documento "${docName}"?`, '📄', 'Aprobar', 'success')) return;
 
     try {
         const { error } = await _supabase
@@ -14083,7 +14099,7 @@ window.approveDesktopDoc = async function(requestId, docName) {
 };
 
 window.rejectDesktopDoc = async function(requestId, docName) {
-    const reason = prompt('Escribe el motivo del rechazo / corrección:');
+    const reason = await showPrompt('Rechazar Documento', `Escribe el motivo del rechazo / corrección para "${docName}":`, '❌', '', 'Ej: Documento borroso, formato incorrecto...');
     if (reason === null) return;
     if (!reason.trim()) { showToast('El motivo es obligatorio ⚠️'); return; }
 
@@ -14124,7 +14140,7 @@ window.rejectDesktopDoc = async function(requestId, docName) {
 };
 
 window.deleteDesktopDocRequest = async function(requestId) {
-    if (!confirm('¿Seguro que quieres eliminar esta solicitud de documento?')) return;
+    if (!await showConfirm('Eliminar Solicitud', '¿Seguro que quieres eliminar esta solicitud de documento?', '🗑️', 'Eliminar', 'danger')) return;
 
     try {
         const { error } = await _supabase
@@ -14176,7 +14192,7 @@ window.createDesktopMilestone = async function() {
 };
 
 window.deleteDesktopMilestone = async function(milestoneId) {
-    if (!confirm('¿Seguro que deseas eliminar este hito?')) return;
+    if (!await showConfirm('Eliminar Hito', '¿Seguro que deseas eliminar este hito?', '📅', 'Eliminar', 'danger')) return;
 
     try {
         const { error } = await _supabase
@@ -14193,5 +14209,6 @@ window.deleteDesktopMilestone = async function(milestoneId) {
         showToast('Error al eliminar hito ❌');
     }
 };
+
 
 
