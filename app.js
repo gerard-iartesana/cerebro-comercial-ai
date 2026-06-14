@@ -7100,7 +7100,7 @@ function renderCalEvent(ev) {
     let label = ev.title;
     if (ev.type === 'task') label = `[${typeLabels[ev.taskType] || 'Tarea'}] ${ev.title}`;
     else if (ev.isGcal) label = `📅 ${ev.title}`;
-    const clickAction = ev.type === 'task' ? `onclick="openTaskModal('${ev.id}')"` : (ev.isGcal ? '' : `onclick="scrollToMeeting('${ev.id}')"`);
+    const clickAction = ev.type === 'task' ? `onclick="openTaskModal('${ev.id}')"` : (ev.isGcal ? '' : `onclick="openMeetingModal('${ev.id}')"`);
     return `<div class="cal-event ${evClass}" ${clickAction} style="cursor:pointer"><span class="cal-ev-time">${evTime}</span><span class="cal-ev-badge"></span>${label}</div>`;
 }
 
@@ -7514,10 +7514,160 @@ async function deleteTask(id) {
 
 // --- Modal Helpers ---
 function openNewMeetingModal() {
+    document.getElementById('mtg-edit-id').value = '';
+    document.getElementById('mtg-name').value = '';
+    document.getElementById('mtg-email').value = '';
+    document.getElementById('mtg-phone').value = '';
+    document.getElementById('mtg-date').value = '';
+    document.getElementById('mtg-notes').value = '';
+    document.getElementById('mtg-type').value = 'discovery';
+    document.getElementById('mtg-status').value = 'pending';
+    if (document.getElementById('mtg-source')) {
+        document.getElementById('mtg-source').value = 'manual';
+    }
+
+    const titleEl = document.querySelector('#modal-new-meeting h2');
+    if (titleEl) titleEl.textContent = '📅 Nueva Reunión';
+
+    const footerEl = document.querySelector('#modal-new-meeting .modal-footer');
+    if (footerEl) {
+        footerEl.innerHTML = `
+            <button class="modal-cancel-btn" onclick="closeNewMeetingModal()">Cancelar</button>
+            <button class="btn-primary" onclick="addMeeting()" style="padding:10px 24px">✓ Guardar reunión</button>
+        `;
+    }
+
     document.getElementById('modal-new-meeting').style.display = 'flex';
 }
 function closeNewMeetingModal() {
     document.getElementById('modal-new-meeting').style.display = 'none';
+}
+
+async function openMeetingModal(id) {
+    if (!id) { openNewMeetingModal(); return; }
+    try {
+        const { data: mtg, error } = await _supabase.from('meetings').select('*').eq('id', id).single();
+        if (error) throw error;
+        if (!mtg) return;
+
+        document.getElementById('mtg-edit-id').value = mtg.id;
+        document.getElementById('mtg-name').value = mtg.contact_name || '';
+        document.getElementById('mtg-email').value = mtg.contact_email || '';
+        document.getElementById('mtg-phone').value = mtg.contact_phone || '';
+        
+        if (mtg.meeting_date) {
+            const d = new Date(mtg.meeting_date);
+            const offset = d.getTimezoneOffset();
+            const localDate = new Date(d.getTime() - (offset * 60 * 1000));
+            document.getElementById('mtg-date').value = localDate.toISOString().slice(0, 16);
+        } else {
+            document.getElementById('mtg-date').value = '';
+        }
+        
+        document.getElementById('mtg-type').value = mtg.meeting_type || 'discovery';
+        document.getElementById('mtg-status').value = mtg.status || 'pending';
+        if (document.getElementById('mtg-source')) {
+            document.getElementById('mtg-source').value = mtg.source || 'manual';
+        }
+        document.getElementById('mtg-notes').value = mtg.notes || '';
+
+        const titleEl = document.querySelector('#modal-new-meeting h2');
+        if (titleEl) titleEl.textContent = '📅 Editar Reunión';
+
+        const footerEl = document.querySelector('#modal-new-meeting .modal-footer');
+        if (footerEl) {
+            footerEl.innerHTML = `
+                <button class="modal-cancel-btn" onclick="closeNewMeetingModal()">Cancelar</button>
+                <button class="modal-cancel-btn" onclick="deleteMeetingFromModal('${mtg.id}')" style="border-color:#ff3b30;color:#ff3b30">🗑️ Eliminar</button>
+                <button class="btn-primary" onclick="saveMeeting('${mtg.id}')" style="padding:10px 24px">✓ Guardar cambios</button>
+            `;
+        }
+
+        document.getElementById('modal-new-meeting').style.display = 'flex';
+    } catch(err) {
+        showMtgNotif('❌ Error cargando reunión: ' + err.message, 'error');
+    }
+}
+
+async function saveMeeting(id) {
+    const name = document.getElementById('mtg-name').value.trim();
+    const email = document.getElementById('mtg-email').value.trim();
+    const phone = document.getElementById('mtg-phone').value.trim();
+    const date = document.getElementById('mtg-date').value;
+    const type = document.getElementById('mtg-type').value;
+    const status = document.getElementById('mtg-status').value;
+    const notes = document.getElementById('mtg-notes').value.trim();
+    const source = document.getElementById('mtg-source') ? document.getElementById('mtg-source').value : 'manual';
+
+    if (!name || !date) {
+        showMtgNotif('⚠️ Nombre y fecha son obligatorios', 'warn');
+        return;
+    }
+
+    try {
+        const dateISO = new Date(date).toISOString();
+
+        const { data: mtg, error: fetchErr } = await _supabase.from('meetings').select('*').eq('id', id).single();
+        if (fetchErr) throw fetchErr;
+
+        let gcalEventId = mtg.gcal_event_id;
+
+        if (_gcalConnected && _gcalToken && gcalEventId) {
+            try {
+                await deleteGCalEvent(gcalEventId);
+                const newGcalId = await createGCalEvent(name, dateISO, 60, notes, email);
+                gcalEventId = newGcalId;
+            } catch(gcalErr) {
+                console.warn('[GCal Edit Sync] Error updating Google Calendar:', gcalErr);
+            }
+        }
+
+        const updateData = {
+            contact_name: name,
+            contact_email: email || null,
+            contact_phone: phone || null,
+            meeting_date: dateISO,
+            meeting_type: type,
+            status: status,
+            notes: notes || null,
+            source: source,
+            gcal_event_id: gcalEventId || null
+        };
+
+        const { error: updateErr } = await _supabase.from('meetings').update(updateData).eq('id', id);
+        if (updateErr) throw updateErr;
+
+        showAlert('Reunión actualizada', `${name} — ${new Date(dateISO).toLocaleDateString('es-ES')}`, '📅');
+        closeNewMeetingModal();
+        renderCalGrid();
+        loadMeetings();
+    } catch (err) {
+        showMtgNotif('❌ Error actualizando: ' + err.message, 'error');
+    }
+}
+
+async function deleteMeetingFromModal(id) {
+    if (!confirm('¿Seguro que quieres eliminar esta reunión?')) return;
+    try {
+        if (_gcalConnected) {
+            try {
+                const { data: mtg } = await _supabase.from('meetings').select('gcal_event_id').eq('id', id).single();
+                if (mtg && mtg.gcal_event_id) {
+                    await deleteGCalEvent(mtg.gcal_event_id);
+                }
+            } catch(e) { console.log('GCal sync skip:', e.message); }
+        }
+
+        const { error } = await _supabase.from('meetings').delete().eq('id', id);
+        if (error) throw error;
+        
+        showAlert('Reunión eliminada', 'La reunión ha sido eliminada correctamente', '🗑️');
+        closeNewMeetingModal();
+        renderCalGrid();
+        loadMeetings();
+    } catch (err) {
+        showMtgNotif('❌ Error eliminando: ' + err.message, 'error');
+    }
 }
 
 function openNewTaskModal() {
@@ -7597,6 +7747,9 @@ window.openDashMeetingModal = async function() {
 
 async function openTaskModal(id) {
     if (!id) { openNewTaskModal(); return; }
+    if (allTasks.length === 0 || !allTasks.some(t => t.id === id)) {
+        await loadTasks();
+    }
     const task = allTasks.find(t => t.id === id);
     if (!task) return;
     
