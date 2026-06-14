@@ -7271,18 +7271,6 @@ async function addMeeting() {
     try {
         const dateISO = new Date(date).toISOString();
 
-        let gcalEventId = null;
-        if (_gcalConnected) {
-            gcalEventId = await createGCalEvent(name, dateISO, 60, notes, email);
-            if (gcalEventId) {
-                showGCalStatus('✅ Evento creado en Google Calendar', '#34c759');
-                setTimeout(() => {
-                    const iframe = document.querySelector('#sec-calendar iframe');
-                    if (iframe) iframe.src = iframe.src;
-                }, 2000);
-            }
-        }
-
         const insertData = {
             contact_name: name,
             contact_email: email || null,
@@ -7293,10 +7281,26 @@ async function addMeeting() {
             notes: notes || null,
             source: source
         };
-        if (gcalEventId) insertData.gcal_event_id = gcalEventId;
 
-        const { error } = await _supabase.from('meetings').insert(insertData);
-        if (error) throw error;
+        // Call the backend API which handles both DB insertion and Google Calendar sync
+        const response = await fetch('/api/meetings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(insertData)
+        });
+        const resData = await response.json();
+        
+        if (!response.ok || !resData.success) {
+            throw new Error(resData.error || 'Error en la respuesta del servidor');
+        }
+
+        if (resData.gcal_synced) {
+            showGCalStatus('✅ Evento creado en Google Calendar', '#34c759');
+            setTimeout(() => {
+                const iframe = document.querySelector('#sec-calendar iframe');
+                if (iframe) iframe.src = iframe.src;
+            }, 2000);
+        }
 
         // Clear form
         document.getElementById('mtg-name').value = '';
@@ -8214,75 +8218,39 @@ async function syncMeetingToGCal(id) {
 let _gcalRestoreAttempted = false;
 let _gcalRefreshInterval = null;
 
-function tryRestoreGCalSession() {
+async function tryRestoreGCalSession() {
     if (_gcalConnected || _gcalRestoreAttempted) return;
     _gcalRestoreAttempted = true;
 
-    const wasAuthorized = localStorage.getItem('gf_gcal_authorized');
-    const clientId = getGCalClientId();
-    if (!wasAuthorized || !clientId) return;
-
-    const storedToken = localStorage.getItem('gf_gcal_token');
-    const storedExpiry = parseInt(localStorage.getItem('gf_gcal_token_expiry') || '0');
-
-    // If token is still valid, use it directly
-    if (storedToken && storedExpiry > Date.now()) {
-        _gcalToken = storedToken;
-        _gcalConnected = true;
-        updateGCalButton(true);
-        showGCalStatus('✅ Google Calendar reconectado automáticamente', '#34c759');
-        setTimeout(() => {
-            if (document.getElementById('meetings-list')) loadGCalEvents();
-        }, 800);
-        _startGCalAutoRefresh(clientId);
-        return;
-    }
-
-    // Token expired — try silent renewal (no popup)
-    _silentGCalRefresh(clientId);
-}
-
-function _silentGCalRefresh(clientId) {
     try {
-        const tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: clientId,
-            scope: GCAL_SCOPES,
-            callback: function(tokenResponse) {
-                if (tokenResponse.error) {
-                    console.warn('[GCal] Silent refresh failed:', tokenResponse.error);
-                    _showGCalReconnectBtn();
-                    return;
-                }
-                console.log('[GCal] Token renovado silenciosamente');
-                _onGCalAuthSuccess(tokenResponse);
-                _startGCalAutoRefresh(clientId);
-            }
-        });
-        // prompt: '' = silent renewal if user already granted consent
-        tokenClient.requestAccessToken({ prompt: '' });
+        const res = await fetch('/api/gcal-token');
+        if (!res.ok) throw new Error('API status ' + res.status);
+        const data = await res.json();
+        
+        if (data.success && data.access_token) {
+            _gcalToken = data.access_token;
+            _gcalConnected = true;
+            updateGCalButton(true);
+            showGCalStatus('✅ Google Calendar conectado y sincronizado', '#34c759');
+            setTimeout(() => {
+                if (document.getElementById('meetings-list')) loadGCalEvents();
+            }, 800);
+
+            // Set refresh timer (every 45 minutes)
+            const expirySec = data.expires_in || 3600;
+            if (_gcalRefreshInterval) clearInterval(_gcalRefreshInterval);
+            _gcalRefreshInterval = setInterval(() => {
+                _gcalRestoreAttempted = false;
+                tryRestoreGCalSession();
+            }, (expirySec - 300) * 1000);
+        } else {
+            console.log('[GCal] No active credentials on backend:', data.error || 'not configured');
+            updateGCalButton(false);
+            showGCalStatus('ℹ️ Google Calendar pendiente de configurar en Vercel.', '#86868b');
+        }
     } catch(e) {
-        console.warn('[GCal] Silent refresh error:', e);
-        _showGCalReconnectBtn();
-    }
-}
-
-function _startGCalAutoRefresh(clientId) {
-    // Clear existing interval if any
-    if (_gcalRefreshInterval) clearInterval(_gcalRefreshInterval);
-    
-    // Refresh token every 45 minutes (tokens last 60 min)
-    _gcalRefreshInterval = setInterval(() => {
-        console.log('[GCal] Auto-renovando token...');
-        _gcalRestoreAttempted = false;
-        _silentGCalRefresh(clientId);
-    }, 45 * 60 * 1000);
-}
-
-function _showGCalReconnectBtn() {
-    const btn = document.getElementById('btn-gcal-connect');
-    if (btn) {
-        btn.style.background = 'linear-gradient(135deg, #ff9500, #ff6b00)';
-        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg> Reconectar Calendar';
+        console.warn('[GCal] Server session restore failed:', e);
+        updateGCalButton(false);
     }
 }
 

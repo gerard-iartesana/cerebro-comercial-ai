@@ -2208,8 +2208,15 @@ async function savePwaMeeting() {
             notes: notes || null
         };
 
-        const { error } = await sb.from('meetings').insert([insertData]);
-        if (error) throw error;
+        const response = await fetch('/api/meetings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(insertData)
+        });
+        const resData = await response.json();
+        if (!response.ok || !resData.success) {
+            throw new Error(resData.error || 'Error en la respuesta del servidor');
+        }
 
         // Registrar actividad
         await sb.from('chat_activities').insert({
