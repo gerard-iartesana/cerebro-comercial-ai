@@ -1,5 +1,5 @@
 // Chat Service Worker - Network First + Push Notifications + Badge
-const CACHE_VERSION = 'chat-v25-local-icon-diagnostic-1718395800';
+const CACHE_VERSION = 'chat-v26-scheduled-history-1718395800';
 
 self.addEventListener('install', event => {
     self.skipWaiting();

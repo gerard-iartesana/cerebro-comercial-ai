@@ -707,6 +707,11 @@
                 <input type="datetime-local" id="lead-reminder-datetime" style="width:100%;padding:12px 14px;border-radius:12px;background:var(--bg-tertiary,#1e1e2a);border:1px solid var(--card-border);color:var(--text-main);font-size:0.88rem;font-family:inherit;outline:none">
             </div>
             <button onclick="sendLeadReminder()" style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#6c5ce7,#a855f7);border:none;color:#fff;font-size:0.92rem;font-weight:700;cursor:pointer;font-family:inherit">🔔 Programar Recordatorio</button>
+            
+            <div style="margin-top:20px;border-top:1px solid var(--card-border);padding-top:20px">
+                <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:12px;display:block">Historial de Recordatorios</label>
+                <div id="lead-reminder-history-list" style="display:flex;flex-direction:column;gap:10px"></div>
+            </div>
         </div>
     </div>
 
@@ -730,6 +735,11 @@
                 <input type="datetime-local" id="lead-schedule-datetime" style="width:100%;padding:12px 14px;border-radius:12px;background:var(--bg-tertiary,#1e1e2a);border:1px solid var(--card-border);color:var(--text-main);font-size:0.88rem;font-family:inherit;outline:none">
             </div>
             <button onclick="sendLeadScheduled()" style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#6c5ce7,#a855f7);border:none;color:#fff;font-size:0.92rem;font-weight:700;cursor:pointer;font-family:inherit">⏰ Programar Envío</button>
+            
+            <div style="margin-top:20px;border-top:1px solid var(--card-border);padding-top:20px">
+                <label style="font-size:0.78rem;font-weight:700;color:var(--text-grey);margin-bottom:12px;display:block">Historial de Programados</label>
+                <div id="lead-schedule-history-list" style="display:flex;flex-direction:column;gap:10px"></div>
+            </div>
         </div>
     </div>
 
@@ -2120,6 +2130,7 @@ function openLeadReminderModal() {
         <button onclick="document.getElementById('lead-reminder-text').value=this.textContent;this.parentNode.querySelectorAll('button').forEach(b=>b.style.borderColor='var(--card-border)');this.style.borderColor='var(--accent)'" style="text-align:left;padding:12px;border-radius:12px;border:1px solid var(--card-border);background:var(--bg-tertiary,#1e1e2a);color:var(--text-main);font-size:0.82rem;cursor:pointer;font-family:inherit;transition:border-color 0.15s">${t}</button>
     `).join('');
     document.getElementById('lead-reminder-text').value = leadReminderTemplates[0];
+    if (currentRoom) loadLeadScheduledHistory(currentRoom.id, 'reminder');
 }
 
 function closeLeadReminderModal() {
@@ -2137,6 +2148,7 @@ function openLeadScheduleModal() {
         <button onclick="document.getElementById('lead-schedule-text').value=this.textContent;this.parentNode.querySelectorAll('button').forEach(b=>b.style.borderColor='var(--card-border)');this.style.borderColor='var(--accent)'" style="text-align:left;padding:12px;border-radius:12px;border:1px solid var(--card-border);background:var(--bg-tertiary,#1e1e2a);color:var(--text-main);font-size:0.82rem;cursor:pointer;font-family:inherit;transition:border-color 0.15s">${t}</button>
     `).join('');
     document.getElementById('lead-schedule-text').value = leadScheduleTemplates[0];
+    if (currentRoom) loadLeadScheduledHistory(currentRoom.id, 'schedule');
 }
 
 function closeLeadScheduleModal() {
@@ -2195,6 +2207,207 @@ function showLeadToast(msg) {
     toast.textContent = msg;
     toast.classList.add('visible');
     setTimeout(() => { toast.classList.remove('visible'); }, 2000);
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+async function loadLeadScheduledHistory(roomId, type) {
+    const listId = type === 'reminder' ? 'lead-reminder-history-list' : 'lead-schedule-history-list';
+    const container = document.getElementById(listId);
+    if (!container) return;
+    
+    container.innerHTML = '<div style="color:var(--text-grey);text-align:center;font-size:0.82rem;padding:12px;">Cargando historial...</div>';
+    
+    try {
+        const { data, error } = await sb
+            .from('chat_scheduled_messages')
+            .select('*')
+            .eq('room_id', roomId)
+            .eq('sender_type', 'lead')
+            .order('scheduled_at', { ascending: false });
+            
+        if (error) throw error;
+        
+        let filtered = data || [];
+        if (type === 'reminder') {
+            filtered = filtered.filter(item => item.content.startsWith('🔔 Recordatorio: '));
+        } else {
+            filtered = filtered.filter(item => !item.content.startsWith('🔔 Recordatorio: '));
+        }
+        
+        if (filtered.length === 0) {
+            container.innerHTML = `<div style="color:var(--text-grey);text-align:center;font-size:0.82rem;padding:12px;">No hay ${type === 'reminder' ? 'recordatorios' : 'mensajes programados'}.</div>`;
+            return;
+        }
+        
+        container.innerHTML = filtered.map(item => {
+            const isPending = item.status === 'pending';
+            const dateStr = new Date(item.scheduled_at).toLocaleString();
+            const badgeColor = item.status === 'sent' ? '#2ecc71' : (item.status === 'cancelled' ? '#95a5a6' : '#f1c40f');
+            const badgeText = item.status === 'sent' ? 'Enviado' : (item.status === 'cancelled' ? 'Cancelado' : 'Pendiente');
+            
+            let actionButtons = '';
+            if (isPending) {
+                actionButtons = `
+                    <button onclick="editLeadScheduled('${item.id}', \`${escapeHtml(item.content)}\`, '${item.scheduled_at}')" style="background:none;border:none;color:var(--accent);font-size:0.82rem;font-weight:700;cursor:pointer;padding:4px 8px">✍️ Editar</button>
+                    <button onclick="deleteLeadScheduled('${item.id}', '${type}')" style="background:none;border:none;color:#ff4757;font-size:0.82rem;font-weight:700;cursor:pointer;padding:4px 8px">🗑️ Borrar</button>
+                    <button onclick="sendLeadScheduledNow('${item.id}', \`${escapeHtml(item.content)}\`, '${type}')" style="background:none;border:none;color:#2ecc71;font-size:0.82rem;font-weight:700;cursor:pointer;padding:4px 8px">🚀 Enviar ya</button>
+                `;
+            } else {
+                actionButtons = `
+                    <button onclick="resendLeadScheduled(\`${escapeHtml(item.content)}\`, '${type}')" style="background:none;border:none;color:#2ecc71;font-size:0.82rem;font-weight:700;cursor:pointer;padding:4px 8px">🔄 Volver a enviar</button>
+                `;
+            }
+            
+            return `
+                <div id="scheduled-item-${item.id}" style="background:var(--bg-tertiary,#1e1e2a);border:1px solid var(--card-border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                        <span style="font-size:0.75rem;color:var(--text-grey)">${dateStr}</span>
+                        <span style="font-size:0.7rem;padding:2px 6px;border-radius:6px;background:${badgeColor}20;color:${badgeColor};font-weight:700">${badgeText}</span>
+                    </div>
+                    <div class="scheduled-content" style="font-size:0.85rem;color:var(--text-main);word-break:break-word">${escapeHtml(item.content)}</div>
+                    <div class="scheduled-edit-form" style="display:none;flex-direction:column;gap:8px;margin-top:4px">
+                        <textarea class="edit-content-input" style="width:100%;padding:8px;border-radius:8px;background:var(--bg-primary);border:1px solid var(--card-border);color:var(--text-main);font-size:0.85rem;font-family:inherit;resize:vertical;outline:none"></textarea>
+                        <input type="datetime-local" class="edit-date-input" style="width:100%;padding:8px;border-radius:8px;background:var(--bg-primary);border:1px solid var(--card-border);color:var(--text-main);font-size:0.85rem;font-family:inherit;outline:none">
+                        <div style="display:flex;justify-content:flex-end;gap:8px">
+                            <button onclick="cancelEditLeadScheduled('${item.id}')" style="background:var(--bg-tertiary);border:1px solid var(--card-border);color:var(--text-main);padding:6px 12px;border-radius:8px;font-size:0.8rem;cursor:pointer">Cancelar</button>
+                            <button onclick="saveEditLeadScheduled('${item.id}', '${type}')" style="background:var(--accent);border:none;color:white;padding:6px 12px;border-radius:8px;font-size:0.8rem;font-weight:700;cursor:pointer">Guardar</button>
+                        </div>
+                    </div>
+                    <div class="scheduled-actions" style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid rgba(255,255,255,0.05);padding-top:8px;margin-top:4px">
+                        ${actionButtons}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        console.error('Error loading scheduled history:', e);
+        container.innerHTML = '<div style="color:#ff4757;text-align:center;font-size:0.82rem;padding:12px;">Error al cargar el historial.</div>';
+    }
+}
+
+function editLeadScheduled(id, content, scheduledAt) {
+    const itemEl = document.getElementById(`scheduled-item-${id}`);
+    if (!itemEl) return;
+    
+    itemEl.querySelector('.scheduled-content').style.display = 'none';
+    itemEl.querySelector('.scheduled-actions').style.display = 'none';
+    
+    const formEl = itemEl.querySelector('.scheduled-edit-form');
+    formEl.style.display = 'flex';
+    
+    const textarea = formEl.querySelector('.edit-content-input');
+    let editContent = content;
+    if (content.startsWith('🔔 Recordatorio: ')) {
+        editContent = content.substring('🔔 Recordatorio: '.length);
+    }
+    textarea.value = editContent;
+    
+    const dt = new Date(scheduledAt);
+    const pad = n => String(n).padStart(2, '0');
+    const dtVal = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+    formEl.querySelector('.edit-date-input').value = dtVal;
+}
+
+function cancelEditLeadScheduled(id) {
+    const itemEl = document.getElementById(`scheduled-item-${id}`);
+    if (!itemEl) return;
+    
+    itemEl.querySelector('.scheduled-content').style.display = 'block';
+    itemEl.querySelector('.scheduled-actions').style.display = 'flex';
+    itemEl.querySelector('.scheduled-edit-form').style.display = 'none';
+}
+
+async function saveEditLeadScheduled(id, type) {
+    const itemEl = document.getElementById(`scheduled-item-${id}`);
+    if (!itemEl) return;
+    
+    const formEl = itemEl.querySelector('.scheduled-edit-form');
+    let content = formEl.querySelector('.edit-content-input').value.trim();
+    const dtVal = formEl.querySelector('.edit-date-input').value;
+    
+    if (!content || !dtVal) { alert('Rellena todos los campos'); return; }
+    
+    if (type === 'reminder') {
+        content = '🔔 Recordatorio: ' + content;
+    }
+    
+    try {
+        const { error } = await sb.from('chat_scheduled_messages').update({
+            content: content,
+            scheduled_at: new Date(dtVal).toISOString()
+        }).eq('id', id);
+        
+        if (error) throw error;
+        
+        showLeadToast('Guardado ✅');
+        if (currentRoom) loadLeadScheduledHistory(currentRoom.id, type);
+    } catch(e) {
+        alert('Error: ' + (e.message || ''));
+    }
+}
+
+async function deleteLeadScheduled(id, type) {
+    if (!confirm('¿Seguro que deseas borrar este elemento?')) return;
+    try {
+        const { error } = await sb.from('chat_scheduled_messages').delete().eq('id', id);
+        if (error) throw error;
+        showLeadToast('Eliminado ✅');
+        if (currentRoom) loadLeadScheduledHistory(currentRoom.id, type);
+    } catch(e) {
+        alert('Error: ' + (e.message || ''));
+    }
+}
+
+async function sendLeadScheduledNow(id, content, type) {
+    if (!currentRoom) return;
+    try {
+        const { error: insertError } = await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'lead',
+            sender_name: currentRoom._member_name || currentRoom.lead_name || 'Lead',
+            content: content
+        });
+        if (insertError) throw insertError;
+
+        await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+
+        const { error: deleteError } = await sb.from('chat_scheduled_messages').delete().eq('id', id);
+        if (deleteError) throw deleteError;
+
+        showLeadToast('Mensaje enviado ✅');
+        if (currentRoom) loadLeadScheduledHistory(currentRoom.id, type);
+    } catch(e) {
+        alert('Error: ' + (e.message || ''));
+    }
+}
+
+async function resendLeadScheduled(content, type) {
+    if (!currentRoom) return;
+    try {
+        const { error: insertError } = await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'lead',
+            sender_name: currentRoom._member_name || currentRoom.lead_name || 'Lead',
+            content: content
+        });
+        if (insertError) throw insertError;
+
+        await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+
+        showLeadToast('Mensaje enviado ✅');
+        if (currentRoom) loadLeadScheduledHistory(currentRoom.id, type);
+    } catch(e) {
+        alert('Error: ' + (e.message || ''));
+    }
 }
 // ===== VOICE DICTATION =====
 let recognition = null;
