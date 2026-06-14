@@ -666,6 +666,7 @@
         <div class="chat-header-actions">
             <div class="chat-header-action" id="add-member-btn" onclick="openAddMemberModal()" title="Añadir miembros" style="display:none">👥+</div>
             <div class="chat-header-action" onclick="copyLink()" title="Copiar link">🔗</div>
+            <div class="chat-header-action" onclick="openPwaDocsListModal()" title="Documentos del Lead">📁</div>
             <div class="chat-header-action" onclick="openReminderModal()" title="Recordatorio">🔔</div>
             <div class="chat-header-action" onclick="openScheduleModal()" title="Programar">⏰</div>
             <div class="chat-header-action" onclick="deleteCurrentRoom()" title="Eliminar chat" style="color:#ff4757">🗑️</div>
@@ -712,6 +713,14 @@
                     <button class="plus-menu-item" onclick="openPwaReportModal(); closePwaPlusMenu();" style="color:#ff9500">
                         <span class="plus-menu-icon">📄</span>
                         <span class="plus-menu-text">Generar Informe</span>
+                    </button>
+                    <button class="plus-menu-item" onclick="openPwaDocRequestModal(); closePwaPlusMenu();" style="color:#ff2d55">
+                        <span class="plus-menu-icon">📄</span>
+                        <span class="plus-menu-text">Solicitar Doc.</span>
+                    </button>
+                    <button class="plus-menu-item" onclick="openPwaMilestoneModal(); closePwaPlusMenu();" style="color:#ffcc00">
+                        <span class="plus-menu-icon">📌</span>
+                        <span class="plus-menu-text">Añadir Fecha</span>
                     </button>
                 </div>
                 <div class="emoji-picker" id="emoji-picker">
@@ -933,6 +942,86 @@
         <div class="modal-footer">
             <button class="modal-cancel-btn" onclick="closePwaMeetingModal()">Cancelar</button>
             <button class="modal-action-btn" id="pwa-meeting-save-btn" onclick="savePwaMeeting()" style="padding:10px 20px;border-radius:12px;background:var(--accent);border:none;color:white;font-weight:700;cursor:pointer">Agendar Cita</button>
+        </div>
+    </div>
+</div>
+
+<!-- PWA DOC REQUEST MODAL -->
+<div class="modal-overlay" id="pwa-doc-request-modal" onclick="if(event.target===this)closePwaDocRequestModal()">
+    <div class="modal-box" style="max-width:500px">
+        <div class="modal-header">
+            <h2>📄 Solicitar Documento</h2>
+            <button class="modal-close" onclick="closePwaDocRequestModal()">✕</button>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="modal-subtitle" id="pwa-doc-request-lead-name" style="font-size:0.82rem;color:var(--text-grey);margin-bottom:4px">Para: Lead</div>
+            
+            <div>
+                <label class="task-field-label">Nombre del Documento</label>
+                <input type="text" id="pwa-doc-request-name" class="modal-input" placeholder="Ej: Factura Google Workspace Mayo 2026">
+            </div>
+
+            <div>
+                <label class="task-field-label">Fecha Límite</label>
+                <input type="datetime-local" id="pwa-doc-request-due-date" class="modal-input">
+            </div>
+
+            <div>
+                <label class="task-field-label">Notas o Instrucciones (Opcional)</label>
+                <textarea id="pwa-doc-request-notes" class="modal-input" style="min-height:60px;resize:vertical" placeholder="Ej: Asegúrate de que se vea claro el importe total..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-cancel-btn" onclick="closePwaDocRequestModal()">Cancelar</button>
+            <button class="modal-action-btn" onclick="savePwaDocRequest()" style="background:var(--accent)">Solicitar</button>
+        </div>
+    </div>
+</div>
+
+<!-- PWA MILESTONE MODAL -->
+<div class="modal-overlay" id="pwa-milestone-modal" onclick="if(event.target===this)closePwaMilestoneModal()">
+    <div class="modal-box" style="max-width:400px">
+        <div class="modal-header">
+            <h2>📅 Añadir Fecha Importante</h2>
+            <button class="modal-close" onclick="closePwaMilestoneModal()">✕</button>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="modal-subtitle" id="pwa-milestone-lead-name" style="font-size:0.82rem;color:var(--text-grey);margin-bottom:4px">Para: Lead</div>
+            
+            <div>
+                <label class="task-field-label">Concepto / Hito</label>
+                <input type="text" id="pwa-milestone-title" class="modal-input" placeholder="Ej: Presentación IVA, Cierre Nóminas">
+            </div>
+
+            <div>
+                <label class="task-field-label">Fecha</label>
+                <input type="datetime-local" id="pwa-milestone-date" class="modal-input">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-cancel-btn" onclick="closePwaMilestoneModal()">Cancelar</button>
+            <button class="modal-action-btn" onclick="savePwaMilestone()" style="background:var(--accent)">Añadir Fecha</button>
+        </div>
+    </div>
+</div>
+
+<!-- PWA DOCS LIST MODAL -->
+<div class="modal-overlay" id="pwa-docs-list-modal" onclick="if(event.target===this)closePwaDocsListModal()">
+    <div class="modal-box" style="max-width:540px">
+        <div class="modal-header">
+            <h2>📁 Documentos del Lead</h2>
+            <button class="modal-close" onclick="closePwaDocsListModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-subtitle" id="pwa-docs-list-lead-name" style="font-size:0.82rem;color:var(--text-grey);margin-bottom:12px">Cliente: Lead</div>
+            
+            <div id="pwa-docs-list-container" style="display:flex;flex-direction:column;gap:12px;max-height:60vh;overflow-y:auto;padding-right:4px">
+                <!-- Document requests will be rendered here -->
+            </div>
+        </div>
+        <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center">
+            <button class="modal-action-btn" onclick="openPwaDocRequestModal(); closePwaDocsListModal();" style="margin:0;background:var(--accent)">+ Solicitar Documento</button>
+            <button class="modal-cancel-btn" onclick="closePwaDocsListModal()" style="margin:0">Cerrar</button>
         </div>
     </div>
 </div>
@@ -2185,6 +2274,269 @@ async function openPwaMeetingModal() {
 
 function closePwaMeetingModal() {
     document.getElementById('pwa-meeting-modal').classList.remove('active');
+}
+
+function openPwaDocRequestModal() {
+    if (!currentRoom) return;
+    document.getElementById('pwa-doc-request-lead-name').textContent = `Para: ${currentRoom.lead_name || 'Lead'}`;
+    document.getElementById('pwa-doc-request-name').value = '';
+    const tom = new Date();
+    tom.setDate(tom.getDate() + 1);
+    tom.setHours(23, 59, 0, 0);
+    const pad = n => String(n).padStart(2, '0');
+    const dtVal = `${tom.getFullYear()}-${pad(tom.getMonth()+1)}-${pad(tom.getDate())}T23:59`;
+    document.getElementById('pwa-doc-request-due-date').value = dtVal;
+    document.getElementById('pwa-doc-request-notes').value = '';
+    document.getElementById('pwa-doc-request-modal').classList.add('active');
+}
+
+function closePwaDocRequestModal() {
+    document.getElementById('pwa-doc-request-modal').classList.remove('active');
+}
+
+async function savePwaDocRequest() {
+    if (!currentRoom) return;
+    const name = document.getElementById('pwa-doc-request-name').value.trim();
+    const dueDate = document.getElementById('pwa-doc-request-due-date').value;
+    const notes = document.getElementById('pwa-doc-request-notes').value.trim();
+
+    if (!name || !dueDate) { showToast('Rellena todos los campos ⚠️'); return; }
+
+    try {
+        const { data, error } = await sb.from('client_document_requests').insert({
+            room_id: currentRoom.id,
+            document_name: name,
+            due_date: new Date(dueDate).toISOString(),
+            notes: notes || null,
+            status: 'pending'
+        });
+
+        if (error) throw error;
+
+        const limitStr = new Date(dueDate).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const chatMsg = `🔔 Documento solicitado: **${name}**\n📅 Fecha límite: ${limitStr}\n${notes ? `📝 Notas: ${notes}` : ''}`;
+        
+        await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'admin',
+            sender_name: adminName,
+            content: chatMsg
+        });
+
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) solicitó un documento: "${name}"`,
+            sender_type: 'admin'
+        });
+
+        await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+
+        showToast('Solicitud enviada ✅');
+        closePwaDocRequestModal();
+        
+        fetch(`${API_BASE}/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'send',
+                room_id: currentRoom.id,
+                title: 'Nuevo documento solicitado 📄',
+                message: `Gerard te ha solicitado: ${name}`
+            })
+        }).catch(() => {});
+        
+    } catch(e) {
+        console.error('Doc request error:', e);
+        showToast('Error al solicitar ❌');
+    }
+}
+
+function openPwaMilestoneModal() {
+    if (!currentRoom) return;
+    document.getElementById('pwa-milestone-lead-name').textContent = `Para: ${currentRoom.lead_name || 'Lead'}`;
+    document.getElementById('pwa-milestone-title').value = '';
+    const tom = new Date();
+    tom.setDate(tom.getDate() + 1);
+    tom.setHours(12, 0, 0, 0);
+    const pad = n => String(n).padStart(2, '0');
+    const dtVal = `${tom.getFullYear()}-${pad(tom.getMonth()+1)}-${pad(tom.getDate())}T12:00`;
+    document.getElementById('pwa-milestone-date').value = dtVal;
+    document.getElementById('pwa-milestone-modal').classList.add('active');
+}
+
+function closePwaMilestoneModal() {
+    document.getElementById('pwa-milestone-modal').classList.remove('active');
+}
+
+async function savePwaMilestone() {
+    if (!currentRoom) return;
+    const title = document.getElementById('pwa-milestone-title').value.trim();
+    const date = document.getElementById('pwa-milestone-date').value;
+
+    if (!title || !date) { showToast('Rellena todos los campos ⚠️'); return; }
+
+    try {
+        const { error } = await sb.from('client_milestones').insert({
+            room_id: currentRoom.id,
+            title: title,
+            date: new Date(date).toISOString(),
+            status: 'pending'
+        });
+
+        if (error) throw error;
+
+        showToast('Fecha importante añadida ✅');
+        closePwaMilestoneModal();
+    } catch(e) {
+        console.error('Milestone error:', e);
+        showToast('Error al guardar ❌');
+    }
+}
+
+async function openPwaDocsListModal() {
+    if (!currentRoom) return;
+    document.getElementById('pwa-docs-list-lead-name').textContent = `Cliente: ${currentRoom.lead_name || 'Lead'}`;
+    document.getElementById('pwa-docs-list-modal').classList.add('active');
+    await loadPwaDocsList();
+}
+
+function closePwaDocsListModal() {
+    document.getElementById('pwa-docs-list-modal').classList.remove('active');
+}
+
+async function loadPwaDocsList() {
+    const container = document.getElementById('pwa-docs-list-container');
+    if (!container) return;
+    container.innerHTML = '<div style="color:var(--text-grey);text-align:center;font-size:0.85rem;padding:12px;">Cargando documentos...</div>';
+
+    try {
+        const { data, error } = await sb
+            .from('client_document_requests')
+            .select('*')
+            .eq('room_id', currentRoom.id)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            container.innerHTML = '<div style="color:var(--text-grey);text-align:center;font-size:0.85rem;padding:12px;">No se han solicitado documentos a este lead.</div>';
+            return;
+        }
+
+        container.innerHTML = data.map(doc => {
+            const dateStr = doc.due_date ? new Date(doc.due_date).toLocaleDateString() : 'Sin fecha';
+            const badgeColor = doc.status === 'approved' ? '#2ecc71' : (doc.status === 'reviewing' ? '#0ea5e9' : (doc.status === 'rejected' ? '#ff4757' : '#f1c40f'));
+            const badgeText = doc.status === 'approved' ? 'Gestionado' : (doc.status === 'reviewing' ? 'En revisión' : (doc.status === 'rejected' ? 'Requiere corrección' : 'Pendiente'));
+
+            let actionsHtml = '';
+            if (doc.status === 'reviewing') {
+                actionsHtml = `
+                    <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
+                        <a href="${doc.uploaded_file_url}" target="_blank" class="template-btn" style="padding:4px 8px;margin:0;font-size:0.75rem;text-decoration:none;display:flex;align-items:center;background:rgba(255,255,255,0.05);color:var(--text-main);border:1px solid var(--card-border)">👁️ Ver Archivo</a>
+                        <button onclick="approvePwaDoc('${doc.id}', '${doc.document_name}')" class="template-btn" style="padding:4px 8px;margin:0;font-size:0.75rem;background:transparent;border:1px solid #2ecc71;color:#2ecc71;cursor:pointer">✅ Aprobar</button>
+                        <button onclick="rejectPwaDoc('${doc.id}', '${doc.document_name}')" class="template-btn" style="padding:4px 8px;margin:0;font-size:0.75rem;background:transparent;border:1px solid #ff4757;color:#ff4757;cursor:pointer">❌ Rechazar</button>
+                    </div>
+                `;
+            } else if (doc.uploaded_file_url) {
+                actionsHtml = `
+                    <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
+                        <a href="${doc.uploaded_file_url}" target="_blank" class="template-btn" style="padding:4px 8px;margin:0;font-size:0.75rem;text-decoration:none;display:flex;align-items:center;background:rgba(255,255,255,0.05);color:var(--text-main);border:1px solid var(--card-border)">👁️ Ver Archivo</a>
+                        ${doc.status === 'rejected' ? `<span style="font-size:0.72rem;color:#ff4757;display:flex;align-items:center;gap:4px">⚠️ Nota: ${doc.notes || ''}</span>` : ''}
+                    </div>
+                `;
+            }
+
+            return `
+                <div style="background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                        <strong style="font-size:0.88rem;color:var(--text-main)">${doc.document_name}</strong>
+                        <span style="font-size:0.7rem;padding:2px 6px;border-radius:6px;background:${badgeColor}20;color:${badgeColor};font-weight:700">${badgeText}</span>
+                    </div>
+                    <div style="font-size:0.78rem;color:var(--text-grey)">Límite: ${dateStr}</div>
+                    ${actionsHtml}
+                </div>
+            `;
+        }).join('');
+
+    } catch (e) {
+        console.error('Load PWA docs list error:', e);
+        container.innerHTML = '<div style="color:#ff4757;text-align:center;font-size:0.85rem;padding:12px;">Error al cargar documentos.</div>';
+    }
+}
+
+async function approvePwaDoc(id, docName) {
+    if (!confirm(`¿Aprobar el documento "${docName}"?`)) return;
+
+    try {
+        const { error } = await sb
+            .from('client_document_requests')
+            .update({ status: 'approved' })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'admin',
+            sender_name: adminName,
+            content: `✅ El documento **${docName}** ha sido **Aprobado**.`
+        });
+
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) aprobó el documento: "${docName}"`,
+            sender_type: 'admin'
+        });
+
+        showToast('Documento aprobado ✅');
+        await loadPwaDocsList();
+    } catch(e) {
+        console.error('Approve doc error:', e);
+        showToast('Error al aprobar ❌');
+    }
+}
+
+async function rejectPwaDoc(id, docName) {
+    const reason = prompt('Escribe el motivo del rechazo / corrección:');
+    if (reason === null) return;
+    if (!reason.trim()) { showToast('El motivo es obligatorio ⚠️'); return; }
+
+    try {
+        const { error } = await sb
+            .from('client_document_requests')
+            .update({
+                status: 'rejected',
+                notes: reason.trim()
+            })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'admin',
+            sender_name: adminName,
+            content: `❌ El documento **${docName}** requiere corrección.\n📝 Motivo: ${reason.trim()}`
+        });
+
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) rechazó el documento: "${docName}". Motivo: ${reason}`,
+            sender_type: 'admin'
+        });
+
+        showToast('Documento rechazado ❌');
+        await loadPwaDocsList();
+    } catch(e) {
+        console.error('Reject doc error:', e);
+        showToast('Error al rechazar ❌');
+    }
 }
 
 async function savePwaMeeting() {

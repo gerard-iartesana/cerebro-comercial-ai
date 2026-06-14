@@ -574,6 +574,325 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* --- Bottom Navigation --- */
+        .bottom-nav {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: rgba(22, 22, 30, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--card-border);
+            padding: 8px 6px calc(8px + env(safe-area-inset-bottom, 0px));
+            position: relative;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+        .nav-item {
+            background: none;
+            border: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-grey);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.72rem;
+            font-weight: 500;
+            padding: 4px 12px;
+            border-radius: 12px;
+            transition: all 0.2s;
+            flex: 1;
+        }
+        .nav-item .icon {
+            font-size: 1.25rem;
+            transition: transform 0.2s;
+        }
+        .nav-item.active {
+            color: var(--accent);
+        }
+        .nav-item.active .icon {
+            transform: translateY(-2px);
+        }
+
+        /* --- Tab contents --- */
+        .lead-tab-content {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+        .lead-tab-content.active {
+            display: flex;
+        }
+
+        /* --- Dashboard Tab Styles --- */
+        .dashboard-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 18px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .dashboard-scroll::-webkit-scrollbar { width: 4px; }
+        .dashboard-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+        
+        .client-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .client-stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 14px 12px;
+            text-align: center;
+            transition: background 0.2s;
+        }
+        .client-stat-card .num {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-top: 4px;
+        }
+        .client-stat-card .lbl {
+            font-size: 0.7rem;
+            color: var(--text-grey);
+            font-weight: 600;
+        }
+
+        .dashboard-title-sec {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 12px;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .action-card-item {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .action-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .action-card-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1.3;
+        }
+        .action-card-meta {
+            font-size: 0.74rem;
+            color: var(--text-grey);
+        }
+        .action-card-notes {
+            font-size: 0.78rem;
+            padding: 8px 10px;
+            border-radius: 10px;
+            background: rgba(255, 71, 87, 0.08);
+            border: 1px solid rgba(255, 71, 87, 0.15);
+            color: #ff4757;
+        }
+        .action-card-btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .action-card-btn:active { transform: scale(0.97); }
+
+        /* --- State Badges --- */
+        .state-badge {
+            font-size: 0.68rem;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .state-badge.pending { background: rgba(241, 196, 15, 0.15); color: #f1c40f; }
+        .state-badge.reviewing { background: rgba(14, 165, 233, 0.15); color: #0ea5e9; }
+        .state-badge.approved { background: rgba(46, 204, 113, 0.15); color: #2ecc71; }
+        .state-badge.rejected { background: rgba(255, 71, 87, 0.15); color: #ff4757; }
+
+        /* --- Documents Tab UI --- */
+        .search-bar-wrap {
+            margin-bottom: 12px;
+            position: relative;
+        }
+        .search-bar-input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            font-size: 0.85rem;
+            font-family: inherit;
+            outline: none;
+        }
+        .search-bar-input:focus { border-color: var(--accent); }
+
+        .filter-tabs-row {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            margin-bottom: 12px;
+        }
+        .filter-tabs-row::-webkit-scrollbar { display: none; }
+        .filter-tab {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--card-border);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            color: var(--text-grey);
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .filter-tab.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        /* --- Calendar Tab UI --- */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .calendar-month-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #fff;
+        }
+        .calendar-nav-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 0.95rem;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            margin-bottom: 18px;
+        }
+        .calendar-day-header {
+            text-align: center;
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--text-grey);
+            padding: 6px 0;
+        }
+        .calendar-day-box {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            font-size: 0.82rem;
+            color: var(--text-main);
+            position: relative;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .calendar-day-box:active { transform: scale(0.9); }
+        .calendar-day-box.empty {
+            background: none; border-color: transparent; cursor: default;
+        }
+        .calendar-day-box.selected {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            font-weight: 700;
+        }
+        .calendar-day-box.today {
+            border-color: var(--accent);
+        }
+        .calendar-day-box .dot-indicator {
+            width: 4px; height: 4px; border-radius: 50%;
+            background: #a855f7; position: absolute; bottom: 4px;
+        }
+        .calendar-day-box.selected .dot-indicator {
+            background: #fff;
+        }
+
+        .event-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .event-card-title {
+            font-size: 0.86rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .event-card-time {
+            font-size: 0.74rem;
+            color: var(--text-grey);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .event-card-btn {
+            align-self: flex-start;
+            margin-top: 4px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 4px 8px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-main);
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .event-card-btn:active { background: rgba(255,255,255,0.12); }
+
         /* --- Responsive --- */
         @media (min-width: 600px) {
             body {
@@ -652,41 +971,168 @@
         </div>
     </div>
 
-    <!-- Messages -->
-    <div class="chat-messages" id="chat-messages"></div>
+    <!-- Tab 1: Chat -->
+    <div id="lead-tab-chat" class="lead-tab-content active">
+        <!-- Messages -->
+        <div class="chat-messages" id="chat-messages"></div>
 
-    <!-- Audio Recording Bar -->
-    <div class="audio-recording-bar" id="audio-rec-bar">
-        <div class="rec-dot"></div>
-        <span class="rec-timer" id="rec-timer">0:00</span>
-        <div style="flex:1"></div>
-        <button class="rec-cancel" onclick="cancelAudioRecording()">✕ Cancelar</button>
-        <button class="rec-send" onclick="sendAudioRecording()">➤ Enviar</button>
+        <!-- Audio Recording Bar -->
+        <div class="audio-recording-bar" id="audio-rec-bar">
+            <div class="rec-dot"></div>
+            <span class="rec-timer" id="rec-timer">0:00</span>
+            <div style="flex:1"></div>
+            <button class="rec-cancel" onclick="cancelAudioRecording()">✕ Cancelar</button>
+            <button class="rec-send" onclick="sendAudioRecording()">➤ Enviar</button>
+        </div>
+        <!-- Input Area -->
+        <div class="chat-input-area">
+            <div class="chat-input-row">
+                <div style="position:relative;flex-shrink:0">
+                    <button class="btn-icon btn-emoji" onclick="toggleEmojiPicker()" title="Emojis">😊</button>
+                    <div class="emoji-picker" id="emoji-picker">
+                        <div class="emoji-grid" id="emoji-grid"></div>
+                    </div>
+                </div>
+                <input type="text" id="msg-input" placeholder="Escribe un mensaje..." autocomplete="off"
+                    onkeydown="if(event.key==='Enter')sendMessage()">
+                <button class="btn-icon btn-mic" id="mic-btn" onclick="toggleDictation()" title="Dictar mensaje">🎙️</button>
+                <button class="btn-icon btn-send" onclick="sendMessage()" title="Enviar">➤</button>
+            </div>
+            <div class="chat-actions-row">
+                <input type="file" id="file-input" style="display:none" onchange="handleFileUpload(this)">
+                <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleFileUpload(this)">
+                <input type="file" id="video-input" accept="video/*" capture="environment" style="display:none" onchange="handleFileUpload(this)">
+                <button class="action-btn" onclick="document.getElementById('file-input').click()" title="Adjuntar archivo"><span>📎</span><span class="action-label">Archivo</span></button>
+                <button class="action-btn" onclick="document.getElementById('photo-input').click()" title="Foto"><span>📷</span><span class="action-label">Foto</span></button>
+                <button class="action-btn" onclick="document.getElementById('video-input').click()" title="Vídeo"><span>🎥</span><span class="action-label">Vídeo</span></button>
+                <button class="action-btn" id="audio-rec-btn" onclick="toggleAudioRecording()" title="Grabar audio"><span>🎤</span><span class="action-label">Audio</span></button>
+            </div>
+        </div>
     </div>
-    <!-- Input Area -->
-    <div class="chat-input-area">
-        <div class="chat-input-row">
-            <div style="position:relative;flex-shrink:0">
-                <button class="btn-icon btn-emoji" onclick="toggleEmojiPicker()" title="Emojis">😊</button>
-                <div class="emoji-picker" id="emoji-picker">
-                    <div class="emoji-grid" id="emoji-grid"></div>
+
+    <!-- Tab 2: Dashboard / Resumen -->
+    <div id="lead-tab-dashboard" class="lead-tab-content">
+        <div class="dashboard-scroll">
+            <h2 style="font-size:1.3rem; font-weight:800; letter-spacing:-0.02em; margin-bottom:4px">Hola, <span id="lead-dashboard-name">Cliente</span> 👋</h2>
+            <p style="font-size:0.8rem; color:var(--text-grey); margin-bottom:16px">Este es el estado de tu cuenta y trámites pendientes.</p>
+            
+            <!-- Quick Indicators Grid -->
+            <div class="client-stat-grid">
+                <div class="client-stat-card" style="box-shadow: 0 4px 20px rgba(241,196,15,0.06)">
+                    <div class="lbl">🛑 PENDIENTES</div>
+                    <div class="num" id="pwa-stat-pending" style="color:#f1c40f">0</div>
+                </div>
+                <div class="client-stat-card" style="box-shadow: 0 4px 20px rgba(14,165,233,0.06)">
+                    <div class="lbl">⚡ EN REVISIÓN</div>
+                    <div class="num" id="pwa-stat-reviewing" style="color:#0ea5e9">0</div>
+                </div>
+                <div class="client-stat-card" style="box-shadow: 0 4px 20px rgba(46,204,113,0.06)">
+                    <div class="lbl">✅ PROCESADOS</div>
+                    <div class="num" id="pwa-stat-approved" style="color:#2ecc71">0</div>
+                </div>
+                <div class="client-stat-card" style="box-shadow: 0 4px 20px rgba(168,85,247,0.06)">
+                    <div class="lbl">📅 PRÓXIMA FECHA</div>
+                    <div class="num" id="pwa-stat-date" style="font-size:0.82rem; line-height:2.2; color:#a855f7">Ninguna</div>
                 </div>
             </div>
-            <input type="text" id="msg-input" placeholder="Escribe un mensaje..." autocomplete="off"
-                onkeydown="if(event.key==='Enter')sendMessage()">
-            <button class="btn-icon btn-mic" id="mic-btn" onclick="toggleDictation()" title="Dictar mensaje">🎙️</button>
-            <button class="btn-icon btn-send" onclick="sendMessage()" title="Enviar">➤</button>
-        </div>
-        <div class="chat-actions-row">
-            <input type="file" id="file-input" style="display:none" onchange="handleFileUpload(this)">
-            <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleFileUpload(this)">
-            <input type="file" id="video-input" accept="video/*" capture="environment" style="display:none" onchange="handleFileUpload(this)">
-            <button class="action-btn" onclick="document.getElementById('file-input').click()" title="Adjuntar archivo"><span>📎</span><span class="action-label">Archivo</span></button>
-            <button class="action-btn" onclick="document.getElementById('photo-input').click()" title="Foto"><span>📷</span><span class="action-label">Foto</span></button>
-            <button class="action-btn" onclick="document.getElementById('video-input').click()" title="Vídeo"><span>🎥</span><span class="action-label">Vídeo</span></button>
-            <button class="action-btn" id="audio-rec-btn" onclick="toggleAudioRecording()" title="Grabar audio"><span>🎤</span><span class="action-label">Audio</span></button>
+
+            <!-- Priority actions -->
+            <div>
+                <div class="dashboard-title-sec">
+                    <span>🛑</span> Acciones Urgentes / Pendientes
+                </div>
+                <div id="pwa-pending-docs-list">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Advisor message card -->
+            <div class="action-card-item" style="background:linear-gradient(135deg, rgba(108,92,231,0.08) 0%, rgba(168,85,247,0.08) 100%); border-color:rgba(108,92,231,0.15)">
+                <div style="font-size:0.8rem; font-weight:700; color:var(--accent); display:flex; align-items:center; gap:6px">
+                    <span>💬</span> MENSAJE DEL ASESOR
+                </div>
+                <p id="pwa-advisor-message-box" style="font-size:0.82rem; color:var(--text-main); line-height:1.5; margin-top:4px">
+                    "Hola. Sube los archivos pendientes para que podamos tramitar tu expediente lo antes posible. Cualquier duda escríbeme por aquí."
+                </p>
+            </div>
         </div>
     </div>
+
+    <!-- Tab 3: Documents List -->
+    <div id="lead-tab-documents" class="lead-tab-content">
+        <div class="dashboard-scroll">
+            <h2 style="font-size:1.2rem; font-weight:800; margin-bottom:4px">Tus Documentos</h2>
+            <p style="font-size:0.8rem; color:var(--text-grey); margin-bottom:12px">Historial y estado de archivos solicitados.</p>
+
+            <div class="search-bar-wrap">
+                <input type="text" class="search-bar-input" id="pwa-doc-search" placeholder="Buscar documento..." oninput="filterPwaDocuments()">
+            </div>
+
+            <div class="filter-tabs-row">
+                <span class="filter-tab active" onclick="filterPwaDocsTab('all', this)">Todos</span>
+                <span class="filter-tab" onclick="filterPwaDocsTab('pending', this)">Pendientes</span>
+                <span class="filter-tab" onclick="filterPwaDocsTab('reviewing', this)">En revisión</span>
+                <span class="filter-tab" onclick="filterPwaDocsTab('approved', this)">Aprobados</span>
+            </div>
+
+            <div id="pwa-all-docs-list" style="display:flex; flex-direction:column; gap:10px">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 4: Calendar view -->
+    <div id="lead-tab-calendar" class="lead-tab-content">
+        <div class="dashboard-scroll">
+            <h2 style="font-size:1.2rem; font-weight:800; margin-bottom:4px">Calendario</h2>
+            <p style="font-size:0.8rem; color:var(--text-grey); margin-bottom:16px">Fechas de entrega, vencimientos e hitos fiscales.</p>
+
+            <!-- Calendar wrapper -->
+            <div style="background:rgba(255,255,255,0.02); border:1px solid var(--card-border); border-radius:18px; padding:14px">
+                <div class="calendar-header">
+                    <button class="calendar-nav-btn" onclick="navPwaCalendar(-1)">‹</button>
+                    <span class="calendar-month-title" id="pwa-calendar-title">Junio 2026</span>
+                    <button class="calendar-nav-btn" onclick="navPwaCalendar(1)">›</button>
+                </div>
+                <div class="calendar-grid" id="pwa-calendar-grid">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Event Details -->
+            <div>
+                <div class="dashboard-title-sec" id="pwa-selected-date-label">
+                    <span>📅</span> Hitos del día
+                </div>
+                <div id="pwa-calendar-events-list">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <div class="bottom-nav">
+        <button class="nav-item active" onclick="switchLeadTab('chat')" id="nav-btn-chat">
+            <span class="icon">💬</span>
+            <span class="label">Chat</span>
+        </button>
+        <button class="nav-item" onclick="switchLeadTab('dashboard')" id="nav-btn-dashboard">
+            <span class="icon">📊</span>
+            <span class="label">Resumen</span>
+        </button>
+        <button class="nav-item" onclick="switchLeadTab('documents')" id="nav-btn-documents">
+            <span class="icon">📁</span>
+            <span class="label">Documentos</span>
+        </button>
+        <button class="nav-item" onclick="switchLeadTab('calendar')" id="nav-btn-calendar">
+            <span class="icon">📅</span>
+            <span class="label">Calendario</span>
+        </button>
+    </div>
+
+    <!-- Hidden input specifically for dashboard uploads -->
+    <input type="file" id="pwa-doc-upload-input" style="display:none" onchange="handlePwaDocUploadSelected(this)">
     <!-- Lead Reminder Modal -->
     <div id="lead-reminder-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:var(--bg-primary);flex-direction:column">
         <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top, 0px));border-bottom:1px solid var(--card-border);background:rgba(10,10,15,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);flex-shrink:0">
@@ -1064,6 +1510,12 @@ function openChatForRoom(room) {
 
     // Load messages
     loadMessages();
+    
+    // Load client dashboard data in background
+    loadPwaClientDashboard();
+    // Default to chat tab
+    switchLeadTab('chat');
+
     if (subscription) { subscription.unsubscribe(); subscription = null; }
     subscribeToMessages();
     updateTotalBadge();
@@ -1320,11 +1772,46 @@ async function handleFileUpload(inputEl) {
 
         const { data: urlData } = sb.storage.from('chat-files').getPublicUrl(path);
 
+        // Check if there is a pending/rejected request to associate this upload with
+        let matchedReqName = '';
+        try {
+            const { data: pendingReqs } = await sb
+                .from('client_document_requests')
+                .select('*')
+                .eq('room_id', currentRoom.id)
+                .in('status', ['pending', 'rejected'])
+                .order('due_date', { ascending: true });
+
+            if (pendingReqs && pendingReqs.length > 0) {
+                let matchedRequest = pendingReqs[0];
+                const fileNameLower = file.name.toLowerCase();
+                for (const req of pendingReqs) {
+                    const reqNameLower = req.document_name.toLowerCase();
+                    const reqWords = reqNameLower.split(/\s+/).filter(w => w.length > 3);
+                    const matchesWord = reqWords.some(w => fileNameLower.includes(w));
+                    if (fileNameLower.includes(reqNameLower) || reqNameLower.includes(fileNameLower) || matchesWord) {
+                        matchedRequest = req;
+                        break;
+                    }
+                }
+                
+                await sb.from('client_document_requests').update({
+                    uploaded_file_url: urlData.publicUrl,
+                    uploaded_at: new Date().toISOString(),
+                    status: 'reviewing'
+                }).eq('id', matchedRequest.id);
+                
+                matchedReqName = matchedRequest.document_name;
+            }
+        } catch(errReq) {
+            console.warn('Could not auto-associate upload with request:', errReq);
+        }
+
         await sb.from('chat_messages').insert({
             room_id: currentRoom.id,
             sender_type: 'lead',
             sender_name: currentRoom._member_name || currentRoom.lead_name || 'Lead',
-            content: '',
+            content: matchedReqName ? `📤 He subido el documento solicitado: **${matchedReqName}**` : '',
             file_url: urlData.publicUrl,
             file_name: file.name
         });
@@ -1782,6 +2269,17 @@ function subscribeToMessages() {
             
             // PWA Badge: notify unread when app not visible
             onNewMessageReceived(m.sender_type);
+
+            // Auto-reload active tab data
+            if (activeLeadTab === 'dashboard') {
+                loadPwaClientDashboard();
+            } else if (activeLeadTab === 'documents') {
+                loadPwaDocumentsList();
+            } else if (activeLeadTab === 'calendar') {
+                renderPwaCalendar(currentCalYear, currentCalMonth);
+            } else {
+                loadPwaClientDashboard();
+            }
         })
         .subscribe();
 }
@@ -2614,6 +3112,450 @@ async function showDiagnosticModal() {
             btn.disabled = false;
         }
     };
+}
+
+// ===== CLIENT DASHBOARD & TABS GLOBAL VARIABLES =====
+let activeLeadTab = 'chat';
+let pwaDocsListCache = [];
+let pwaMilestonesCache = [];
+let pendingUploadRequestId = null;
+let currentCalYear = new Date().getFullYear();
+let currentCalMonth = new Date().getMonth();
+let pwaSelectedCalDate = new Date();
+let pwaActiveDocFilter = 'all';
+
+function switchLeadTab(tabName) {
+    activeLeadTab = tabName;
+    
+    // Toggle active state in bottom nav buttons
+    document.querySelectorAll('.bottom-nav .nav-item').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    const activeBtn = document.getElementById('nav-btn-' + tabName);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    // Toggle active state in tab contents
+    document.querySelectorAll('.lead-tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    const activeTab = document.getElementById('lead-tab-' + tabName);
+    if (activeTab) activeTab.classList.add('active');
+
+    // Load data based on tab
+    if (tabName === 'dashboard') {
+        loadPwaClientDashboard();
+    } else if (tabName === 'documents') {
+        loadPwaDocumentsList();
+    } else if (tabName === 'calendar') {
+        renderPwaCalendar(currentCalYear, currentCalMonth);
+    } else if (tabName === 'chat') {
+        // Scroll to bottom of chat messages
+        const container = document.getElementById('chat-messages');
+        if (container) container.scrollTop = container.scrollHeight;
+    }
+}
+
+async function loadPwaClientDashboard() {
+    if (!currentRoom) return;
+
+    // Update greeting
+    const nameEl = document.getElementById('lead-dashboard-name');
+    if (nameEl) nameEl.textContent = leadIdentity?.name || currentRoom.lead_name || 'Cliente';
+
+    try {
+        // Query client document requests
+        const { data: docs, error: docsErr } = await sb
+            .from('client_document_requests')
+            .select('*')
+            .eq('room_id', currentRoom.id)
+            .order('created_at', { ascending: false });
+
+        if (docsErr) throw docsErr;
+
+        // Query client milestones
+        const { data: milestones, error: milesErr } = await sb
+            .from('client_milestones')
+            .select('*')
+            .eq('room_id', currentRoom.id)
+            .order('date', { ascending: true });
+
+        if (milesErr) throw milesErr;
+        
+        pwaMilestonesCache = milestones || [];
+
+        // Count stats
+        let pending = 0;
+        let reviewing = 0;
+        let approved = 0;
+
+        docs?.forEach(d => {
+            if (d.status === 'pending' || d.status === 'rejected') pending++;
+            else if (d.status === 'reviewing') reviewing++;
+            else if (d.status === 'approved') approved++;
+        });
+
+        // Get next date
+        let nextDateStr = 'Ninguna';
+        const now = new Date();
+        const futureMilestones = pwaMilestonesCache.filter(m => new Date(m.date) >= now);
+        if (futureMilestones.length > 0) {
+            const nextMilestone = futureMilestones[0];
+            nextDateStr = new Date(nextMilestone.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+        }
+
+        // Render stats
+        document.getElementById('pwa-stat-pending').textContent = pending;
+        document.getElementById('pwa-stat-reviewing').textContent = reviewing;
+        document.getElementById('pwa-stat-approved').textContent = approved;
+        document.getElementById('pwa-stat-date').textContent = nextDateStr;
+
+        // Render pending / actions list
+        const pendingContainer = document.getElementById('pwa-pending-docs-list');
+        const pendingDocs = docs?.filter(d => d.status === 'pending' || d.status === 'rejected') || [];
+
+        if (pendingDocs.length === 0) {
+            pendingContainer.innerHTML = `
+                <div style="text-align:center; padding:20px; background:rgba(255,255,255,0.02); border:1px dashed var(--card-border); border-radius:16px; font-size:0.8rem; color:var(--text-grey)">
+                    ✅ ¡Al día! No tienes acciones urgentes.
+                </div>
+            `;
+        } else {
+            pendingContainer.innerHTML = pendingDocs.map(doc => {
+                const dateStr = doc.due_date ? new Date(doc.due_date).toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Sin fecha límite';
+                const isRejected = doc.status === 'rejected';
+                return `
+                    <div class="action-card-item">
+                        <div class="action-card-header">
+                            <span class="action-card-title">${doc.document_name}</span>
+                            <span class="state-badge ${doc.status}">${isRejected ? 'Corregir' : 'Pendiente'}</span>
+                        </div>
+                        <div class="action-card-meta">📅 Límite: ${dateStr}</div>
+                        ${isRejected && doc.notes ? `<div class="action-card-notes">⚠️ Motivo: ${doc.notes}</div>` : ''}
+                        <button class="action-card-btn" onclick="requestDocUpload('${doc.id}')">
+                            <span>📤</span> Subir archivo
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+    } catch (e) {
+        console.error('Error loading client dashboard data:', e);
+    }
+}
+
+async function loadPwaDocumentsList() {
+    if (!currentRoom) return;
+
+    try {
+        const { data, error } = await sb
+            .from('client_document_requests')
+            .select('*')
+            .eq('room_id', currentRoom.id)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        pwaDocsListCache = data || [];
+        renderPwaDocumentsFiltered();
+    } catch(e) {
+        console.error('Error loading documents list:', e);
+    }
+}
+
+function filterPwaDocsTab(status, btnEl) {
+    pwaActiveDocFilter = status;
+    document.querySelectorAll('.filter-tabs-row .filter-tab').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    btnEl.classList.add('active');
+    renderPwaDocumentsFiltered();
+}
+
+function filterPwaDocuments() {
+    renderPwaDocumentsFiltered();
+}
+
+function renderPwaDocumentsFiltered() {
+    const searchVal = document.getElementById('pwa-doc-search').value.toLowerCase().trim();
+    const container = document.getElementById('pwa-all-docs-list');
+    if (!container) return;
+
+    let filtered = pwaDocsListCache;
+
+    // Filter by status tab
+    if (pwaActiveDocFilter !== 'all') {
+        filtered = filtered.filter(doc => {
+            if (pwaActiveDocFilter === 'pending') {
+                return doc.status === 'pending' || doc.status === 'rejected';
+            }
+            return doc.status === pwaActiveDocFilter;
+        });
+    }
+
+    // Filter by search
+    if (searchVal) {
+        filtered = filtered.filter(doc => doc.document_name.toLowerCase().includes(searchVal));
+    }
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:40px 20px; font-size:0.82rem; color:var(--text-grey)">
+                No se encontraron documentos
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = filtered.map(doc => {
+        const dateStr = doc.due_date ? new Date(doc.due_date).toLocaleDateString() : 'Sin fecha';
+        const badgeText = doc.status === 'approved' ? 'Gestionado' : (doc.status === 'reviewing' ? 'En revisión' : (doc.status === 'rejected' ? 'Corregir' : 'Pendiente'));
+        
+        let fileLinkHtml = '';
+        if (doc.uploaded_file_url) {
+            fileLinkHtml = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; font-size:0.76rem; background:rgba(255,255,255,0.02); border:1px solid var(--card-border); padding:6px 10px; border-radius:8px">
+                    <a href="${doc.uploaded_file_url}" target="_blank" style="color:var(--accent); text-decoration:none; display:flex; align-items:center; gap:4px">📄 Ver archivo subido</a>
+                    <span style="font-size:0.68rem; color:var(--text-grey)">${doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : ''}</span>
+                </div>
+            `;
+        }
+
+        let actionHtml = '';
+        if (doc.status === 'pending' || doc.status === 'rejected') {
+            actionHtml = `
+                <button class="action-card-btn" style="margin-top:8px; padding:6px 12px; font-size:0.76rem" onclick="requestDocUpload('${doc.id}')">
+                    <span>📤</span> Subir archivo
+                </button>
+            `;
+        }
+
+        return `
+            <div style="background:var(--bg-secondary); border:1px solid var(--card-border); border-radius:16px; padding:14px; display:flex; flex-direction:column; gap:4px">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px">
+                    <strong style="font-size:0.86rem; color:var(--text-main)">${doc.document_name}</strong>
+                    <span class="state-badge ${doc.status}">${badgeText}</span>
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-grey)">Límite: ${dateStr}</div>
+                ${doc.status === 'rejected' && doc.notes ? `<div class="action-card-notes" style="margin-top:6px">⚠️ Nota de corrección: ${doc.notes}</div>` : ''}
+                ${fileLinkHtml}
+                ${actionHtml}
+            </div>
+        `;
+    }).join('');
+}
+
+function requestDocUpload(docId) {
+    pendingUploadRequestId = docId;
+    document.getElementById('pwa-doc-upload-input').click();
+}
+
+async function handlePwaDocUploadSelected(inputEl) {
+    if (!currentRoom || !inputEl.files.length || !pendingUploadRequestId) return;
+    const file = inputEl.files[0];
+    if (file.size > 10 * 1024 * 1024) { alert('El archivo no puede superar 10MB'); return; }
+
+    const requestId = pendingUploadRequestId;
+    pendingUploadRequestId = null; // Reset immediately to prevent race conditions
+
+    // Find document request details from cache
+    const docReq = pwaDocsListCache.find(d => d.id === requestId) || { document_name: 'Documento' };
+    const docName = docReq.document_name;
+
+    try {
+        showLeadToast('Subiendo archivo...');
+        const path = `docs/${currentRoom.id}/${Date.now()}_${file.name}`;
+        const { data: upload, error: upErr } = await sb.storage.from('chat-files').upload(path, file);
+        if (upErr) throw upErr;
+
+        const { data: urlData } = sb.storage.from('chat-files').getPublicUrl(path);
+
+        // 1. Update client_document_requests status
+        const { error: dbErr } = await sb
+            .from('client_document_requests')
+            .update({
+                uploaded_file_url: urlData.publicUrl,
+                uploaded_at: new Date().toISOString(),
+                status: 'reviewing'
+            })
+            .eq('id', requestId);
+
+        if (dbErr) throw dbErr;
+
+        // 2. Insert chat message
+        await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'lead',
+            sender_name: currentRoom._member_name || currentRoom.lead_name || 'Lead',
+            content: `📤 He subido el documento solicitado: **${docName}**`,
+            file_url: urlData.publicUrl,
+            file_name: file.name
+        });
+
+        // 3. Update last_message_at
+        await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+
+        // 4. Log activity
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `El lead subió el documento: "${docName}"`,
+            sender_type: 'lead'
+        });
+
+        // 5. Send push notification to admin
+        fetch(`${API_BASE}/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'send',
+                room_id: 'admin-global',
+                title: `${currentRoom.lead_name || 'Lead'} — Documento recibido`,
+                message: `Ha subido: ${docName}`
+            })
+        }).catch(() => {});
+
+        showLeadToast('Archivo subido ✅');
+
+        // Reload views
+        if (activeLeadTab === 'dashboard') {
+            loadPwaClientDashboard();
+        } else if (activeLeadTab === 'documents') {
+            loadPwaDocumentsList();
+        }
+
+    } catch (e) {
+        console.error('Error handling doc request upload:', e);
+        alert('Error al subir el documento. Reinténtalo.');
+    }
+    inputEl.value = '';
+}
+
+function renderPwaCalendar(year, month) {
+    currentCalYear = year;
+    currentCalMonth = month;
+
+    const grid = document.getElementById('pwa-calendar-grid');
+    const titleEl = document.getElementById('pwa-calendar-title');
+    if (!grid || !titleEl) return;
+
+    const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    titleEl.textContent = `${monthNames[month]} ${year}`;
+
+    // Clear calendar grid
+    grid.innerHTML = '';
+
+    // Day headers Lu, Ma, Mi, Ju, Vi, Sá, Do
+    const dayHeaders = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
+    dayHeaders.forEach(dh => {
+        grid.innerHTML += `<div class="calendar-day-header">${dh}</div>`;
+    });
+
+    // Date calculations
+    const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7; // Convert Sun=0, Mon=1... to Mon=0, Sun=6
+    const totalDays = new Date(year, month + 1, 0).getDate();
+
+    // Render empty boxes before first day
+    for (let i = 0; i < firstDayIndex; i++) {
+        grid.innerHTML += `<div class="calendar-day-box empty"></div>`;
+    }
+
+    // Render days of the month
+    const today = new Date();
+    for (let d = 1; d <= totalDays; d++) {
+        const cellDate = new Date(year, month, d);
+        
+        const isToday = cellDate.getDate() === today.getDate() && cellDate.getMonth() === today.getMonth() && cellDate.getFullYear() === today.getFullYear();
+        const isSelected = cellDate.getDate() === pwaSelectedCalDate.getDate() && cellDate.getMonth() === pwaSelectedCalDate.getMonth() && cellDate.getFullYear() === pwaSelectedCalDate.getFullYear();
+        
+        // Check if there are milestones on this day
+        const hasMilestone = pwaMilestonesCache.some(m => {
+            const mDate = new Date(m.date);
+            return mDate.getDate() === d && mDate.getMonth() === month && mDate.getFullYear() === year;
+        });
+
+        const classes = ['calendar-day-box'];
+        if (isToday) classes.push('today');
+        if (isSelected) classes.push('selected');
+
+        const indicator = hasMilestone ? `<span class="dot-indicator"></span>` : '';
+
+        grid.innerHTML += `
+            <div class="${classes.join(' ')}" onclick="selectPwaCalDate(${year}, ${month}, ${d})">
+                ${d}
+                ${indicator}
+            </div>
+        `;
+    }
+
+    // Load events for the selected date
+    loadPwaCalendarEventsForDay(pwaSelectedCalDate);
+}
+
+function navPwaCalendar(dir) {
+    currentCalMonth += dir;
+    if (currentCalMonth < 0) {
+        currentCalMonth = 11;
+        currentCalYear--;
+    } else if (currentCalMonth > 11) {
+        currentCalMonth = 0;
+        currentCalYear++;
+    }
+    renderPwaCalendar(currentCalYear, currentCalMonth);
+}
+
+function selectPwaCalDate(year, month, day) {
+    pwaSelectedCalDate = new Date(year, month, day);
+    renderPwaCalendar(year, month);
+}
+
+function loadPwaCalendarEventsForDay(date) {
+    const listContainer = document.getElementById('pwa-calendar-events-list');
+    const dateLabel = document.getElementById('pwa-selected-date-label');
+    if (!listContainer || !dateLabel) return;
+
+    const opt = { weekday: 'long', day: 'numeric', month: 'long' };
+    const dateTitle = date.toLocaleDateString('es-ES', opt);
+    dateLabel.innerHTML = `<span>📅</span> Hitos del ${dateTitle}`;
+
+    // Filter milestones for this day
+    const dayMilestones = pwaMilestonesCache.filter(m => {
+        const mDate = new Date(m.date);
+        return mDate.getDate() === date.getDate() && mDate.getMonth() === date.getMonth() && mDate.getFullYear() === date.getFullYear();
+    });
+
+    if (dayMilestones.length === 0) {
+        listContainer.innerHTML = `
+            <div style="text-align:center; padding:20px; font-size:0.8rem; color:var(--text-grey); background:rgba(255,255,255,0.01); border:1px dashed var(--card-border); border-radius:12px">
+                No hay hitos o reuniones programadas para este día.
+            </div>
+        `;
+        return;
+    }
+
+    listContainer.innerHTML = dayMilestones.map(m => {
+        const mDate = new Date(m.date);
+        const timeStr = mDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        
+        // Google Calendar link generation
+        const pad = n => String(n).padStart(2, '0');
+        const startUTC = new Date(mDate.getTime() - mDate.getTimezoneOffset() * 60000).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        const endUTC = new Date(mDate.getTime() + 60 * 60000 - mDate.getTimezoneOffset() * 60000).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(m.title)}&dates=${startUTC}/${endUTC}&details=${encodeURIComponent('Hito / Fecha de interés programada desde el panel.')}`;
+
+        return `
+            <div class="event-card">
+                <span class="event-card-title">${m.title}</span>
+                <div class="event-card-time">
+                    <span>⏰</span> Hora: ${timeStr}
+                </div>
+                <a href="${gcalUrl}" target="_blank" class="event-card-btn">
+                    🗓️ Añadir a mi calendario
+                </a>
+            </div>
+        `;
+    }).join('');
 }
 </script>
 </body>

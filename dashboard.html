@@ -3866,44 +3866,145 @@
 
             <!-- SECTION: Dashboard Cliente (New) -->
             <div class="dashboard-section" id="sec-dashboard-client">
-                <div class="section-header">
-                    <h1>Dashboard de Clientes</h1>
-                    <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Estado de Cuentas & CRM</span>
-                </div>
-                
-                <div class="stats-grid" style="margin-bottom:24px">
-                    <div class="stat-card-glass">
-                        <span class="stat-label">Clientes Activos</span>
-                        <div class="stat-value">12</div>
-                        <span class="stat-trend trend-up">✦ 2 nuevas altas</span>
+                <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
+                    <div>
+                        <h1>Dashboard de Clientes</h1>
+                        <span style="font-size:0.75rem;color:var(--text-grey);font-weight:700">Gestión de Cuentas, Documentos e Hitos</span>
                     </div>
-                    <div class="stat-card-glass">
-                        <span class="stat-label">NPS / Satisfacción</span>
-                        <div class="stat-value">9.6 <span style="font-size:1rem;color:var(--text-grey)">/ 10</span></div>
-                        <span class="stat-trend trend-up">▲ Excelente</span>
-                    </div>
-                    <div class="stat-card-glass">
-                        <span class="stat-label">Tiempo de Respuesta Soporte</span>
-                        <div class="stat-value">1.5h</div>
-                        <span class="stat-trend trend-down">▼ -20% tiempo</span>
-                    </div>
-                    <div class="stat-card-glass">
-                        <span class="stat-label">Tasa de Retención</span>
-                        <div class="stat-value">95%</div>
-                        <span class="stat-trend" style="color:var(--text-grey)">Renovación mensual</span>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <label for="desktop-client-selector" style="font-size:0.85rem; font-weight:700; color:var(--text-grey)">Cliente:</label>
+                        <select id="desktop-client-selector" class="cfg-input" style="width:240px; cursor:pointer; margin:0; padding:8px 12px; border-radius:10px; background:var(--bg-card); border:1px solid var(--card-border); color:var(--text-main)" onchange="onDesktopClientSelected(this.value)">
+                            <option value="">-- Selecciona un cliente --</option>
+                        </select>
                     </div>
                 </div>
 
-                <div class="stat-card-glass" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
-                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
-                        👥 Gestión de Cuentas & Soporte Integrado
-                    </h3>
-                    <p style="margin: 0; color: var(--text-grey); font-size: 0.9rem; line-height: 1.6;">
-                        Este módulo centralizará el estado de los proyectos activos de cada cliente de iadebarrio.com. Permitirá revisar el historial de interacciones, automatizar la entrega de informes mensuales de captación de leads, y realizar el seguimiento de incidencias o tickets pendientes de soporte.
-                    </p>
-                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px dashed var(--card-border); padding: 16px; border-radius: 12px; font-size: 0.85rem; color: var(--text-grey); line-height: 1.5;">
-                        ℹ️ <strong>Nota de Integración:</strong> La vista de cliente se sincronizará con el módulo de propuestas y contratos aprobados, permitiendo enviar actualizaciones automáticas de avance del embudo comercial por WhatsApp y Email.
+                <!-- Active Client Area (hidden if no client selected) -->
+                <div id="desktop-client-active-area" style="display:none; flex-direction:column; gap:24px">
+                    
+                    <!-- Stats cards -->
+                    <div class="stats-grid">
+                        <div class="stat-card-glass">
+                            <span class="stat-label">Documentos Pendientes</span>
+                            <div class="stat-value" id="desktop-stat-pending">0</div>
+                            <span class="stat-trend trend-down" id="desktop-stat-pending-label">Requeridos o corregir</span>
+                        </div>
+                        <div class="stat-card-glass">
+                            <span class="stat-label">En Revisión</span>
+                            <div class="stat-value" id="desktop-stat-reviewing" style="color:#0ea5e9">0</div>
+                            <span class="stat-trend" style="color:#0ea5e9">Esperando tu aprobación</span>
+                        </div>
+                        <div class="stat-card-glass">
+                            <span class="stat-label">Aprobados / Procesados</span>
+                            <div class="stat-value" id="desktop-stat-approved" style="color:#2ecc71">0</div>
+                            <span class="stat-trend trend-up">Completados con éxito</span>
+                        </div>
+                        <div class="stat-card-glass">
+                            <span class="stat-label">Próxima Fecha de Interés</span>
+                            <div class="stat-value" id="desktop-stat-next-date" style="font-size:1.1rem; line-height:2.4">Ninguna</div>
+                            <span class="stat-trend" style="color:var(--text-grey)">Hito o evento</span>
+                        </div>
                     </div>
+
+                    <!-- Main content split layout -->
+                    <div style="display:grid; grid-template-columns: 2fr 1fr; gap:24px; align-items:start">
+                        
+                        <!-- Left panel: Documents list & management -->
+                        <div style="display:flex; flex-direction:column; gap:24px">
+                            <div class="stat-card-glass" style="padding:20px; display:flex; flex-direction:column; gap:16px">
+                                <div style="display:flex; justify-content:space-between; align-items:center">
+                                    <h3 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-main)">📄 Documentación Requerida</h3>
+                                    <span style="font-size:0.75rem; color:var(--text-grey)" id="desktop-doc-count-label">0 solicitudes</span>
+                                </div>
+
+                                <div style="overflow-x:auto; width:100%">
+                                    <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.85rem">
+                                        <thead>
+                                            <tr style="border-bottom:1px solid var(--card-border); color:var(--text-grey)">
+                                                <th style="padding:10px 8px; font-weight:600">Documento</th>
+                                                <th style="padding:10px 8px; font-weight:600">Vencimiento</th>
+                                                <th style="padding:10px 8px; font-weight:600">Estado</th>
+                                                <th style="padding:10px 8px; font-weight:600">Archivo</th>
+                                                <th style="padding:10px 8px; font-weight:600; text-align:right">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="desktop-documents-tbody">
+                                            <!-- Populated dynamically -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Calendar and Milestones List -->
+                            <div class="stat-card-glass" style="padding:20px; display:flex; flex-direction:column; gap:16px">
+                                <h3 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-main)">📅 Fechas Importantes e Hitos</h3>
+                                <div style="overflow-x:auto; width:100%">
+                                    <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.85rem">
+                                        <thead>
+                                            <tr style="border-bottom:1px solid var(--card-border); color:var(--text-grey)">
+                                                <th style="padding:10px 8px; font-weight:600">Título del Hito</th>
+                                                <th style="padding:10px 8px; font-weight:600">Fecha</th>
+                                                <th style="padding:10px 8px; font-weight:600">Estado</th>
+                                                <th style="padding:10px 8px; font-weight:600; text-align:right">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="desktop-milestones-tbody">
+                                            <!-- Populated dynamically -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right panel: Quick Forms to Add Doc Request & Milestone -->
+                        <div style="display:flex; flex-direction:column; gap:24px">
+                            <!-- Add Doc Request Form -->
+                            <div class="stat-card-glass" style="padding:20px; display:flex; flex-direction:column; gap:14px">
+                                <h3 style="margin:0; font-size:1rem; font-weight:700; color:var(--text-main)">➕ Solicitar Documento</h3>
+                                <div class="cfg-field" style="margin:0">
+                                    <label class="cfg-label" style="font-size:0.75rem">Nombre del documento</label>
+                                    <input class="cfg-input" id="desktop-newdoc-name" placeholder="Ej: Modelo 303 IVA, DNI..." style="padding:8px 12px; font-size:0.8rem">
+                                </div>
+                                <div class="cfg-field" style="margin:0">
+                                    <label class="cfg-label" style="font-size:0.75rem">Fecha límite (Vencimiento)</label>
+                                    <input class="cfg-input" id="desktop-newdoc-duedate" type="datetime-local" style="padding:8px 12px; font-size:0.8rem">
+                                </div>
+                                <div class="cfg-field" style="margin:0">
+                                    <label class="cfg-label" style="font-size:0.75rem">Indicaciones o Notas (Opcional)</label>
+                                    <textarea class="cfg-input" id="desktop-newdoc-notes" placeholder="Ej: Sube el PDF del último trimestre..." rows="2" style="padding:8px 12px; font-size:0.8rem; height:auto; resize:vertical"></textarea>
+                                </div>
+                                <button onclick="createDesktopDocRequest()" class="btn-primary" style="width:100%; padding:10px; font-size:0.82rem; font-weight:700; border-radius:8px">
+                                    Enviar Solicitud
+                                </button>
+                            </div>
+
+                            <!-- Add Milestone Form -->
+                            <div class="stat-card-glass" style="padding:20px; display:flex; flex-direction:column; gap:14px">
+                                <h3 style="margin:0; font-size:1rem; font-weight:700; color:var(--text-main)">➕ Añadir Hito / Fecha Importante</h3>
+                                <div class="cfg-field" style="margin:0">
+                                    <label class="cfg-label" style="font-size:0.75rem">Título del Hito / Reunión</label>
+                                    <input class="cfg-input" id="desktop-newmilestone-title" placeholder="Ej: Entrega IRPF, Videollamada..." style="padding:8px 12px; font-size:0.8rem">
+                                </div>
+                                <div class="cfg-field" style="margin:0">
+                                    <label class="cfg-label" style="font-size:0.75rem">Fecha y Hora</label>
+                                    <input class="cfg-input" id="desktop-newmilestone-date" type="datetime-local" style="padding:8px 12px; font-size:0.8rem">
+                                </div>
+                                <button onclick="createDesktopMilestone()" class="btn-primary" style="width:100%; padding:10px; font-size:0.82rem; font-weight:700; border-radius:8px">
+                                    Añadir al Calendario
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Empty state for active client area -->
+                <div id="desktop-client-empty-area" class="stat-card-glass" style="padding:48px 24px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:12px">
+                    <span style="font-size:3rem">👤</span>
+                    <h3 style="margin:0; font-weight:700">Ningún cliente seleccionado</h3>
+                    <p style="margin:0; color:var(--text-grey); font-size:0.88rem; max-width:320px; line-height:1.5">
+                        Selecciona un cliente del menú desplegable superior para ver su estado, gestionar sus solicitudes de documentos y programar hitos en su calendario.
+                    </p>
                 </div>
             </div>
 

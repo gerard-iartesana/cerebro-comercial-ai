@@ -1,5 +1,5 @@
 // Admin Chat Service Worker - Network First + Push Notifications + Badge
-const CACHE_VERSION = 'admin-chat-v13-scheduled-history-1718420000';
+const CACHE_VERSION = 'admin-chat-v14-client-dashboard-1718458600';
 
 self.addEventListener('install', event => {
     self.skipWaiting();
