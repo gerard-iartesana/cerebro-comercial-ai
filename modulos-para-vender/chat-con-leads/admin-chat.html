@@ -1,0 +1,3735 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0a0f">
+    <title>Admin Chat — iadebarrio</title>
+    <link rel="manifest" href="/manifest-admin.json">
+    <link rel="icon" href="/admin-icon.png">
+    <link rel="apple-touch-icon" href="/admin-icon.png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+    :root {
+        --bg-primary: #0a0a0f;
+        --bg-secondary: #12121a;
+        --bg-tertiary: #1a1a2e;
+        --card-bg: #16161f;
+        --card-border: rgba(255,255,255,0.06);
+        --text-main: #f0f0f5;
+        --text-grey: #8888a0;
+        --accent: #6c5ce7;
+        --accent2: #a855f7;
+        --green: #00d26a;
+        --red: #ff4757;
+        --msg-admin: linear-gradient(135deg, #6c5ce7, #a855f7);
+        --msg-lead: #1e1e2e;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Inter', sans-serif;
+        background: var(--bg-primary); color: var(--text-main);
+        -webkit-font-smoothing: antialiased;
+        overscroll-behavior: none;
+    }
+
+    /* ===== SCREENS ===== */
+    .screen { display:none; flex-direction:column; height:100dvh; }
+    .screen.active { display:flex; }
+
+    /* ===== LOGIN ===== */
+    #login-screen {
+        align-items:center; justify-content:center;
+        padding: 24px; gap: 24px;
+        background: linear-gradient(180deg, #0a0a0f 0%, #12121a 100%);
+    }
+    .login-logo { font-size: 3rem; margin-bottom: 8px; }
+    .login-title { font-size: 1.4rem; font-weight: 800; }
+    .login-subtitle { font-size: 0.8rem; color: var(--text-grey); margin-bottom: 16px; }
+    .login-form { width: 100%; max-width: 320px; display:flex; flex-direction:column; gap:12px; }
+    .login-input {
+        padding: 14px 16px; border-radius: 14px;
+        background: var(--bg-tertiary); border: 1px solid var(--card-border);
+        color: var(--text-main); font-size: 0.9rem; font-family: inherit;
+        outline: none; transition: border 0.2s;
+    }
+    .login-input:focus { border-color: var(--accent); }
+    .login-input::placeholder { color: var(--text-grey); }
+    .login-btn {
+        padding: 14px; border-radius: 14px; border:none;
+        background: var(--msg-admin); color: #fff;
+        font-size: 0.9rem; font-weight: 700; cursor:pointer;
+        font-family: inherit; transition: all 0.2s;
+    }
+    .login-btn:active { transform: scale(0.97); }
+    .login-error { color: var(--red); font-size: 0.75rem; text-align:center; min-height:20px; }
+
+    /* ===== ROOMS LIST ===== */
+    #rooms-screen { background: var(--bg-primary); position: relative; }
+    .fab-nuevo-chat {
+        width: 56px; height: 56px; border-radius: 50%;
+        background: linear-gradient(135deg, #6c5ce7, #a855f7);
+        color: #fff; font-size: 1.5rem;
+        box-shadow: 0 4px 20px rgba(108,92,231,0.5);
+        border: none; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        transition: transform 0.15s;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .fab-nuevo-chat:active { transform: scale(0.9); }
+    .create-lead-label {
+        font-size: 0.78rem; font-weight: 700; color: var(--text-grey);
+        margin-bottom: 6px; display: block;
+    }
+    .create-lead-input {
+        padding: 12px 14px; border-radius: 12px;
+        background: var(--bg-tertiary); border: 1px solid var(--card-border);
+        color: var(--text-main); font-size: 0.88rem;
+        width: 100%; outline: none; font-family: inherit;
+        transition: border 0.2s;
+    }
+    .create-lead-input:focus { border-color: var(--accent); }
+    .create-lead-input::placeholder { color: var(--text-grey); }
+    .rooms-header {
+        padding: 16px 20px 12px; 
+        border-bottom: 1px solid var(--card-border);
+        background: rgba(10,10,15,0.85); backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+    .rooms-header h1 { font-size: 1.5rem; font-weight: 800; }
+    .rooms-header .subtitle { font-size: 0.72rem; color: var(--text-grey); margin-top: 2px; }
+    .rooms-list { flex:1; overflow-y:auto; padding: 8px 0; }
+    .room-item {
+        display:flex; align-items:center; gap:12px;
+        padding: 14px 20px; cursor:pointer;
+        border-bottom: 1px solid rgba(255,255,255,0.03);
+        transition: background 0.15s;
+    }
+    .room-item:active { background: rgba(108,92,231,0.08); }
+    .room-avatar {
+        width:46px; height:46px; border-radius:50%;
+        background: var(--msg-admin); display:flex;
+        align-items:center; justify-content:center;
+        font-size:1rem; font-weight:700; flex-shrink:0;
+    }
+    .room-info { flex:1; min-width:0; }
+    .room-name { font-size:0.88rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .room-last-msg { font-size:0.72rem; color:var(--text-grey); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+    .room-meta { display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
+    .room-time { font-size:0.62rem; color:var(--text-grey); }
+    .room-badge {
+        width:20px; height:20px; border-radius:50%;
+        background: var(--accent); color:#fff;
+        font-size:0.6rem; font-weight:700;
+        display:none; align-items:center; justify-content:center;
+    }
+    .room-badge.has-unread { display:flex; }
+    .rooms-empty { text-align:center; padding:60px 20px; color:var(--text-grey); font-size:0.85rem; }
+
+    /* ===== CHAT ===== */
+    #chat-screen { background: var(--bg-primary); }
+    .chat-header {
+        display:flex; align-items:center; gap:12px;
+        padding: 12px 16px; border-bottom: 1px solid var(--card-border);
+        background: rgba(10,10,15,0.85); backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+    .chat-back {
+        width:36px; height:36px; border-radius:50%;
+        background: var(--bg-tertiary); border: 1px solid var(--card-border);
+        display:flex; align-items:center; justify-content:center;
+        font-size:1rem; cursor:pointer; flex-shrink:0;
+    }
+    .chat-back:active { background: var(--accent); }
+    .chat-header-info { flex:1; }
+    .chat-header-name { font-size:0.9rem; font-weight:700; }
+    .chat-header-status { font-size:0.68rem; color:var(--green); }
+    .chat-messages {
+        flex:1; overflow-y:auto; padding:16px;
+        display:flex; flex-direction:column; gap:6px;
+    }
+    .msg-wrapper { display:flex; flex-direction:column; max-width:82%; }
+    .msg-wrapper.admin { align-self:flex-end; align-items:flex-end; }
+    .msg-wrapper.lead { align-self:flex-start; align-items:flex-start; }
+    .msg-meta { font-size:0.58rem; color:var(--text-grey); margin-bottom:3px; padding:0 6px; }
+    .msg-bubble {
+        padding: 10px 14px; border-radius: 18px;
+        font-size: 0.85rem; line-height: 1.4;
+        word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;
+        overflow: hidden;
+    }
+    .msg-wrapper.admin .msg-bubble {
+        background: var(--msg-admin); color:#fff;
+        border-bottom-right-radius: 6px;
+    }
+    .msg-wrapper.lead .msg-bubble {
+        background: var(--msg-lead); color:var(--text-main);
+        border: 1px solid var(--card-border);
+        border-bottom-left-radius: 6px;
+    }
+    .msg-bubble img {
+        max-width:100%; border-radius:12px; margin-top:6px; cursor:pointer;
+    }
+    .msg-bubble a { color: #a8b4ff; word-break: break-all; }
+    .msg-bubble audio, .msg-bubble video {
+        max-width: 100%; border-radius: 10px; margin-top: 4px;
+    }
+    .msg-bubble audio { width: 100%; min-width: 200px; }
+    .msg-bubble video { max-height: 280px; }
+    .chat-input-area {
+        border-top: 1px solid var(--card-border);
+        background: var(--bg-secondary);
+    }
+    .chat-input-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px 6px;
+    }
+    .chat-input-row input {
+        flex:1; padding:12px 16px; border-radius:24px;
+        background: var(--bg-tertiary); border:1px solid var(--card-border);
+        color: var(--text-main); font-size:0.85rem; font-family:inherit;
+        outline:none; min-width:0;
+    }
+    .chat-input-row input:focus { border-color: var(--accent); }
+    .chat-input-row input::placeholder { color: var(--text-grey); }
+    /* Plus Button & Popup Menu */
+    .btn-plus {
+        width: 38px; height: 38px; border-radius: 50%;
+        border: 1px solid var(--card-border);
+        background: var(--bg-tertiary);
+        color: var(--text-main);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1rem; cursor: pointer; transition: all 0.15s;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .btn-plus:active {
+        transform: scale(0.92);
+        background: rgba(255,255,255,0.05);
+    }
+    .pwa-plus-menu {
+        position: absolute;
+        bottom: calc(100% + 10px);
+        left: 0;
+        background: var(--bg-secondary);
+        border: 1px solid var(--card-border);
+        border-radius: 18px;
+        padding: 6px;
+        display: none;
+        flex-direction: column;
+        gap: 2px;
+        width: 190px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        z-index: 1000;
+        animation: plusMenuFade 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .pwa-plus-menu.active {
+        display: flex;
+    }
+    @keyframes plusMenuFade {
+        from { transform: translateY(10px) scale(0.95); opacity: 0; }
+        to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .plus-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border: none;
+        background: transparent;
+        color: var(--text-main);
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+        border-radius: 10px;
+        width: 100%;
+        transition: background 0.15s;
+        font-family: inherit;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .plus-menu-item:active {
+        background: rgba(255, 255, 255, 0.08);
+    }
+    .plus-menu-icon {
+        font-size: 1.05rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+    }
+    .task-type-pill {
+        flex: 1; text-align: center;
+        padding: 8px 12px; border: 1.5px solid var(--card-border);
+        background: transparent; border-radius: 10px;
+        font-size: 0.8rem; font-weight: 600; cursor: pointer;
+        color: var(--text-grey); transition: all 0.2s;
+        font-family: inherit;
+    }
+    .task-type-pill.active {
+        border-color: var(--accent); background: var(--accent);
+        color: white;
+    }
+    .emoji-picker {
+        display: none;
+        position: absolute;
+        bottom: 48px; left: 0;
+        background: var(--bg-secondary);
+        border: 1px solid var(--card-border);
+        border-radius: 16px;
+        padding: 10px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        z-index: 100;
+        width: 280px;
+        max-height: 220px;
+        overflow-y: auto;
+    }
+    .emoji-grid {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 2px;
+        font-size: 1.2rem;
+        text-align: center;
+        cursor: pointer;
+    }
+    .emoji-grid span:hover { transform: scale(1.25); }
+    .btn-emoji {
+        width: 40px; height: 40px;
+        border-radius: 50%;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--card-border);
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.1rem;
+        transition: all 0.2s;
+        flex-shrink: 0;
+        color: var(--text-grey);
+    }
+    .btn-emoji:active { background: var(--accent); }
+    .chat-send-btn, .chat-attach-btn {
+        width:42px; height:42px; border-radius:50%;
+        display:flex; align-items:center; justify-content:center;
+        font-size:1.1rem; cursor:pointer; flex-shrink:0;
+        border:none; transition: all 0.15s;
+    }
+    .chat-send-btn { background: var(--msg-admin); color:#fff; }
+    .chat-send-btn:active { transform: scale(0.9); }
+
+    /* ===== CHAT HEADER ACTIONS ===== */
+    .chat-header-actions {
+        display:flex; align-items:center; gap:8px; flex-shrink:0;
+    }
+    .chat-header-action {
+        width:38px; height:38px; border-radius:50%;
+        background: var(--bg-tertiary); border: 1px solid var(--card-border);
+        display:flex; align-items:center; justify-content:center;
+        font-size:1rem; cursor:pointer; flex-shrink:0;
+        transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+    }
+    .chat-header-action:active { background: var(--accent); border-color: var(--accent); transform: scale(0.92); }
+
+    /* ===== TOAST ===== */
+    .toast-notification {
+        position:fixed; top:50%; left:50%; 
+        transform:translate(-50%, -50%) scale(0.85);
+        background: rgba(30,30,42,0.95); color: #e8e6f0;
+        padding: 16px 28px; border-radius: 18px;
+        font-size: 0.88rem; font-weight: 700;
+        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+        backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        z-index: 3000; opacity:0; pointer-events:none;
+        transition: opacity 0.3s, transform 0.3s;
+        text-align:center; max-width:280px;
+    }
+    .toast-notification.visible {
+        opacity:1; transform:translate(-50%, -50%) scale(1); pointer-events:auto;
+    }
+
+    /* ===== FULL SCREEN MODALS ===== */
+    .fullscreen-modal {
+        position:fixed; inset:0; z-index:1000;
+        background: var(--bg-primary);
+        display:none; flex-direction:column;
+    }
+    .fullscreen-modal.active { display:flex; }
+    .modal-header {
+        display:flex; align-items:center; gap:12px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--card-border);
+        background: rgba(10,10,15,0.85); backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        flex-shrink:0;
+    }
+    .modal-header-title { flex:1; font-size:0.95rem; font-weight:800; }
+    .modal-close {
+        width:36px; height:36px; border-radius:50%;
+        background: var(--bg-tertiary); border: 1px solid var(--card-border);
+        display:flex; align-items:center; justify-content:center;
+        font-size:1rem; cursor:pointer; flex-shrink:0;
+        color: var(--text-main);
+    }
+    .modal-close:active { background: var(--red); border-color: var(--red); }
+    .modal-body {
+        flex:1; overflow-y:auto; padding:16px;
+        display:flex; flex-direction:column; gap:14px;
+    }
+    .modal-subtitle {
+        font-size:0.78rem; color: var(--text-grey); font-weight:500;
+    }
+    .modal-section-label {
+        font-size:0.72rem; color: var(--text-grey); text-transform:uppercase;
+        letter-spacing:0.5px; font-weight:700; margin-top:4px;
+    }
+    .template-btn {
+        width:100%; text-align:left; padding:12px;
+        border-radius:12px; border:1px solid var(--card-border);
+        background: var(--bg-tertiary); color: var(--text-main);
+        font-size:0.82rem; line-height:1.45; cursor:pointer;
+        font-family:inherit; transition: border-color 0.15s;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .template-btn:active, .template-btn.selected {
+        border-color: var(--accent);
+    }
+    .modal-textarea {
+        width:100%; min-height:100px; padding:14px;
+        border-radius:12px; border:1px solid var(--card-border);
+        background: var(--bg-tertiary); color: var(--text-main);
+        font-size:0.85rem; font-family:inherit; line-height:1.45;
+        outline:none; resize:vertical;
+    }
+    .modal-textarea:focus { border-color: var(--accent); }
+    .modal-datetime {
+        width:100%; padding:14px;
+        border-radius:12px; border:1px solid var(--card-border);
+        background: var(--bg-tertiary); color: var(--text-main);
+        font-size:0.85rem; font-family:inherit;
+        outline:none; color-scheme: dark;
+    }
+    .modal-datetime:focus { border-color: var(--accent); }
+    .modal-action-btn {
+        width:100%; padding:14px; border-radius:14px; border:none;
+        background: var(--msg-admin); color:#fff;
+        font-size:0.9rem; font-weight:700; cursor:pointer;
+        font-family:inherit; transition: all 0.15s;
+        margin-top:6px;
+    }
+    .modal-action-btn:active { transform: scale(0.97); opacity:0.9; }
+    .modal-action-btn:disabled { opacity:0.5; pointer-events:none; }
+
+    /* Modal Overlay & Box (matching dashboard) */
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        display: none; align-items: center; justify-content: center;
+        z-index: 9999;
+        animation: modalFadeIn 0.2s ease;
+    }
+    .modal-overlay.active { display: flex; }
+    @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    
+    .modal-box {
+        background: var(--bg-secondary);
+        border: 1px solid var(--card-border);
+        border-radius: 20px;
+        width: 95%; max-width: 480px;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        animation: modalSlideIn 0.25s ease;
+    }
+    @keyframes modalSlideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* Overlay Modal Elements (matching dashboard h2, close button, body, footer, cancel button) */
+    .modal-overlay .modal-header {
+        padding: 20px 24px;
+        background: transparent;
+        backdrop-filter: none; -webkit-backdrop-filter: none;
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px solid var(--card-border);
+        flex-shrink: 0;
+    }
+    .modal-overlay .modal-header h2 {
+        margin: 0; font-size: 1.1rem; font-weight: 700;
+        color: var(--text-main);
+    }
+    .modal-overlay .modal-close {
+        width: 32px; height: 32px; border-radius: 50%;
+        border: none; background: var(--bg-secondary);
+        font-size: 1.1rem; cursor: pointer; color: var(--text-grey);
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.2s;
+    }
+    .modal-overlay .modal-close:hover { background: #ff3b30; color: white; }
+    
+    .modal-overlay .modal-body {
+        padding: 20px 24px;
+        flex: 1;
+        overflow-y: auto;
+        display: flex; flex-direction: column; gap: 16px;
+    }
+    
+    .modal-overlay .modal-footer {
+        flex-shrink: 0;
+        padding: 16px 24px; border-top: 1px solid var(--card-border);
+        display: flex; justify-content: flex-end; gap: 10px;
+        background: transparent;
+    }
+    
+    .modal-overlay .modal-cancel-btn {
+        padding: 10px 20px; border: 1px solid var(--card-border);
+        background: transparent; border-radius: 12px;
+        font-size: 0.85rem; font-weight: 600; cursor: pointer;
+        color: var(--text-grey); transition: all 0.2s;
+        font-family: inherit;
+    }
+    .modal-overlay .modal-cancel-btn:hover { background: var(--bg-tertiary); }
+    
+    .task-field-label {
+        font-size: 0.72rem; font-weight: 700;
+        color: var(--text-grey); text-transform: uppercase;
+        display: block; margin-bottom: 6px; letter-spacing: 0.04em;
+    }
+    .task-priority-pills {
+        display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .task-prio-pill {
+        flex: 1; text-align: center;
+        padding: 8px 12px; border: 1.5px solid var(--card-border);
+        background: transparent; border-radius: 10px;
+        font-size: 0.8rem; font-weight: 600; cursor: pointer;
+        color: var(--text-grey); transition: all 0.2s;
+        font-family: inherit;
+    }
+    .task-prio-pill.active {
+        border-color: var(--accent); background: var(--accent);
+        color: white;
+    }
+    .modal-input {
+        width: 100%; padding: 10px 14px;
+        border: 1px solid var(--card-border);
+        border-radius: 10px; font-size: 0.85rem;
+        background: var(--bg-tertiary);
+        color: var(--text-main);
+        transition: border-color 0.2s;
+        box-sizing: border-box;
+        font-family: inherit;
+        outline: none;
+    }
+    .modal-input:focus { border-color: var(--accent); }
+
+    /* ===== SAFE AREAS ===== */
+    @supports(padding-top: env(safe-area-inset-top)) {
+        .rooms-header, .chat-header, .modal-header { padding-top: calc(12px + env(safe-area-inset-top)); }
+        .chat-input-area { padding-bottom: calc(8px + env(safe-area-inset-bottom)); padding-left: calc(16px + env(safe-area-inset-left)); padding-right: calc(16px + env(safe-area-inset-right)); }
+        .modal-body { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+    }
+
+    /* ===== MIC BUTTON ===== */
+    .chat-mic-btn {
+        width:42px; height:42px; border-radius:50%;
+        display:flex; align-items:center; justify-content:center;
+        font-size:1.1rem; cursor:pointer; flex-shrink:0;
+        border:1px solid var(--card-border); background:var(--bg-tertiary);
+        color:var(--text-main); transition: all 0.15s;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .chat-mic-btn.recording {
+        background: linear-gradient(135deg, #ff4757, #ff6b81);
+        border-color: #ff4757;
+        animation: micPulse 1s ease-in-out infinite;
+    }
+    @keyframes micPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(255,71,87,0.4); }
+        50% { box-shadow: 0 0 0 10px rgba(255,71,87,0); }
+    }
+    @keyframes modalPop {
+        from { opacity: 0; transform: scale(0.85); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes slideDown {
+        from { transform: translateY(-100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    .action-btn.recording { background: rgba(255,71,87,0.15); border-color: rgba(255,71,87,0.3); color: #ff4757; animation: pulse-rec 1s ease-in-out infinite; }
+    @keyframes pulse-rec { 0%,100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+
+    /* Context menu */
+    .msg-context-menu {
+        position: fixed; z-index: 9999;
+        background: var(--bg-secondary); border: 1px solid var(--card-border);
+        border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+        padding: 6px 0; min-width: 170px; display: none;
+        backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    }
+    .msg-context-menu.active { display: block; }
+    .msg-ctx-item {
+        display: flex; align-items: center; gap: 10px;
+        padding: 11px 18px; font-size: 0.82rem; color: var(--text-main);
+        cursor: pointer; transition: background 0.12s; font-family: inherit;
+    }
+    .msg-ctx-item:first-child { border-radius: 14px 14px 0 0; }
+    .msg-ctx-item:last-child { border-radius: 0 0 14px 14px; }
+    .msg-ctx-item:active, .msg-ctx-item:hover { background: rgba(108,92,231,0.15); }
+    .msg-ctx-item.danger { color: #ff4757; }
+    .msg-ctx-item span:first-child { font-size: 1rem; }
+    .msg-wrapper { user-select: none; -webkit-user-select: none; }
+    .msg-wrapper.ctx-active .msg-bubble { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .forward-room-list { max-height: 260px; overflow-y: auto; }
+    .forward-room-item {
+        display: flex; align-items: center; gap: 10px;
+        padding: 12px 18px; cursor: pointer; transition: background 0.12s;
+        font-size: 0.85rem;
+    }
+    .forward-room-item:active, .forward-room-item:hover { background: rgba(108,92,231,0.15); }
+
+    .audio-recording-bar {
+        display: none;
+        position: absolute;
+        bottom: 100%;
+        left: 0; right: 0;
+        padding: 12px 16px;
+        background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(108,92,231,0.15));
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-top: 1px solid rgba(168,85,247,0.3);
+        align-items: center;
+        gap: 12px;
+        z-index: 10;
+    }
+    .audio-recording-bar.active { display: flex; }
+    .rec-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff4757; animation: blink-rec 1s infinite; }
+    @keyframes blink-rec { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .rec-timer { font-size: 0.82rem; font-weight: 700; color: var(--text-main); font-variant-numeric: tabular-nums; }
+    .rec-cancel { padding: 6px 14px; border-radius: 10px; background: rgba(255,71,87,0.15); border: 1px solid rgba(255,71,87,0.3); color: #ff4757; font-size: 0.78rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .rec-send { padding: 6px 14px; border-radius: 10px; background: linear-gradient(135deg,#6c5ce7,#a855f7); border: none; color: #fff; font-size: 0.78rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+
+    .chat-msg .msg-content audio, .chat-msg .msg-content video {
+        max-width: 100%; border-radius: 10px; margin-top: 4px;
+    }
+    .chat-msg .msg-content video { max-height: 280px; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="screen active">
+    <div class="login-logo">💬</div>
+    <div class="login-title">Admin Chat</div>
+    <div class="login-subtitle">iadebarrio — Panel de mensajes</div>
+    <div class="login-form">
+        <input class="login-input" id="login-user" type="email" placeholder="Email" autocomplete="email">
+        <input class="login-input" id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password">
+        <button class="login-btn" onclick="doLogin()">Entrar</button>
+        <div class="login-error" id="login-error"></div>
+    </div>
+</div>
+
+<!-- ROOMS SCREEN -->
+<div id="rooms-screen" class="screen">
+    <div class="rooms-header">
+        <h1>Chats</h1>
+        <div class="subtitle">Conversaciones con leads</div>
+    </div>
+    <div id="push-bar" style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(135deg,rgba(108,92,231,0.2),rgba(168,85,247,0.12));border-bottom:1px solid rgba(108,92,231,0.25);cursor:pointer;" onclick="activatePush()">
+        <span style="font-size:1.3rem">🔔</span>
+        <div style="flex:1">
+            <div style="font-size:0.82rem;font-weight:700;color:var(--text-main)">Activar notificaciones</div>
+            <div style="font-size:0.68rem;color:var(--text-grey)">Recibe avisos cuando un lead te escriba</div>
+        </div>
+        <button onclick="event.stopPropagation();activatePush()" style="padding:8px 18px;border-radius:20px;background:linear-gradient(135deg,#6c5ce7,#a855f7);border:none;color:#fff;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit">Activar</button>
+    </div>
+    <div class="rooms-list" id="rooms-list">
+        <div class="rooms-empty">Cargando conversaciones...</div>
+    </div>
+    <div style="position:absolute;bottom:24px;right:20px;display:flex;flex-direction:row;gap:12px;z-index:10">
+        <button class="fab-nuevo-chat" onclick="openCreateGroupModal()" style="background:linear-gradient(135deg,#0ea5e9,#06b6d4);box-shadow:0 4px 20px rgba(14,165,233,0.45)" title="Nuevo grupo">👥</button>
+        <button class="fab-nuevo-chat" onclick="openCreateLeadModal()" title="Nuevo chat">+</button>
+    </div>
+</div>
+
+<!-- CHAT SCREEN -->
+<div id="chat-screen" class="screen">
+    <div class="chat-header">
+        <div class="chat-back" onclick="goBack()">←</div>
+        <div class="chat-header-info">
+            <div class="chat-header-name" id="chat-header-name">Lead</div>
+            <div class="chat-header-status">● En línea</div>
+        </div>
+        <div class="chat-header-actions">
+            <div class="chat-header-action" id="add-member-btn" onclick="openAddMemberModal()" title="Añadir miembros" style="display:none">👥+</div>
+            <div class="chat-header-action" onclick="copyLink()" title="Copiar link">🔗</div>
+            <div class="chat-header-action" onclick="openReminderModal()" title="Recordatorio">🔔</div>
+            <div class="chat-header-action" onclick="openScheduleModal()" title="Programar">⏰</div>
+            <div class="chat-header-action" onclick="deleteCurrentRoom()" title="Eliminar chat" style="color:#ff4757">🗑️</div>
+        </div>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-area" style="position:relative">
+        <div class="audio-recording-bar" id="audio-rec-bar">
+            <div class="rec-dot"></div>
+            <span class="rec-timer" id="rec-timer">0:00</span>
+            <div style="flex:1"></div>
+            <button class="rec-cancel" onclick="cancelAudioRecording()">✕ Cancelar</button>
+            <button class="rec-send" onclick="sendAudioRecording()">➤ Enviar</button>
+        </div>
+        <div class="chat-input-row">
+            <div style="position:relative;flex-shrink:0;display:flex;gap:6px">
+                <button class="btn-emoji" onclick="toggleEmojiPicker(event)" title="Emojis">😊</button>
+                <button class="btn-plus" onclick="togglePwaPlusMenu(event)" title="Más opciones">➕</button>
+                <div class="pwa-plus-menu" id="pwa-plus-menu">
+                    <button class="plus-menu-item" onclick="document.getElementById('file-input').click(); closePwaPlusMenu();">
+                        <span class="plus-menu-icon">📁</span>
+                        <span class="plus-menu-text">Archivo</span>
+                    </button>
+                    <button class="plus-menu-item" onclick="document.getElementById('photo-input').click(); closePwaPlusMenu();">
+                        <span class="plus-menu-icon">📷</span>
+                        <span class="plus-menu-text">Foto / Cámara</span>
+                    </button>
+                    <button class="plus-menu-item" onclick="document.getElementById('video-input').click(); closePwaPlusMenu();">
+                        <span class="plus-menu-icon">🎥</span>
+                        <span class="plus-menu-text">Vídeo</span>
+                    </button>
+                    <button class="plus-menu-item" onclick="toggleAudioRecording(); closePwaPlusMenu();">
+                        <span class="plus-menu-icon">🎤</span>
+                        <span class="plus-menu-text">Audio / Voz</span>
+                    </button>
+                    <button class="plus-menu-item" onclick="openPwaTaskModal(); closePwaPlusMenu();" style="color:#00c7be">
+                        <span class="plus-menu-icon">☑️</span>
+                        <span class="plus-menu-text">Crear Tarea</span>
+                    </button>
+                    <button class="plus-menu-item" onclick="openPwaMeetingModal(); closePwaPlusMenu();" style="color:#5856d6">
+                        <span class="plus-menu-icon">📅</span>
+                        <span class="plus-menu-text">Agendar Cita</span>
+                    </button>
+                    <button class="plus-menu-item" onclick="openPwaReportModal(); closePwaPlusMenu();" style="color:#ff9500">
+                        <span class="plus-menu-icon">📄</span>
+                        <span class="plus-menu-text">Generar Informe</span>
+                    </button>
+                </div>
+                <div class="emoji-picker" id="emoji-picker">
+                    <div class="emoji-grid" id="emoji-grid"></div>
+                </div>
+            </div>
+            <input type="text" id="msg-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')sendMsg()">
+            <button class="chat-mic-btn" id="mic-btn" onclick="toggleDictation()" title="Dictar mensaje">🎙️</button>
+            <button class="chat-send-btn" onclick="sendMsg()">➤</button>
+            
+            <!-- Hidden inputs for uploads -->
+            <input type="file" id="file-input" style="display:none" onchange="handleFileUpload(this)">
+            <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleFileUpload(this)">
+            <input type="file" id="video-input" accept="video/*" capture="environment" style="display:none" onchange="handleFileUpload(this)">
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-notification" id="toast-notification"></div>
+
+<!-- PWA TASK MODAL -->
+<div class="modal-overlay" id="pwa-task-modal" onclick="if(event.target===this)closePwaTaskModal()">
+    <div class="modal-box" style="max-width:540px">
+        <div class="modal-header">
+            <h2>☑️ Crear Tarea</h2>
+            <button class="modal-close" onclick="closePwaTaskModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-subtitle" id="pwa-task-lead-name" style="font-size:0.82rem;color:var(--text-grey);margin-bottom:8px">Para: Lead</div>
+            
+            <div>
+                <label class="task-field-label">📝 TÍTULO</label>
+                <input type="text" id="pwa-task-title" class="modal-input" placeholder="Ej: Llamar por teléfono...">
+            </div>
+
+            <div>
+                <label class="task-field-label">📄 DESCRIPCIÓN</label>
+                <textarea class="modal-input" id="pwa-task-desc" style="min-height:70px;resize:vertical" placeholder="Detalles de la tarea..."></textarea>
+            </div>
+
+            <div>
+                <label class="task-field-label">💼 TIPO DE TAREA</label>
+                <div class="task-priority-pills" id="pwa-task-type-container" style="gap:6px">
+                    <button class="task-type-pill active" data-type="business" onclick="setPwaTaskType('business')">💼 Negocio</button>
+                    <button class="task-type-pill" data-type="personal" onclick="setPwaTaskType('personal')">👤 Personal</button>
+                    <button class="task-type-pill" data-type="application" onclick="setPwaTaskType('application')">💻 Aplicación</button>
+                </div>
+                <input type="hidden" id="pwa-task-type" value="business">
+            </div>
+
+            <div>
+                <label class="task-field-label">👥 RESPONSABLE DEL PROYECTO</label>
+                <select id="pwa-task-responsible" class="modal-input">
+                    <option value="Gerard">Gerard</option>
+                </select>
+            </div>
+
+            <div style="border: 1px dashed var(--card-border); padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.01)">
+                <label class="task-field-label" style="color:var(--accent);margin-bottom:8px">💰 VALORACIÓN ECONÓMICA</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+                    <div>
+                        <label class="task-field-label" style="font-size:0.65rem">Precio/hora (€)</label>
+                        <input type="number" id="pwa-task-hourly-rate" class="modal-input" value="53" oninput="calcPwaTaskEcon()">
+                    </div>
+                    <div>
+                        <label class="task-field-label" style="font-size:0.65rem">Descuento (%)</label>
+                        <input type="number" id="pwa-task-discount" class="modal-input" value="0" min="0" max="100" oninput="calcPwaTaskEcon()">
+                    </div>
+                </div>
+                <div id="pwa-task-effective-price" style="font-size:0.75rem;color:var(--text-grey);margin-bottom:8px">Precio efectivo: <strong>53.00€/h</strong></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <div>
+                        <label class="task-field-label" style="font-size:0.65rem">Horas previstas</label>
+                        <input type="number" id="pwa-task-hours-est" class="modal-input" value="0" min="0" oninput="calcPwaTaskEcon()">
+                        <div id="pwa-task-total-est" style="font-size:0.72rem;color:var(--accent);font-weight:700;margin-top:4px">💰 Total: 0.00€</div>
+                    </div>
+                    <div>
+                        <label class="task-field-label" style="font-size:0.65rem">Horas reales</label>
+                        <input type="number" id="pwa-task-hours-actual" class="modal-input" placeholder="—" min="0" oninput="calcPwaTaskEcon()">
+                        <div id="pwa-task-total-actual" style="font-size:0.72rem;color:#34c759;font-weight:700;margin-top:4px">💰 Total: —</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div>
+                    <label class="task-field-label">ESTADO</label>
+                    <select id="pwa-task-status" class="modal-input">
+                        <option value="new">🔵 Nueva</option>
+                        <option value="started">🟡 Empezada</option>
+                        <option value="done">✅ Finalizada</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="task-field-label">HORA LÍMITE</label>
+                    <input type="time" id="pwa-task-time" class="modal-input">
+                </div>
+            </div>
+
+            <div>
+                <label class="task-field-label">📌 PRIORIDAD</label>
+                <div class="task-priority-pills" id="pwa-task-priority-container" style="gap:6px">
+                    <button class="task-prio-pill" data-prio="none" onclick="setPwaTaskPriority('none')" style="padding:6px 8px;font-size:0.75rem">Sin pr.</button>
+                    <button class="task-prio-pill" data-prio="day" onclick="setPwaTaskPriority('day')" style="padding:6px 8px;font-size:0.75rem">Día</button>
+                    <button class="task-prio-pill" data-prio="week" onclick="setPwaTaskPriority('week')" style="padding:6px 8px;font-size:0.75rem">Semana</button>
+                    <button class="task-prio-pill" data-prio="15days" onclick="setPwaTaskPriority('15days')" style="padding:6px 8px;font-size:0.75rem">15 d</button>
+                    <button class="task-prio-pill active" data-prio="month" onclick="setPwaTaskPriority('month')" style="padding:6px 8px;font-size:0.75rem">Mes</button>
+                    <button class="task-prio-pill" data-prio="quarter" onclick="setPwaTaskPriority('quarter')" style="padding:6px 8px;font-size:0.75rem">Trim.</button>
+                </div>
+                <input type="hidden" id="pwa-task-priority" value="month">
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div>
+                    <label class="task-field-label">🟢 FECHA DE INICIO</label>
+                    <input type="date" class="modal-input" id="pwa-task-start-date">
+                </div>
+                <div>
+                    <label class="task-field-label">🔴 FECHA LÍMITE</label>
+                    <input type="date" class="modal-input" id="pwa-task-due-date">
+                </div>
+            </div>
+
+            <div>
+                <label class="task-field-label">📝 NOTAS</label>
+                <textarea class="modal-input" id="pwa-task-notes" style="min-height:70px;resize:vertical" placeholder="Notas, apuntes, ideas..."></textarea>
+            </div>
+
+            <div>
+                <label class="task-field-label">📋 SUBTAREAS (<span id="pwa-subtask-count">0</span>)</label>
+                <div id="pwa-subtasks-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                    <input type="text" id="pwa-new-subtask-input" class="modal-input" placeholder="Nueva subtarea..." onkeypress="if(event.key==='Enter')addPwaSubtask()">
+                    <button class="modal-action-btn" onclick="addPwaSubtask()" style="background:var(--accent);margin-top:0">+ Añadir Subtarea</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-cancel-btn" onclick="closePwaTaskModal()">Cancelar</button>
+            <button class="modal-action-btn" id="pwa-task-save-btn" onclick="savePwaTask()" style="padding:10px 20px;border-radius:12px;background:var(--accent);border:none;color:white;font-weight:700;cursor:pointer">Guardar Tarea</button>
+        </div>
+    </div>
+</div>
+
+<!-- PWA MEETING MODAL -->
+<div class="modal-overlay" id="pwa-meeting-modal" onclick="if(event.target===this)closePwaMeetingModal()">
+    <div class="modal-box" style="max-width:540px">
+        <div class="modal-header">
+            <h2>📅 Agendar Cita</h2>
+            <button class="modal-close" onclick="closePwaMeetingModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-subtitle" id="pwa-meeting-lead-name" style="font-size:0.82rem;color:var(--text-grey);margin-bottom:8px">Para: Lead</div>
+
+            <div>
+                <label class="task-field-label">👤 NOMBRE DEL CONTACTO</label>
+                <input type="text" id="pwa-meeting-name" class="modal-input">
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div>
+                    <label class="task-field-label">📧 EMAIL</label>
+                    <input type="email" id="pwa-meeting-email" class="modal-input">
+                </div>
+                <div>
+                    <label class="task-field-label">📱 TELÉFONO</label>
+                    <input type="tel" id="pwa-meeting-phone" class="modal-input">
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div>
+                    <label class="task-field-label">📅 FECHA</label>
+                    <input type="date" class="modal-input" id="pwa-meeting-date">
+                </div>
+                <div>
+                    <label class="task-field-label">🕒 HORA</label>
+                    <input type="time" class="modal-input" id="pwa-meeting-time">
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div>
+                    <label class="task-field-label">💼 TIPO</label>
+                    <select id="pwa-meeting-type" class="modal-input">
+                        <option value="discovery" selected>📅 Reunión (Discovery)</option>
+                        <option value="followup">🔄 Follow-up</option>
+                        <option value="closing">🤝 Cierre</option>
+                        <option value="support">🛠️ Soporte</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="task-field-label">⏳ ESTADO</label>
+                    <select id="pwa-meeting-status" class="modal-input">
+                        <option value="pending" selected>⏳ Pendiente</option>
+                        <option value="confirmed">✅ Confirmada</option>
+                        <option value="done">✔️ Realizada</option>
+                        <option value="cancelled">❌ Cancelada</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="task-field-label">🌐 ORIGEN</label>
+                <select id="pwa-meeting-source" class="modal-input">
+                    <option value="manual">✍️ Manual</option>
+                    <option value="web">🌐 Web</option>
+                    <option value="cerebro">🧠 Cerebro AI</option>
+                    <option value="chat" selected>💬 Chat</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="task-field-label">📝 NOTAS</label>
+                <textarea class="modal-input" id="pwa-meeting-notes" style="min-height:60px;resize:vertical" placeholder="Notas sobre la reunión..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-cancel-btn" onclick="closePwaMeetingModal()">Cancelar</button>
+            <button class="modal-action-btn" id="pwa-meeting-save-btn" onclick="savePwaMeeting()" style="padding:10px 20px;border-radius:12px;background:var(--accent);border:none;color:white;font-weight:700;cursor:pointer">Agendar Cita</button>
+        </div>
+    </div>
+</div>
+
+<!-- REMINDER MODAL -->
+<div class="fullscreen-modal" id="reminder-modal">
+    <div class="modal-header">
+        <div class="modal-header-title">🔔 Enviar Recordatorio</div>
+        <div class="modal-close" onclick="closeReminderModal()">✕</div>
+    </div>
+    <div class="modal-body">
+        <div class="modal-subtitle" id="reminder-lead-name">Para: Lead</div>
+        <div class="modal-section-label">Plantillas</div>
+        <div id="reminder-templates"></div>
+        <div class="modal-section-label">Mensaje</div>
+        <textarea class="modal-textarea" id="reminder-textarea"></textarea>
+        <div class="modal-section-label">Programar envío (Opcional)</div>
+        <input type="datetime-local" class="modal-datetime" id="reminder-datetime" style="margin-bottom:12px" placeholder="Dejar vacío para enviar ahora">
+        <button class="modal-action-btn" id="reminder-send-btn" onclick="sendReminder()">Programar / Enviar</button>
+        
+        <div style="margin-top:24px;border-top:1px solid var(--card-border);padding-top:20px">
+            <div class="modal-section-label">Historial de Recordatorios</div>
+            <div id="admin-reminder-history-list" style="display:flex;flex-direction:column;gap:10px;margin-top:10px"></div>
+        </div>
+    </div>
+</div>
+
+<!-- SCHEDULE MODAL -->
+<div class="fullscreen-modal" id="schedule-modal">
+    <div class="modal-header">
+        <div class="modal-header-title">⏰ Programar Mensaje</div>
+        <div class="modal-close" onclick="closeScheduleModal()">✕</div>
+    </div>
+    <div class="modal-body">
+        <div class="modal-subtitle" id="schedule-lead-name">Para: Lead</div>
+        <div class="modal-section-label">Plantillas</div>
+        <div id="schedule-templates"></div>
+        <div class="modal-section-label">Mensaje</div>
+        <textarea class="modal-textarea" id="schedule-textarea"></textarea>
+        <div class="modal-section-label">Fecha y hora de envío</div>
+        <input type="datetime-local" class="modal-datetime" id="schedule-datetime">
+        <button class="modal-action-btn" id="schedule-send-btn" onclick="sendScheduled()">Programar Envío</button>
+        
+        <div style="margin-top:24px;border-top:1px solid var(--card-border);padding-top:20px">
+            <div class="modal-section-label">Historial de Programados</div>
+            <div id="admin-schedule-history-list" style="display:flex;flex-direction:column;gap:10px;margin-top:10px"></div>
+        </div>
+    </div>
+</div>
+
+<!-- CREATE LEAD MODAL -->
+<div class="fullscreen-modal" id="create-lead-modal">
+    <div class="modal-header">
+        <div class="modal-header-title">💬 Nuevo Chat con Lead</div>
+        <div class="modal-close" onclick="closeCreateLeadModal()">✕</div>
+    </div>
+    <div class="modal-body">
+        <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="position:relative">
+                <label class="create-lead-label">🔍 Buscar Lead en CRM</label>
+                <input class="create-lead-input" id="create-lead-search" type="text" placeholder="Busca por nombre, empresa o email..." autocomplete="off" oninput="searchLeads(this.value)" onblur="setTimeout(()=>{const c=document.getElementById('create-lead-results');if(c)c.style.display='none'},200)">
+                <div id="create-lead-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:12px;max-height:200px;overflow-y:auto;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.5);margin-top:4px"></div>
+            </div>
+            <div id="create-lead-selected" style="display:none;background:rgba(108,92,231,0.12);border:1px solid rgba(108,92,231,0.25);border-radius:10px;padding:10px 14px;font-size:0.8rem;color:var(--accent);font-weight:600;align-items:center;justify-content:space-between"></div>
+            <div>
+                <label class="create-lead-label" for="create-lead-name">Nombre *</label>
+                <input class="create-lead-input" id="create-lead-name" type="text" placeholder="Nombre del lead" required>
+            </div>
+            <div>
+                <label class="create-lead-label" for="create-lead-company">Empresa</label>
+                <input class="create-lead-input" id="create-lead-company" type="text" placeholder="Nombre de la empresa">
+            </div>
+            <div>
+                <label class="create-lead-label" for="create-lead-email">Email</label>
+                <input class="create-lead-input" id="create-lead-email" type="email" placeholder="email@ejemplo.com">
+            </div>
+            <div>
+                <label class="create-lead-label" for="create-lead-phone">Teléfono</label>
+                <input class="create-lead-input" id="create-lead-phone" type="tel" placeholder="+34 600 000 000">
+            </div>
+        </div>
+        <button class="modal-action-btn" onclick="createLeadRoom()">Crear Chat</button>
+    </div>
+</div>
+
+<!-- CREATE GROUP MODAL -->
+<div class="fullscreen-modal" id="create-group-modal">
+    <div class="modal-header">
+        <div class="modal-header-title">👥 Nuevo Grupo</div>
+        <div class="modal-close" onclick="closeCreateGroupModal()">✕</div>
+    </div>
+    <div class="modal-body">
+        <div style="display:flex;flex-direction:column;gap:14px">
+            <div>
+                <label class="create-lead-label">Nombre del grupo *</label>
+                <input class="create-lead-input" id="create-group-name" type="text" placeholder="Ej: Leads restaurantes">
+            </div>
+            <div>
+                <label class="create-lead-label">Descripción</label>
+                <input class="create-lead-input" id="create-group-desc" type="text" placeholder="Descripción del grupo">
+            </div>
+            <div>
+                <label class="create-lead-label">Añadir miembros</label>
+                <input class="create-lead-input" id="group-member-search" type="text" placeholder="Buscar leads..." oninput="searchGroupMembers(this.value)" autocomplete="off">
+                <div id="group-member-results" style="display:none;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:12px;max-height:180px;overflow-y:auto;margin-top:4px"></div>
+            </div>
+            <div id="group-members-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+        <button class="modal-action-btn" onclick="createGroup()">Crear Grupo</button>
+    </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://lmozoetpehmdxxremtqn.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxtb3pvZXRwZWhtZHh4cmVtdHFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNTA2NDUsImV4cCI6MjA5NTgyNjY0NX0.1xkCCw7q9CDvVbqGswCeFwXpgYfMtb0wcl7lHWlKQ8U';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const VAPID_PUBLIC_KEY = 'BAfWR9i2l5IKCTMpV5cjjjTt4dkSQuvGMUAO5aSVIVMEvXWElSTIrf3S92HhmqveaiWhcdXXw5WUaaYL7AxI1Fg';
+const API_BASE = window.location.origin + '/api';
+
+const safeStorage = {
+    _mem: {},
+    getItem(k) {
+        try {
+            return localStorage.getItem(k);
+        } catch(e) {
+            const match = document.cookie.match(new RegExp('(^| )' + k + '=([^;]+)'));
+            if (match) return decodeURIComponent(match[2]);
+            return this._mem[k] || null;
+        }
+    },
+    setItem(k, v) {
+        try {
+            localStorage.setItem(k, v);
+        } catch(e) {
+            const d = new Date();
+            d.setTime(d.getTime() + (30*24*60*60*1000));
+            document.cookie = `${k}=${encodeURIComponent(v)};expires=${d.toUTCString()};path=/;SameSite=Strict`;
+            this._mem[k] = String(v);
+        }
+    },
+    removeItem(k) {
+        try {
+            localStorage.removeItem(k);
+        } catch(e) {
+            document.cookie = `${k}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;SameSite=Strict`;
+            delete this._mem[k];
+        }
+    }
+};
+
+// ===== LINKIFY HELPER =====
+function linkify(text) {
+    if (!text) return '';
+    let escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+    return escaped.replace(urlRegex, function(url) {
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+    });
+}
+
+let adminEmail = null;
+let adminName = 'Gerard';
+let rooms = [];
+let currentRoom = null;
+let messagesSub = null;
+let roomsSub = null;
+
+// ===== NAVIGATION =====
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+// ===== LOGIN =====
+async function doLogin() {
+    const user = document.getElementById('login-user').value.trim();
+    const pass = document.getElementById('login-pass').value;
+    const errEl = document.getElementById('login-error');
+    errEl.textContent = '';
+
+    if (!user || !pass) { errEl.textContent = 'Completa todos los campos'; return; }
+
+    try {
+        const resp = await fetch(`${API_BASE}/auth`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: user, password: pass })
+        });
+        const data = await resp.json();
+
+        if (!data.success) {
+            errEl.textContent = data.error || 'Credenciales incorrectas';
+            return;
+        }
+
+        adminEmail = data.email;
+        safeStorage.setItem('admin_session', JSON.stringify({ email: adminEmail, name: adminName }));
+        await loadRooms();
+        registerSW();
+    } catch(e) {
+        console.error(e);
+        errEl.textContent = 'Error de conexión';
+    }
+}
+
+function checkSession() {
+    const session = safeStorage.getItem('admin_session');
+    if (session) {
+        const s = JSON.parse(session);
+        adminEmail = s.email;
+        adminName = s.name || 'Gerard';
+        loadRooms();
+        registerSW();
+        return true;
+    }
+    return false;
+}
+
+// ===== ROOMS =====
+async function loadRooms() {
+    showScreen('rooms-screen');
+
+    const { data, error } = await sb
+        .from('chat_rooms')
+        .select('*, chat_messages(content, sender_type, created_at)')
+        .order('last_message_at', { ascending: false });
+
+    if (error) {
+        document.getElementById('rooms-list').innerHTML = '<div class="rooms-empty">Error al cargar</div>';
+        return;
+    }
+
+    rooms = data || [];
+    renderRooms();
+    subscribeToRooms();
+}
+
+function renderRooms() {
+    const container = document.getElementById('rooms-list');
+    if (!rooms.length) {
+        container.innerHTML = '<div class="rooms-empty">No hay conversaciones todavía</div>';
+        return;
+    }
+
+    container.innerHTML = rooms.map(r => {
+        const msgs = r.chat_messages || [];
+        const lastMsg = msgs.sort((a,b) => new Date(b.created_at) - new Date(a.created_at))[0];
+        const lastText = lastMsg ? (lastMsg.sender_type === 'admin' ? 'Tú: ' : '') + (lastMsg.content || '📎 Archivo').substring(0, 50) : 'Sin mensajes';
+        const time = r.last_message_at ? formatTime(r.last_message_at) : '';
+        const initials = (r.lead_name || 'L').substring(0, 2).toUpperCase();
+        const isGroup = r.is_group;
+        
+        // Count unread (lead messages after last read time)
+        const lastRead = getLastRead(r.id);
+        const unread = lastRead
+            ? msgs.filter(m => m.sender_type === 'lead' && new Date(m.created_at) > new Date(lastRead)).length
+            : msgs.filter(m => m.sender_type === 'lead').length;
+
+        const avatarBg = isGroup ? 'linear-gradient(135deg,#0ea5e9,#06b6d4)' : '';
+        const groupLabel = isGroup ? '<span style="font-size:0.6rem;background:rgba(14,165,233,0.15);color:#0ea5e9;padding:1px 6px;border-radius:6px;margin-left:6px;font-weight:600">Grupo</span>' : '';
+
+        return `
+            <div class="room-item" onclick="openRoom('${r.id}')">
+                <div class="room-avatar" ${isGroup ? 'style="background:' + avatarBg + ';font-size:1rem"' : ''}>${isGroup ? '👥' : initials}</div>
+                <div class="room-info">
+                    <div class="room-name">${r.lead_name || r.lead_email || 'Lead'}${groupLabel}</div>
+                    <div class="room-last-msg">${lastText}</div>
+                </div>
+                <div class="room-meta">
+                    <div class="room-time">${time}</div>
+                    <div class="room-badge ${unread > 0 ? 'has-unread' : ''}">${unread}</div>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+function subscribeToRooms() {
+    if (roomsSub) roomsSub.unsubscribe();
+    roomsSub = sb.channel('admin-rooms-realtime')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, () => {
+            loadRooms(); // Reload to update last message and unread
+        })
+        .subscribe();
+}
+
+// ===== CHAT =====
+async function openRoom(roomId) {
+    currentRoom = rooms.find(r => r.id === roomId);
+    if (!currentRoom) return;
+
+    // Mark as read
+    markAsRead(roomId);
+    const isGroup = currentRoom.is_group;
+    document.getElementById('chat-header-name').textContent = currentRoom.lead_name || currentRoom.lead_email || 'Lead';
+    
+    // Show/hide add member button for groups
+    const addMemberBtn = document.getElementById('add-member-btn');
+    if (addMemberBtn) addMemberBtn.style.display = isGroup ? 'flex' : 'none';
+    
+    showScreen('chat-screen');
+    await loadMessages();
+    subscribeToMessages();
+    clearBadge();
+}
+
+function goBack() {
+    if (messagesSub) { messagesSub.unsubscribe(); messagesSub = null; }
+    currentRoom = null;
+    loadRooms();
+}
+
+async function deleteCurrentRoom() {
+    if (!currentRoom) return;
+    const roomName = currentRoom.lead_name || 'este chat';
+    
+    // Show Apple-style confirmation modal
+    let modal = document.getElementById('delete-confirm-modal');
+    if (modal) modal.remove();
+    modal = document.createElement('div');
+    modal.id = 'delete-confirm-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.65);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;padding:24px';
+    modal.innerHTML = `
+        <div style="background:linear-gradient(180deg,#1e1e2a 0%,#16161e 100%);border:1px solid rgba(255,255,255,0.1);border-radius:24px;max-width:320px;width:100%;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.6);animation:modalPop 0.35s cubic-bezier(0.34,1.56,0.64,1)">
+            <div style="padding:28px 24px 16px;text-align:center">
+                <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#ff4757,#ff6b81);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto 14px;box-shadow:0 8px 24px rgba(255,71,87,0.3)">🗑️</div>
+                <h3 style="font-size:1.1rem;font-weight:800;letter-spacing:-0.02em;color:#e8e6f0">Eliminar chat</h3>
+                <p style="font-size:0.82rem;color:#8b8a97;margin-top:8px;line-height:1.5">¿Seguro que quieres eliminar el chat con <strong style="color:#e8e6f0">${roomName}</strong>? Se borrarán todos los mensajes.</p>
+            </div>
+            <div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:8px">
+                <button onclick="confirmDeleteRoom()" style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#ff4757,#ff6b81);border:none;color:#fff;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit">Eliminar</button>
+                <button onclick="document.getElementById('delete-confirm-modal').remove()" style="width:100%;padding:14px;border-radius:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#e8e6f0;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+async function confirmDeleteRoom() {
+    if (!currentRoom) return;
+    const roomId = currentRoom.id;
+    document.getElementById('delete-confirm-modal')?.remove();
+    try {
+        // Delete members if group
+        await sb.from('chat_room_members').delete().eq('room_id', roomId);
+        // Delete scheduled messages
+        await sb.from('chat_scheduled_messages').delete().eq('room_id', roomId);
+        // Delete messages
+        await sb.from('chat_messages').delete().eq('room_id', roomId);
+        // Delete room
+        const { error } = await sb.from('chat_rooms').delete().eq('id', roomId);
+        if (error) throw error;
+        showToast('Chat eliminado ✅');
+        goBack();
+    } catch(e) {
+        showToast('Error al eliminar: ' + (e.message || ''));
+    }
+}
+
+async function loadMessages() {
+    const container = document.getElementById('chat-messages');
+    const { data: messages, error } = await sb
+        .from('chat_messages')
+        .select('*')
+        .eq('room_id', currentRoom.id)
+        .order('created_at', { ascending: true });
+
+    if (error || !messages?.length) {
+        container.innerHTML = '<div class="rooms-empty">👋 Inicio de la conversación</div>';
+        return;
+    }
+
+    container.innerHTML = messages.map(m => {
+        const cls = m.sender_type === 'admin' ? 'admin' : 'lead';
+        const name = m.sender_type === 'admin' ? 'Tú' : (currentRoom.lead_name || 'Lead');
+        const time = new Date(m.created_at).toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+        
+        let fileHtml = '';
+        if (m.file_url) {
+            const fn = (m.file_name || '').toLowerCase();
+            const isImg = /\.(jpg|jpeg|png|gif|webp|heic)$/i.test(fn);
+            const isAudio = /\.(webm|mp3|ogg|m4a|wav|mp4)$/i.test(fn) && fn.startsWith('audio_');
+            const isVideo = /\.(mp4|mov|webm|avi)$/i.test(fn) && !fn.startsWith('audio_');
+            if (isImg) {
+                fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" onclick="window.open('${m.file_url}','_blank')">`;
+            } else if (isAudio) {
+                fileHtml = `<audio controls preload="none" src="${m.file_url}"></audio>`;
+            } else if (isVideo) {
+                fileHtml = `<video controls src="${m.file_url}" preload="metadata" playsinline style="max-height:280px;border-radius:10px"></video>`;
+            } else {
+                fileHtml = `<a href="${m.file_url}" target="_blank">📄 ${m.file_name || 'Archivo'}</a>`;
+            }
+        }
+
+        const safeContent = (m.content || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+        return `
+            <div class="msg-wrapper ${cls}" data-msg-id="${m.id}" data-msg-content="${safeContent}" data-msg-file="${m.file_url||''}" data-msg-fname="${m.file_name||''}">
+                <div class="msg-meta">${name} · ${time}</div>
+                <div class="msg-bubble">${linkify(m.content || '')}${fileHtml}</div>
+            </div>`;
+    }).join('');
+
+    const scrollBottom = () => container.scrollTop = container.scrollHeight;
+    scrollBottom();
+    requestAnimationFrame(scrollBottom);
+    setTimeout(scrollBottom, 100);
+    setTimeout(scrollBottom, 500);
+}
+
+function subscribeToMessages() {
+    if (messagesSub) messagesSub.unsubscribe();
+    messagesSub = sb.channel('admin-chat-' + currentRoom.id)
+        .on('postgres_changes', {
+            event: 'INSERT', schema: 'public', table: 'chat_messages',
+            filter: `room_id=eq.${currentRoom.id}`
+        }, payload => {
+            const m = payload.new;
+            const container = document.getElementById('chat-messages');
+            const cls = m.sender_type === 'admin' ? 'admin' : 'lead';
+            const name = m.sender_type === 'admin' ? 'Tú' : (currentRoom.lead_name || 'Lead');
+            const time = new Date(m.created_at).toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+            
+            let fileHtml = '';
+            if (m.file_url) {
+                const fn = (m.file_name || '').toLowerCase();
+                const isImg = /\.(jpg|jpeg|png|gif|webp|heic)$/i.test(fn);
+                const isAudio = /\.(webm|mp3|ogg|m4a|wav|mp4)$/i.test(fn) && fn.startsWith('audio_');
+                const isVideo = /\.(mp4|mov|webm|avi)$/i.test(fn) && !fn.startsWith('audio_');
+                if (isImg) {
+                    fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" onclick="window.open('${m.file_url}','_blank')">`;
+                } else if (isAudio) {
+                    fileHtml = `<audio controls preload="none" src="${m.file_url}"></audio>`;
+                } else if (isVideo) {
+                    fileHtml = `<video controls src="${m.file_url}" preload="metadata" playsinline style="max-height:280px;border-radius:10px"></video>`;
+                } else {
+                    fileHtml = `<a href="${m.file_url}" target="_blank">📄 ${m.file_name || 'Archivo'}</a>`;
+                }
+            }
+
+            const safeContent = (m.content || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+            container.insertAdjacentHTML('beforeend', `
+                <div class="msg-wrapper ${cls}" data-msg-id="${m.id}" data-msg-content="${safeContent}" data-msg-file="${m.file_url||''}" data-msg-fname="${m.file_name||''}">
+                    <div class="msg-meta">${name} · ${time}</div>
+                    <div class="msg-bubble">${linkify(m.content || '')}${fileHtml}</div>
+                </div>`);
+            container.scrollTop = container.scrollHeight;
+        })
+        .subscribe();
+}
+
+// ===== SEND MESSAGE =====
+async function sendMsg() {
+    if (!currentRoom) return;
+    const input = document.getElementById('msg-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+    input.value = '';
+
+    try {
+        await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'admin',
+            sender_name: adminName,
+            content: msg
+        });
+        await sb.from('chat_rooms').update({ 
+            last_message_at: new Date().toISOString(),
+            unread_count: (currentRoom.unread_count || 0) + 1
+        }).eq('id', currentRoom.id);
+        currentRoom.unread_count = (currentRoom.unread_count || 0) + 1;
+
+        // Registrar actividad
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) envió un mensaje: "${msg.substring(0, 100)}${msg.length > 100 ? '...' : ''}"`,
+            sender_type: 'admin'
+        });
+
+        // Push to lead
+        fetch(`${API_BASE}/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'send',
+                room_id: currentRoom.id,
+                title: `${adminName} — iadebarrio`,
+                message: msg.length > 100 ? msg.substring(0, 100) + '...' : msg
+            })
+        }).catch(() => {});
+    } catch(e) {
+        console.error('Send error:', e);
+    }
+}
+
+async function handleFileUpload(inputEl) {
+    if (!currentRoom || !inputEl.files[0]) return;
+    const file = inputEl.files[0];
+
+    try {
+        const filePath = `chat/${currentRoom.id}/${Date.now()}_${file.name}`;
+        const { error: uploadErr } = await sb.storage.from('chat-files').upload(filePath, file);
+        if (uploadErr) throw uploadErr;
+
+        const { data: urlData } = sb.storage.from('chat-files').getPublicUrl(filePath);
+        await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'admin',
+            sender_name: adminName,
+            content: '',
+            file_url: urlData.publicUrl,
+            file_name: file.name
+        });
+        await sb.from('chat_rooms').update({ 
+            last_message_at: new Date().toISOString(),
+            unread_count: (currentRoom.unread_count || 0) + 1
+        }).eq('id', currentRoom.id);
+        currentRoom.unread_count = (currentRoom.unread_count || 0) + 1;
+
+        // Registrar actividad
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) envió un archivo: "${file.name}"`,
+            sender_type: 'admin'
+        });
+
+        fetch(`${API_BASE}/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'send',
+                room_id: currentRoom.id,
+                title: `${adminName} — iadebarrio`,
+                message: `📎 ${file.name}`
+            })
+        }).catch(() => {});
+    } catch(e) {
+        console.error('Upload error:', e);
+    }
+    inputEl.value = '';
+}
+
+// ===== AUDIO RECORDING =====
+let audioRecorder = null;
+let audioChunks = [];
+let audioRecordingTimer = null;
+let audioRecordingSeconds = 0;
+
+async function toggleAudioRecording() {
+    const btn = document.getElementById('audio-rec-btn');
+    if (audioRecorder && audioRecorder.state === 'recording') {
+        sendAudioRecording();
+        return;
+    }
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mime = getSupportedAudioMime();
+        const opts = mime ? { mimeType: mime } : {};
+        try {
+            audioRecorder = new MediaRecorder(stream, opts);
+        } catch(e2) {
+            audioRecorder = new MediaRecorder(stream);
+        }
+        audioChunks = [];
+        audioRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+        audioRecorder.onstop = () => { stream.getTracks().forEach(t => t.stop()); };
+        audioRecorder.start();
+        btn.classList.add('recording');
+        document.getElementById('audio-rec-bar').classList.add('active');
+        audioRecordingSeconds = 0;
+        updateRecTimer();
+        audioRecordingTimer = setInterval(() => {
+            audioRecordingSeconds++;
+            updateRecTimer();
+            if (audioRecordingSeconds >= 300) sendAudioRecording();
+        }, 1000);
+    } catch(e) {
+        console.error('Mic error:', e);
+        showToast('No se pudo acceder al micrófono');
+    }
+}
+
+function updateRecTimer() {
+    const el = document.getElementById('rec-timer');
+    if (el) el.textContent = `${Math.floor(audioRecordingSeconds / 60)}:${(audioRecordingSeconds % 60).toString().padStart(2, '0')}`;
+}
+
+function cancelAudioRecording() {
+    if (audioRecorder && audioRecorder.state !== 'inactive') audioRecorder.stop();
+    clearInterval(audioRecordingTimer);
+    audioChunks = [];
+    document.getElementById('audio-rec-btn')?.classList.remove('recording');
+    document.getElementById('audio-rec-bar')?.classList.remove('active');
+}
+
+async function sendAudioRecording() {
+    if (!audioRecorder || audioRecorder.state === 'inactive') return;
+    return new Promise(resolve => {
+        audioRecorder.onstop = async () => {
+            audioRecorder.stream?.getTracks().forEach(t => t.stop());
+            clearInterval(audioRecordingTimer);
+            document.getElementById('audio-rec-btn')?.classList.remove('recording');
+            document.getElementById('audio-rec-bar')?.classList.remove('active');
+            if (!audioChunks.length || !currentRoom) { resolve(); return; }
+            const actualMime = audioRecorder.mimeType || 'audio/mp4';
+            const ext = actualMime.includes('webm') ? 'webm' : actualMime.includes('ogg') ? 'ogg' : 'mp4';
+            const blob = new Blob(audioChunks, { type: actualMime });
+            const fileName = `audio_${Date.now()}.${ext}`;
+            try {
+                const path = `chat/${currentRoom.id}/${fileName}`;
+                const { error: upErr } = await sb.storage.from('chat-files').upload(path, blob, { contentType: actualMime });
+                if (upErr) throw upErr;
+                const { data: urlData } = sb.storage.from('chat-files').getPublicUrl(path);
+                await sb.from('chat_messages').insert({
+                    room_id: currentRoom.id,
+                    sender_type: 'admin',
+                    sender_name: adminName,
+                    content: '',
+                    file_url: urlData.publicUrl,
+                    file_name: fileName
+                });
+                await sb.from('chat_rooms').update({
+                    last_message_at: new Date().toISOString(),
+                    unread_count: (currentRoom.unread_count || 0) + 1
+                }).eq('id', currentRoom.id);
+                currentRoom.unread_count = (currentRoom.unread_count || 0) + 1;
+
+                // Registrar actividad
+                await sb.from('chat_activities').insert({
+                    room_id: currentRoom.id,
+                    lead_name: currentRoom.lead_name || 'Lead',
+                    action: 'send_message',
+                    desc: `Gerard (admin) envió una nota de voz`,
+                    sender_type: 'admin'
+                });
+
+                fetch(`${API_BASE}/push`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'send', room_id: currentRoom.id, title: `${adminName} — iadebarrio`, message: '🎤 Audio' })
+                }).catch(() => {});
+            } catch(e) { console.error('Audio upload error:', e); }
+            resolve();
+        };
+        audioRecorder.stop();
+    });
+}
+
+function getSupportedAudioMime() {
+    const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac', 'audio/ogg;codecs=opus'];
+    for (const t of types) {
+        try { if (MediaRecorder.isTypeSupported(t)) return t; } catch(e) {}
+    }
+    return '';
+}
+
+// ===== MESSAGE CONTEXT MENU =====
+let _ctxMsgId = null, _ctxMsgContent = '', _ctxMsgFile = '', _ctxMsgFname = '';
+let _longPressTimer = null;
+let _touchStartX = 0, _touchStartY = 0;
+
+function initContextMenu() {
+    const menu = document.createElement('div');
+    menu.className = 'msg-context-menu';
+    menu.id = 'msg-ctx-menu';
+    menu.innerHTML = `
+        <div class="msg-ctx-item" onclick="ctxCopy()"><span>📋</span> Copiar</div>
+        <div class="msg-ctx-item" onclick="ctxForward()"><span>↩️</span> Reenviar</div>
+        <div class="msg-ctx-item danger" onclick="ctxDelete()"><span>🗑️</span> Borrar</div>
+    `;
+    document.body.appendChild(menu);
+
+    const container = document.getElementById('chat-messages');
+    if (!container) return;
+
+    // Long press for mobile
+    container.addEventListener('touchstart', e => {
+        const wrapper = e.target.closest('.msg-wrapper');
+        if (!wrapper) return;
+        const touch = e.touches[0];
+        _touchStartX = touch.clientX;
+        _touchStartY = touch.clientY;
+        _longPressTimer = setTimeout(() => {
+            showContextMenu(wrapper, _touchStartX, _touchStartY);
+            navigator.vibrate?.(30);
+        }, 500);
+    }, { passive: true });
+    container.addEventListener('touchend', e => {
+        clearTimeout(_longPressTimer);
+        // If context menu is active, prevent the tap from triggering click
+        const menu = document.getElementById('msg-ctx-menu');
+        if (menu && menu.classList.contains('active')) {
+            e.preventDefault();
+        }
+    });
+    container.addEventListener('touchmove', e => {
+        const touch = e.touches[0];
+        if (Math.abs(touch.clientX - _touchStartX) > 10 || Math.abs(touch.clientY - _touchStartY) > 10) {
+            clearTimeout(_longPressTimer);
+        }
+    });
+
+    // Right click for desktop
+    container.addEventListener('contextmenu', e => {
+        const wrapper = e.target.closest('.msg-wrapper');
+        if (!wrapper) return;
+        e.preventDefault();
+        showContextMenu(wrapper, e.clientX, e.clientY);
+    });
+
+    // Close on outside click
+    document.addEventListener('click', e => {
+        const menu = document.getElementById('msg-ctx-menu');
+        if (menu && !menu.contains(e.target)) hideContextMenu();
+    });
+    document.addEventListener('touchstart', e => {
+        const menu = document.getElementById('msg-ctx-menu');
+        if (menu && menu.classList.contains('active') && !menu.contains(e.target)) hideContextMenu();
+    });
+}
+
+function showContextMenu(wrapper, x, y) {
+    hideContextMenu();
+    _ctxMsgId = wrapper.dataset.msgId;
+    _ctxMsgContent = wrapper.dataset.msgContent || '';
+    _ctxMsgFile = wrapper.dataset.msgFile || '';
+    _ctxMsgFname = wrapper.dataset.msgFname || '';
+    wrapper.classList.add('ctx-active');
+
+    const menu = document.getElementById('msg-ctx-menu');
+    menu.classList.add('active');
+
+    // Position
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    let left = Math.min(x, window.innerWidth - mw - 12);
+    let top = y - mh - 8;
+    if (top < 8) top = y + 8;
+    menu.style.left = Math.max(8, left) + 'px';
+    menu.style.top = top + 'px';
+}
+
+function hideContextMenu() {
+    const menu = document.getElementById('msg-ctx-menu');
+    if (menu) menu.classList.remove('active');
+    document.querySelectorAll('.msg-wrapper.ctx-active').forEach(el => el.classList.remove('ctx-active'));
+}
+
+async function ctxCopy() {
+    hideContextMenu();
+    const text = _ctxMsgContent.replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+    if (text) {
+        try { await navigator.clipboard.writeText(text); showToast('Texto copiado ✅'); }
+        catch { showToast('No se pudo copiar'); }
+    } else if (_ctxMsgFile) {
+        try { await navigator.clipboard.writeText(_ctxMsgFile); showToast('Enlace copiado ✅'); }
+        catch { showToast('No se pudo copiar'); }
+    }
+}
+
+async function ctxDelete() {
+    hideContextMenu();
+    if (!_ctxMsgId) return;
+    try {
+        let deletedText = _ctxMsgContent || '';
+        if (_ctxMsgFile) {
+            const parts = _ctxMsgFile.split('/');
+            const fname = decodeURIComponent(parts[parts.length - 1]);
+            const shortName = fname.includes('_') ? fname.substring(fname.indexOf('_') + 1) : fname;
+            deletedText = `[Archivo] ${shortName}`;
+        }
+
+        const { error } = await sb.from('chat_messages').delete().eq('id', _ctxMsgId);
+        if (error) throw error;
+        
+        // Registrar actividad
+        const roomName = currentRoom?.lead_name || 'Lead';
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom?.id,
+            lead_name: roomName,
+            action: 'delete_message',
+            desc: `Gerard (admin) borró un mensaje en el chat con ${roomName}: "${deletedText.substring(0, 100)}${deletedText.length > 100 ? '...' : ''}"`,
+            sender_type: 'admin'
+        });
+
+        const el = document.querySelector(`[data-msg-id="${_ctxMsgId}"]`);
+        if (el) el.remove();
+        showToast('Mensaje borrado ✅');
+    } catch(e) {
+        console.error('Delete error:', e);
+        showToast('Error al borrar: ' + (e.message || ''));
+    }
+}
+
+async function ctxForward() {
+    hideContextMenu();
+    // Fetch rooms
+    const { data: rooms } = await sb.from('chat_rooms').select('*').order('last_message_at', { ascending: false }).limit(20);
+    if (!rooms || !rooms.length) { showToast('No hay chats disponibles'); return; }
+
+    const modal = document.createElement('div');
+    modal.className = 'fullscreen-modal';
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div class="modal-card" style="max-width:360px;width:90%">
+            <h3 style="margin:0 0 12px;font-size:1rem">Reenviar a...</h3>
+            <div class="forward-room-list">
+                ${rooms.filter(r => !currentRoom || r.id !== currentRoom.id).map(r => `
+                    <div class="forward-room-item" onclick="doForward('${r.id}','${(r.lead_name||r.group_name||'Chat').replace(/'/g,"\\'")}')"
+                    >${r.is_group?'👥':'💬'} ${r.lead_name||r.group_name||'Chat'}</div>
+                `).join('')}
+            </div>
+            <button onclick="this.closest('.fullscreen-modal').remove()" style="margin-top:12px;padding:10px;border-radius:12px;background:var(--bg-tertiary);border:1px solid var(--card-border);color:var(--text-main);font-size:0.82rem;cursor:pointer;width:100%;font-family:inherit">Cancelar</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+async function doForward(roomId, roomName) {
+    document.querySelector('.fullscreen-modal:last-child')?.remove();
+    try {
+        const insertData = {
+            room_id: roomId,
+            sender_type: 'admin',
+            sender_name: adminName,
+            content: _ctxMsgContent.replace(/&#39;/g, "'").replace(/&quot;/g, '"') || '',
+        };
+        if (_ctxMsgFile) {
+            insertData.file_url = _ctxMsgFile;
+            insertData.file_name = _ctxMsgFname;
+        }
+        const { error } = await sb.from('chat_messages').insert(insertData);
+        if (error) throw error;
+        await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', roomId);
+        
+        // Registrar actividad
+        let fwdDesc = insertData.content || '';
+        if (_ctxMsgFile) {
+            fwdDesc = `[Archivo] ${_ctxMsgFname || 'Adjunto'}`;
+        }
+        await sb.from('chat_activities').insert({
+            room_id: roomId,
+            lead_name: roomName,
+            action: 'send_message',
+            desc: `Gerard (admin) reenvió un mensaje a ${roomName}: "${fwdDesc.substring(0, 100)}${fwdDesc.length > 100 ? '...' : ''}"`,
+            sender_type: 'admin'
+        });
+        showToast(`Reenviado a ${roomName} ✅`);
+    } catch(e) {
+        showToast('Error al reenviar: ' + (e.message || ''));
+    }
+}
+
+setTimeout(initContextMenu, 500);
+
+// ===== PWA + PUSH =====
+function registerSW() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/admin-sw.js').then(reg => {
+            // Check for updates every 60 seconds
+            setInterval(() => reg.update(), 60000);
+            reg.addEventListener('updatefound', () => {
+                const newSW = reg.installing;
+                newSW.addEventListener('statechange', () => {
+                    if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                        showUpdateBanner();
+                    }
+                });
+            });
+            subscribeToPush(reg);
+        }).catch(e => console.log('SW failed:', e));
+    }
+}
+
+function showUpdateBanner() {
+    if (document.getElementById('update-banner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'update-banner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:3000;padding:0;animation:slideDown 0.4s cubic-bezier(0.34,1.56,0.64,1)';
+    banner.innerHTML = `
+        <div style="margin:12px;padding:14px 18px;border-radius:16px;background:linear-gradient(135deg,rgba(108,92,231,0.95),rgba(168,85,247,0.95));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(108,92,231,0.4)">
+            <div style="font-size:1.3rem">🔄</div>
+            <div style="flex:1">
+                <div style="font-size:0.82rem;font-weight:700;color:#fff">Actualización disponible</div>
+                <div style="font-size:0.72rem;color:rgba(255,255,255,0.8);margin-top:2px">Toca para actualizar la app</div>
+            </div>
+            <button onclick="window.location.reload()" style="padding:8px 16px;border-radius:10px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:#fff;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit">Actualizar</button>
+        </div>
+    `;
+    document.body.prepend(banner);
+}
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!document._isReloading) {
+            document._isReloading = true;
+            window.location.reload();
+        }
+    });
+}
+
+async function subscribeToPush(swReg) {
+    if (!('PushManager' in window)) {
+        hidePushBar();
+        return;
+    }
+    
+    const existing = await swReg.pushManager.getSubscription();
+    if (existing) {
+        saveAdminPushSub(existing);
+        hidePushBar();
+        return;
+    }
+    
+    if (Notification.permission === 'granted') {
+        await doSubscribe(swReg);
+        hidePushBar();
+    } else if (Notification.permission === 'denied') {
+        hidePushBar();
+    }
+    // If 'default', the bar is already visible in the HTML
+}
+
+async function activatePush() {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') {
+        hidePushBar();
+        return;
+    }
+    const reg = await navigator.serviceWorker.ready;
+    await doSubscribe(reg);
+    hidePushBar();
+}
+
+function hidePushBar() {
+    const bar = document.getElementById('push-bar');
+    if (bar) bar.style.display = 'none';
+}
+
+async function doSubscribe(swReg) {
+    try {
+        const sub = await swReg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+        saveAdminPushSub(sub);
+    } catch(e) { console.error('Push sub error:', e); }
+}
+
+async function saveAdminPushSub(pushSub) {
+    // Save as admin subscription (use a special "admin" room ID)
+    try {
+        await fetch(`${API_BASE}/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'subscribe',
+                room_id: 'admin-global',
+                subscription: pushSub.toJSON()
+            })
+        });
+    } catch(e) { console.error('Save push error:', e); }
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+function clearBadge() {
+    try {
+        if (navigator.clearAppBadge) navigator.clearAppBadge();
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.ready.then(reg => {
+                reg.getNotifications().then(n => n.forEach(x => x.close()));
+            });
+        }
+    } catch(e) {}
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') clearBadge(); });
+window.addEventListener('focus', clearBadge);
+
+// ===== READ TRACKING =====
+function getLastRead(roomId) {
+    try {
+        const data = JSON.parse(safeStorage.getItem('admin_read') || '{}');
+        return data[roomId] || null;
+    } catch(e) { return null; }
+}
+
+function markAsRead(roomId) {
+    try {
+        const data = JSON.parse(safeStorage.getItem('admin_read') || '{}');
+        data[roomId] = new Date().toISOString();
+        safeStorage.setItem('admin_read', JSON.stringify(data));
+    } catch(e) {}
+}
+
+// ===== HELPERS =====
+function formatTime(dateStr) {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diff = now - d;
+    if (diff < 86400000 && d.getDate() === now.getDate()) {
+        return d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+    }
+    if (diff < 172800000) return 'Ayer';
+    return d.toLocaleDateString('es-ES', { day:'numeric', month:'short' });
+}
+
+// ===== TOAST =====
+function showToast(msg) {
+    const t = document.getElementById('toast-notification');
+    t.textContent = msg;
+    t.classList.add('visible');
+    clearTimeout(t._tid);
+    t._tid = setTimeout(() => t.classList.remove('visible'), 2000);
+}
+
+// ===== COPY LINK =====
+function copyLink() {
+    if (!currentRoom || !currentRoom.link_token) {
+        showToast('No hay link disponible ❌');
+        return;
+    }
+    const url = `${window.location.origin}/chat?token=${currentRoom.link_token}`;
+    navigator.clipboard.writeText(url).then(() => {
+        showToast('Link copiado ✅');
+    }).catch(() => {
+        showToast('Error al copiar ❌');
+    });
+}
+
+// ===== PWA TASKS & MEETINGS =====
+let pwaTaskSubtasks = [];
+
+function openPwaTaskModal() {
+    if (!currentRoom) return;
+    document.getElementById('pwa-task-lead-name').textContent = `Para: ${currentRoom.lead_name || 'Lead'}`;
+    document.getElementById('pwa-task-title').value = `Seguimiento con ${currentRoom.lead_name || 'Lead'}`;
+    document.getElementById('pwa-task-desc').value = `Tarea creada desde el chat PWA.\nLead: ${currentRoom.lead_name || ''}\nEmail: ${currentRoom.lead_email || ''}`;
+    document.getElementById('pwa-task-notes').value = '';
+    
+    setPwaTaskType('business');
+    setPwaTaskPriority('month');
+    
+    document.getElementById('pwa-task-responsible').value = 'Gerard';
+    document.getElementById('pwa-task-hourly-rate').value = '53';
+    document.getElementById('pwa-task-discount').value = '0';
+    document.getElementById('pwa-task-hours-est').value = '0';
+    document.getElementById('pwa-task-hours-actual').value = '';
+    document.getElementById('pwa-task-status').value = 'new';
+    document.getElementById('pwa-task-time').value = '';
+    
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('pwa-task-start-date').value = today;
+    document.getElementById('pwa-task-due-date').value = '';
+    
+    pwaTaskSubtasks = [];
+    renderPwaSubtasks();
+    
+    calcPwaTaskEcon();
+    document.getElementById('pwa-task-modal').classList.add('active');
+}
+
+function renderPwaSubtasks() {
+    const listEl = document.getElementById('pwa-subtasks-list');
+    const countEl = document.getElementById('pwa-subtask-count');
+    if (countEl) countEl.textContent = pwaTaskSubtasks.length;
+    if (listEl) {
+        listEl.innerHTML = pwaTaskSubtasks.map((st, i) => `
+            <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.02);padding:8px 12px;border:1px solid var(--card-border);border-radius:10px">
+                <input type="checkbox" ${st.status==='done'?'checked':''} onchange="togglePwaSubtask(${i})" style="width:16px;height:16px;cursor:pointer">
+                <span style="flex:1;font-size:0.82rem;${st.status==='done'?'text-decoration:line-through;color:var(--text-grey)':''}">${st.title}</span>
+                <button onclick="removePwaSubtask(${i})" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:0.9rem;padding:4px">✕</button>
+            </div>
+        `).join('');
+    }
+}
+
+function addPwaSubtask() {
+    const input = document.getElementById('pwa-new-subtask-input');
+    if (!input || !input.value.trim()) return;
+    pwaTaskSubtasks.push({ title: input.value.trim(), status: 'new', due_date: null, assigned_to: 'Gerard' });
+    input.value = '';
+    renderPwaSubtasks();
+}
+
+function removePwaSubtask(i) {
+    pwaTaskSubtasks.splice(i, 1);
+    renderPwaSubtasks();
+}
+
+function togglePwaSubtask(i) {
+    pwaTaskSubtasks[i].status = pwaTaskSubtasks[i].status === 'done' ? 'new' : 'done';
+    renderPwaSubtasks();
+}
+
+function setPwaTaskPriority(val) {
+    document.getElementById('pwa-task-priority').value = val;
+    document.querySelectorAll('#pwa-task-priority-container .task-prio-pill').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-prio') === val);
+    });
+}
+
+function setPwaTaskType(val) {
+    document.getElementById('pwa-task-type').value = val;
+    document.querySelectorAll('#pwa-task-type-container .task-type-pill').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-type') === val);
+    });
+}
+
+function calcPwaTaskEcon() {
+    const rate = parseFloat(document.getElementById('pwa-task-hourly-rate').value) || 0;
+    const discount = parseFloat(document.getElementById('pwa-task-discount').value) || 0;
+    const hoursEst = parseFloat(document.getElementById('pwa-task-hours-est').value) || 0;
+    const hoursActualVal = document.getElementById('pwa-task-hours-actual').value;
+    const hoursActual = hoursActualVal !== '' ? parseFloat(hoursActualVal) : 0;
+    
+    const effective = rate * (1 - discount / 100);
+    document.getElementById('pwa-task-effective-price').innerHTML = `Precio efectivo: <strong>${effective.toFixed(2)}€/h</strong>`;
+    
+    const totalEst = effective * hoursEst;
+    document.getElementById('pwa-task-total-est').textContent = `💰 Total: ${totalEst.toFixed(2)}€`;
+    
+    if (hoursActualVal !== '') {
+        const totalActual = effective * hoursActual;
+        document.getElementById('pwa-task-total-actual').textContent = `💰 Total: ${totalActual.toFixed(2)}€`;
+    } else {
+        document.getElementById('pwa-task-total-actual').textContent = `💰 Total: —`;
+    }
+}
+
+function closePwaTaskModal() {
+    document.getElementById('pwa-task-modal').classList.remove('active');
+}
+
+async function savePwaTask() {
+    const title = document.getElementById('pwa-task-title').value.trim();
+    const description = document.getElementById('pwa-task-desc').value.trim();
+    const notes = document.getElementById('pwa-task-notes').value.trim();
+    const type = document.getElementById('pwa-task-type').value;
+    const responsible = document.getElementById('pwa-task-responsible').value;
+    const priority = document.getElementById('pwa-task-priority').value;
+    const hourlyRate = parseFloat(document.getElementById('pwa-task-hourly-rate').value) || 53;
+    const discount = parseFloat(document.getElementById('pwa-task-discount').value) || 0;
+    const hoursEst = parseFloat(document.getElementById('pwa-task-hours-est').value) || 0;
+    const hoursActualVal = document.getElementById('pwa-task-hours-actual').value;
+    const hoursActual = hoursActualVal !== '' ? parseFloat(hoursActualVal) : null;
+    const status = document.getElementById('pwa-task-status').value;
+    const taskTime = document.getElementById('pwa-task-time').value || null;
+    const startDate = document.getElementById('pwa-task-start-date').value || null;
+    const dueDate = document.getElementById('pwa-task-due-date').value || null;
+
+    if (!title) {
+        showToast('El título es obligatorio ⚠️');
+        return;
+    }
+
+    const saveBtn = document.getElementById('pwa-task-save-btn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Guardando...';
+
+    try {
+        const taskData = {
+            title: title,
+            description: description,
+            notes: notes,
+            priority: priority,
+            due_date: dueDate || null,
+            status: status,
+            task_type: type,
+            responsible: responsible,
+            hourly_rate: hourlyRate,
+            discount: discount,
+            hours_estimated: hoursEst,
+            hours_actual: hoursActual,
+            task_time: taskTime,
+            start_date: startDate || new Date().toISOString().split('T')[0],
+            updated_at: new Date().toISOString()
+        };
+
+        const { data, error } = await sb.from('tasks').insert([taskData]).select();
+        if (error) throw error;
+        
+        const taskId = data && data[0] ? data[0].id : null;
+        if (taskId && pwaTaskSubtasks.length > 0) {
+            const subs = pwaTaskSubtasks.map(st => ({ ...st, task_id: taskId }));
+            const { error: subError } = await sb.from('subtasks').insert(subs);
+            if (subError) throw subError;
+        }
+
+        // Registrar actividad
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) creó una tarea: "${title}"`,
+            sender_type: 'admin'
+        });
+
+        showToast('Tarea guardada ✅');
+        closePwaTaskModal();
+    } catch(e) {
+        showToast('Error al guardar: ' + (e.message || e));
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Guardar Tarea';
+    }
+}
+
+async function openPwaMeetingModal() {
+    if (!currentRoom) return;
+    document.getElementById('pwa-meeting-lead-name').textContent = `Para: ${currentRoom.lead_name || 'Lead'}`;
+    document.getElementById('pwa-meeting-name').value = currentRoom.lead_name || '';
+    document.getElementById('pwa-meeting-email').value = currentRoom.lead_email || '';
+    document.getElementById('pwa-meeting-phone').value = '';
+    document.getElementById('pwa-meeting-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('pwa-meeting-time').value = '10:00';
+    document.getElementById('pwa-meeting-notes').value = '';
+    document.getElementById('pwa-meeting-type').value = 'discovery';
+    document.getElementById('pwa-meeting-status').value = 'pending';
+    document.getElementById('pwa-meeting-source').value = 'chat';
+
+    // Fetch phone from lead
+    if (currentRoom.lead_id) {
+        try {
+            const { data } = await sb.from('outreach_leads').select('phone').eq('id', currentRoom.lead_id).single();
+            if (data && data.phone) {
+                document.getElementById('pwa-meeting-phone').value = data.phone;
+            }
+        } catch(e) {}
+    }
+
+    document.getElementById('pwa-meeting-modal').classList.add('active');
+}
+
+function closePwaMeetingModal() {
+    document.getElementById('pwa-meeting-modal').classList.remove('active');
+}
+
+async function savePwaMeeting() {
+    const name = document.getElementById('pwa-meeting-name').value.trim();
+    const email = document.getElementById('pwa-meeting-email').value.trim();
+    const phone = document.getElementById('pwa-meeting-phone').value.trim();
+    const date = document.getElementById('pwa-meeting-date').value;
+    const time = document.getElementById('pwa-meeting-time').value;
+    const type = document.getElementById('pwa-meeting-type').value;
+    const status = document.getElementById('pwa-meeting-status').value;
+    const source = document.getElementById('pwa-meeting-source').value;
+    const notes = document.getElementById('pwa-meeting-notes').value.trim();
+
+    if (!name || !date || !time) {
+        showToast('Nombre, fecha y hora son obligatorios ⚠️');
+        return;
+    }
+
+    const saveBtn = document.getElementById('pwa-meeting-save-btn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Guardando...';
+
+    try {
+        const datetimeISO = new Date(`${date}T${time}`).toISOString();
+        const insertData = {
+            contact_name: name,
+            contact_email: email || null,
+            contact_phone: phone || null,
+            meeting_date: datetimeISO,
+            meeting_type: type,
+            status: status,
+            source: source,
+            notes: notes || null
+        };
+
+        const response = await fetch('/api/meetings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(insertData)
+        });
+        const resData = await response.json();
+        if (!response.ok || !resData.success) {
+            throw new Error(resData.error || 'Error en la respuesta del servidor');
+        }
+
+        // Registrar actividad
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) agendó una cita con ${name} para el ${date} a las ${time}`,
+            sender_type: 'admin'
+        });
+
+        showToast('Cita agendada ✅');
+        closePwaMeetingModal();
+    } catch(e) {
+        showToast('Error al agendar: ' + (e.message || e));
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Agendar Cita';
+    }
+}
+
+// ===== CHAT REPORT MODAL AND PDF GENERATOR =====
+function openPwaReportModal() {
+    if (!currentRoom) return;
+    const activeRoomId = currentRoom.id;
+    
+    // Create the modal element if not exists
+    let modal = document.getElementById('chat-report-modal');
+    if (modal) modal.remove();
+    
+    modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'chat-report-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.65);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;padding:24px';
+    
+    // Date ranges (default to last 7 days)
+    const now = new Date();
+    const past = new Date();
+    past.setDate(now.getDate() - 7);
+    
+    const formatDateTimeLocal = (date) => {
+        const pad = (num) => String(num).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
+    
+    const startVal = formatDateTimeLocal(past);
+    const endVal = formatDateTimeLocal(now);
+    
+    // Build options for lead select
+    const optionsHtml = rooms.map(r => 
+        `<option value="${r.id}" ${r.id === activeRoomId ? 'selected' : ''}>${r.lead_name || r.lead_email || 'Lead sin nombre'}</option>`
+    ).join('');
+    
+    modal.innerHTML = `
+        <div class="modal-box" style="max-width:420px;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:18px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,0.3)">
+            <div class="modal-header" style="padding:16px 20px;border-bottom:1px solid var(--card-border);display:flex;justify-content:space-between;align-items:center">
+                <div style="display:flex;align-items:center;gap:12px">
+                    <div style="font-size:1.5rem">📄</div>
+                    <div>
+                        <h2 style="margin:0;font-size:1.1rem;font-weight:800;color:var(--text-main)">Generar Informe de Chat</h2>
+                        <span style="font-size:0.75rem;color:var(--text-grey);display:block;margin-top:2px">Exporta la conversación a PDF</span>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="document.getElementById('chat-report-modal').remove()" style="background:transparent;border:none;color:var(--text-grey);font-size:1.2rem;cursor:pointer">✕</button>
+            </div>
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:16px;padding:20px;max-height:60vh;overflow-y:auto">
+                <!-- Lead Selector -->
+                <div>
+                    <label style="font-size:0.72rem;font-weight:700;color:var(--text-grey);display:block;margin-bottom:6px">👤 SELECCIONAR LEAD</label>
+                    <select id="report-lead-select" class="modal-input" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--card-border);background:var(--bg-tertiary);color:var(--text-main);font-family:inherit;outline:none">
+                        ${optionsHtml}
+                    </select>
+                </div>
+                
+                <!-- Date Range -->
+                <div style="display:flex;gap:12px">
+                    <div style="flex:1">
+                        <label style="font-size:0.72rem;font-weight:700;color:var(--text-grey);display:block;margin-bottom:6px">📅 DESDE</label>
+                        <input type="datetime-local" id="report-date-start" class="modal-input" value="${startVal}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--card-border);background:var(--bg-tertiary);color:var(--text-main);font-family:inherit;outline:none">
+                    </div>
+                    <div style="flex:1">
+                        <label style="font-size:0.72rem;font-weight:700;color:var(--text-grey);display:block;margin-bottom:6px">📅 HASTA</label>
+                        <input type="datetime-local" id="report-date-end" class="modal-input" value="${endVal}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--card-border);background:var(--bg-tertiary);color:var(--text-main);font-family:inherit;outline:none">
+                    </div>
+                </div>
+
+                <!-- Delivery Options -->
+                <div>
+                    <label style="font-size:0.72rem;font-weight:700;color:var(--text-grey);display:block;margin-bottom:8px">📦 OPCIONES DE ENVÍO / DESCARGA</label>
+                    <div style="display:flex;flex-direction:column;gap:10px">
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.85rem;color:var(--text-main);user-select:none">
+                            <input type="checkbox" id="report-opt-download" checked style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer">
+                            <span>📥 Descargar PDF localmente</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.85rem;color:var(--text-main);user-select:none">
+                            <input type="checkbox" id="report-opt-chat" style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer">
+                            <span>💬 Enviar al lead por este chat</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.85rem;color:var(--text-main);user-select:none">
+                            <input type="checkbox" id="report-opt-email" style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer">
+                            <span>📧 Enviar al lead por email</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding:16px 20px;border-top:1px solid var(--card-border);display:flex;justify-content:flex-end;gap:10px;background:rgba(0,0,0,0.1)">
+                <button onclick="document.getElementById('chat-report-modal').remove()" style="padding:10px 18px;border-radius:10px;border:1px solid var(--card-border);background:transparent;color:var(--text-main);font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
+                <button onclick="generatePwaChatReport(event)" style="padding:10px 18px;border-radius:10px;background:var(--accent);color:white;font-weight:700;border:none;cursor:pointer;font-family:inherit">Generar PDF</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+async function generatePwaChatReport(event) {
+    const roomId = document.getElementById('report-lead-select').value;
+    const startDateVal = document.getElementById('report-date-start').value;
+    const endDateVal = document.getElementById('report-date-end').value;
+    
+    if (!roomId) {
+        alert('Por favor, selecciona un lead.');
+        return;
+    }
+    
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) return;
+    
+    const optDownload = document.getElementById('report-opt-download').checked;
+    const optChat = document.getElementById('report-opt-chat').checked;
+    const optEmail = document.getElementById('report-opt-email').checked;
+    
+    if (optEmail && !room.lead_email) {
+        alert('El lead seleccionado no tiene un correo electrónico configurado para poder enviárselo por email.');
+        return;
+    }
+    
+    if (!optDownload && !optChat && !optEmail) {
+        alert('Por favor, selecciona al menos una opción de envío o descarga.');
+        return;
+    }
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = 'Cargando...';
+    btn.disabled = true;
+    
+    try {
+        const { data: messages, error } = await sb
+            .from('chat_messages')
+            .select('*')
+            .eq('room_id', roomId)
+            .gte('created_at', new Date(startDateVal).toISOString())
+            .lte('created_at', new Date(endDateVal).toISOString())
+            .order('created_at', { ascending: true });
+            
+        if (error) throw error;
+        
+        if (!messages || messages.length === 0) {
+            alert('No se encontraron mensajes en el rango de fechas seleccionado.');
+            btn.textContent = originalText;
+            btn.disabled = false;
+            return;
+        }
+        
+        btn.textContent = 'Generando...';
+        
+        // Build report HTML container
+        const container = document.createElement('div');
+        container.style.padding = '45px';
+        container.style.fontFamily = "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+        container.style.color = '#111827';
+        container.style.backgroundColor = '#ffffff';
+        container.style.maxWidth = '800px';
+        container.style.margin = '0 auto';
+        
+        const headerHtml = `
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #6c5ce7;padding-bottom:20px;margin-bottom:30px">
+                <div>
+                    <h1 style="font-size:1.6rem;font-weight:800;color:#6c5ce7;margin:0 0 4px 0">INFORME DE CONVERSACIÓN</h1>
+                    <p style="font-size:0.85rem;color:#6b7280;margin:0">CerebroComercial AI — iadebarrio.com</p>
+                </div>
+                <div style="text-align:right">
+                    <p style="font-size:0.8rem;color:#374151;margin:0"><b>Fecha informe:</b> ${new Date().toLocaleDateString('es-ES')}</p>
+                    <p style="font-size:0.8rem;color:#374151;margin:2px 0 0 0"><b>Mensajes exportados:</b> ${messages.length}</p>
+                </div>
+            </div>
+            
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px 20px;margin-bottom:30px;display:flex;gap:20px">
+                <div style="flex:1">
+                    <h3 style="font-size:0.75rem;text-transform:uppercase;color:#9ca3af;margin:0 0 6px 0;letter-spacing:0.05em">Lead / Cliente</h3>
+                    <p style="font-size:0.95rem;font-weight:700;color:#111827;margin:0">${room.lead_name || 'Sin nombre'}</p>
+                    <p style="font-size:0.85rem;color:#4b5563;margin:4px 0 0 0">${room.lead_email || ''}</p>
+                </div>
+                <div style="flex:1">
+                    <h3 style="font-size:0.75rem;text-transform:uppercase;color:#9ca3af;margin:0 0 6px 0;letter-spacing:0.05em">Periodo del Reporte</h3>
+                    <p style="font-size:0.85rem;color:#111827;margin:0"><b>Desde:</b> ${new Date(startDateVal).toLocaleString('es-ES')}</p>
+                    <p style="font-size:0.85rem;color:#111827;margin:4px 0 0 0"><b>Hasta:</b> ${new Date(endDateVal).toLocaleString('es-ES')}</p>
+                </div>
+            </div>
+        `;
+        
+        let messagesHtml = '<div style="display:flex;flex-direction:column;gap:16px">';
+        messages.forEach(m => {
+            const isAdmin = m.sender_type === 'admin';
+            const senderName = m.sender_name || (isAdmin ? 'Tú (Administrador)' : room.lead_name || 'Lead');
+            const timeStr = new Date(m.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const bubbleBg = isAdmin ? '#f3f4f6' : '#eef2ff';
+            const borderLeft = isAdmin ? '4px solid #9ca3af' : '4px solid #6c5ce7';
+            
+            let attachmentHtml = '';
+            if (m.file_url) {
+                attachmentHtml = `<div style="margin-top:6px;font-size:0.8rem;color:#4f46e5;font-style:italic">📎 Adjunto: <a href="${m.file_url}" target="_blank" style="color:#4f46e5;text-decoration:underline">${m.file_name || 'Archivo'}</a></div>`;
+            }
+            
+            messagesHtml += `
+                <div style="background:${bubbleBg};border-left:${borderLeft};border-radius:0 12px 12px 0;padding:12px 16px;box-sizing:border-box">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                        <span style="font-size:0.8rem;font-weight:700;color:#374151">${senderName}</span>
+                        <span style="font-size:0.72rem;color:#9ca3af">${timeStr}</span>
+                    </div>
+                    <div style="font-size:0.88rem;line-height:1.5;color:#111827;white-space:pre-wrap;word-break:break-word">${m.content || ''}</div>
+                    ${attachmentHtml}
+                </div>
+            `;
+        });
+        messagesHtml += '</div>';
+        
+        container.innerHTML = headerHtml + messagesHtml;
+        
+        if (typeof html2pdf === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+        
+        btn.textContent = 'Procesando PDF...';
+        
+        // Generate a clean filename and path for the report
+        const reportFileName = `Reporte-Chat-${(room.lead_name || 'Lead').replace(/\s+/g, '-')}-${Date.now()}.pdf`;
+        const opt = {
+            margin:       12,
+            filename:     reportFileName,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        
+        // Output PDF as a Blob in memory
+        const pdfBlob = await html2pdf().set(opt).from(container).output('blob');
+        
+        btn.textContent = 'Subiendo a Storage...';
+        
+        // Upload Blob automatically to Supabase Storage (chat-files bucket)
+        const storagePath = `informes/${reportFileName}`;
+        const { error: uploadErr } = await sb.storage
+            .from('chat-files')
+            .upload(storagePath, pdfBlob, {
+                contentType: 'application/pdf',
+                cacheControl: '3600',
+                upsert: true
+            });
+        if (uploadErr) throw uploadErr;
+        
+        const { data: urlData } = sb.storage.from('chat-files').getPublicUrl(storagePath);
+        const fileUrl = urlData?.publicUrl;
+        
+        // 1. Download local copy if requested
+        if (optDownload) {
+            btn.textContent = 'Descargando...';
+            const blobUrl = URL.createObjectURL(pdfBlob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = reportFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
+        }
+        
+        // 2. Send via Chat if requested
+        if (optChat) {
+            btn.textContent = 'Enviando por Chat...';
+            await sb.from('chat_messages').insert({
+                room_id: roomId,
+                sender_type: 'admin',
+                sender_name: adminName,
+                content: `📎 ${reportFileName}`,
+                file_url: fileUrl,
+                file_name: reportFileName
+            });
+            
+            await sb.from('chat_rooms').update({ 
+                last_message_at: new Date().toISOString(),
+                unread_count: (room.unread_count || 0) + 1
+            }).eq('id', roomId);
+            room.unread_count = (room.unread_count || 0) + 1;
+            room.last_message_at = new Date().toISOString();
+            
+            await sb.from('chat_activities').insert({
+                room_id: roomId,
+                lead_name: room.lead_name || 'Lead',
+                action: 'send_message',
+                desc: `Gerard (admin) envió el informe de chat: "${reportFileName}"`,
+                sender_type: 'admin'
+            });
+            
+            if (currentRoom && currentRoom.id === roomId) {
+                loadMessages();
+            }
+            
+            fetch(`${API_BASE}/push`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'send',
+                    room_id: roomId,
+                    title: `${adminName} — iadebarrio`,
+                    message: `📎 ${reportFileName}`
+                })
+            }).catch(() => {});
+        }
+        
+        // 3. Send via Email if requested
+        if (optEmail) {
+            btn.textContent = 'Enviando por Email...';
+            const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(pdfBlob);
+            });
+            
+            const emailRes = await fetch('/api/send-manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: room.lead_email,
+                    subject: `Informe de Chat — ${room.lead_name || 'Lead'}`,
+                    body: `Hola ${room.lead_name || 'cliente'},\n\nAdjunto a este correo encontrarás el informe de nuestra conversación de chat correspondiente al periodo solicitado.\n\nAtentamente,\nGerard Fanals`,
+                    attachments: [
+                        {
+                            filename: reportFileName,
+                            content: base64
+                        }
+                    ]
+                })
+            });
+            const emailData = await emailRes.json();
+            if (!emailRes.ok || !emailData.success) {
+                throw new Error(emailData.error || 'No se pudo enviar el correo.');
+            }
+        }
+        
+        showToast('Informe procesado con éxito ✅');
+        
+        const modalEl = document.getElementById('chat-report-modal');
+        if (modalEl) modalEl.remove();
+    } catch (e) {
+        console.error('Error generating PDF:', e);
+        alert('Error al generar el informe: ' + e.message);
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+}
+
+// ===== REMINDER MODAL =====
+const REMINDER_TEMPLATES = [
+    '👋 Hola {name}, te escribo para hacer seguimiento. ¿Has tenido oportunidad de revisar nuestro último mensaje?',
+    '📋 Hola {name}, quería recordarte que estamos pendientes de tu respuesta.',
+    '🕐 Hola {name}, solo un pequeño recordatorio. ¿Cuándo te viene bien?',
+    '💡 {name}, te dejo un recordatorio amigable. Estamos preparados para empezar cuando tú lo estés.'
+];
+
+function openReminderModal() {
+    if (!currentRoom) return;
+    const leadName = currentRoom.lead_name || currentRoom.lead_email || 'Lead';
+    document.getElementById('reminder-lead-name').textContent = `Para: ${leadName}`;
+
+    const container = document.getElementById('reminder-templates');
+    container.innerHTML = REMINDER_TEMPLATES.map((tpl, i) => {
+        const filled = tpl.replace(/\{name\}/g, leadName);
+        return `<button class="template-btn ${i === 0 ? 'selected' : ''}" onclick="selectReminderTemplate(this, ${i})">${filled}</button>`;
+    }).join('');
+
+    const firstFilled = REMINDER_TEMPLATES[0].replace(/\{name\}/g, leadName);
+    document.getElementById('reminder-textarea').value = firstFilled;
+    document.getElementById('reminder-modal').classList.add('active');
+    
+    if (document.getElementById('reminder-datetime')) {
+        document.getElementById('reminder-datetime').value = '';
+    }
+    loadAdminScheduledHistory();
+}
+
+function selectReminderTemplate(btn, idx) {
+    const leadName = currentRoom.lead_name || currentRoom.lead_email || 'Lead';
+    document.querySelectorAll('#reminder-templates .template-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const filled = REMINDER_TEMPLATES[idx].replace(/\{name\}/g, leadName);
+    document.getElementById('reminder-textarea').value = filled;
+}
+
+function closeReminderModal() {
+    document.getElementById('reminder-modal').classList.remove('active');
+}
+
+async function sendReminder() {
+    if (!currentRoom) return;
+    const msg = document.getElementById('reminder-textarea').value.trim();
+    if (!msg) { showToast('Escribe un mensaje'); return; }
+
+    const dtVal = document.getElementById('reminder-datetime')?.value;
+    
+    if (dtVal) {
+        if (new Date(dtVal) <= new Date()) { showToast('La fecha debe ser futura'); return; }
+        const btn = document.getElementById('reminder-send-btn');
+        btn.disabled = true;
+        btn.textContent = 'Programando...';
+        
+        try {
+            await sb.from('chat_scheduled_messages').insert({
+                room_id: currentRoom.id,
+                content: '🔔 Recordatorio: ' + msg,
+                scheduled_at: new Date(dtVal).toISOString(),
+                sender_type: 'admin'
+            });
+            document.getElementById('reminder-datetime').value = '';
+            closeReminderModal();
+            showToast('Recordatorio programado ✅');
+        } catch(e) {
+            console.error('Schedule reminder error:', e);
+            showToast('Error al programar ❌');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Programar / Enviar';
+        }
+        return;
+    }
+
+    const btn = document.getElementById('reminder-send-btn');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+
+    try {
+        await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'admin',
+            sender_name: adminName,
+            content: msg
+        });
+        await sb.from('chat_rooms').update({ 
+            last_message_at: new Date().toISOString(),
+            unread_count: (currentRoom.unread_count || 0) + 1
+        }).eq('id', currentRoom.id);
+        currentRoom.unread_count = (currentRoom.unread_count || 0) + 1;
+
+        // Registrar actividad
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) envió un mensaje: "${msg.substring(0, 100)}${msg.length > 100 ? '...' : ''}"`,
+            sender_type: 'admin'
+        });
+
+        // Push to lead
+        fetch(`${API_BASE}/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'send',
+                room_id: currentRoom.id,
+                title: `${adminName} — iadebarrio`,
+                message: msg.length > 100 ? msg.substring(0, 100) + '...' : msg
+            })
+        }).catch(() => {});
+
+        closeReminderModal();
+        showToast('Recordatorio enviado ✅');
+    } catch(e) {
+        console.error('Reminder error:', e);
+        showToast('Error al enviar ❌');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Programar / Enviar';
+    }
+}
+
+// ===== SCHEDULE MODAL =====
+const SCHEDULE_TEMPLATES = [
+    'Buenos días {name}, ¿cómo va todo? Quería hacer un seguimiento rápido.',
+    'Hola {name}, te recuerdo que tenemos pendiente confirmar los detalles.',
+    '{name}, te envío un recordatorio amigable. Estamos listos para empezar cuando tú digas.',
+    'Hola {name}, ¿has podido revisar la propuesta que te envié?'
+];
+
+function openScheduleModal() {
+    if (!currentRoom) return;
+    const leadName = currentRoom.lead_name || currentRoom.lead_email || 'Lead';
+    document.getElementById('schedule-lead-name').textContent = `Para: ${leadName}`;
+
+    const container = document.getElementById('schedule-templates');
+    container.innerHTML = SCHEDULE_TEMPLATES.map((tpl, i) => {
+        const filled = tpl.replace(/\{name\}/g, leadName);
+        return `<button class="template-btn ${i === 0 ? 'selected' : ''}" onclick="selectScheduleTemplate(this, ${i})">${filled}</button>`;
+    }).join('');
+
+    const firstFilled = SCHEDULE_TEMPLATES[0].replace(/\{name\}/g, leadName);
+    document.getElementById('schedule-textarea').value = firstFilled;
+
+    // Default: 30 min from now
+    const now = new Date(Date.now() + 30 * 60000);
+    const pad = n => String(n).padStart(2, '0');
+    const dtVal = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    document.getElementById('schedule-datetime').value = dtVal;
+
+    document.getElementById('schedule-modal').classList.add('active');
+    loadAdminScheduledHistory();
+}
+
+function selectScheduleTemplate(btn, idx) {
+    const leadName = currentRoom.lead_name || currentRoom.lead_email || 'Lead';
+    document.querySelectorAll('#schedule-templates .template-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const filled = SCHEDULE_TEMPLATES[idx].replace(/\{name\}/g, leadName);
+    document.getElementById('schedule-textarea').value = filled;
+}
+
+function closeScheduleModal() {
+    document.getElementById('schedule-modal').classList.remove('active');
+}
+
+async function sendScheduled() {
+    if (!currentRoom) return;
+    const msg = document.getElementById('schedule-textarea').value.trim();
+    const dt = document.getElementById('schedule-datetime').value;
+    if (!msg) { showToast('Escribe un mensaje'); return; }
+    if (!dt) { showToast('Selecciona fecha y hora'); return; }
+
+    const scheduledAt = new Date(dt).toISOString();
+    if (new Date(dt) <= new Date()) { showToast('La fecha debe ser futura'); return; }
+
+    const btn = document.getElementById('schedule-send-btn');
+    btn.disabled = true;
+    btn.textContent = 'Programando...';
+
+    try {
+        await sb.from('chat_scheduled_messages').insert({
+            room_id: currentRoom.id,
+            content: msg,
+            scheduled_at: scheduledAt,
+            sender_type: 'admin'
+        });
+        closeScheduleModal();
+        showToast('Mensaje programado ✅');
+    } catch(e) {
+        console.error('Schedule error:', e);
+        showToast('Error al programar ❌');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Programar Envío';
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+async function loadAdminScheduledHistory() {
+    if (!currentRoom) return;
+    const roomId = currentRoom.id;
+    const listContainers = [
+        document.getElementById('admin-schedule-history-list'),
+        document.getElementById('admin-reminder-history-list')
+    ];
+    
+    listContainers.forEach(container => {
+        if (container) container.innerHTML = '<div style="color:var(--text-grey);text-align:center;font-size:0.82rem;padding:12px;">Cargando historial...</div>';
+    });
+    
+    try {
+        const { data, error } = await sb
+            .from('chat_scheduled_messages')
+            .select('*')
+            .eq('room_id', roomId)
+            .order('scheduled_at', { ascending: false });
+            
+        if (error) throw error;
+        
+        listContainers.forEach(container => {
+            if (!container) return;
+            
+            const isReminderModal = container.id === 'admin-reminder-history-list';
+            let filtered = data || [];
+            if (isReminderModal) {
+                filtered = filtered.filter(item => item.content.startsWith('🔔 Recordatorio: '));
+            } else {
+                filtered = filtered.filter(item => !item.content.startsWith('🔔 Recordatorio: '));
+            }
+            
+            if (filtered.length === 0) {
+                container.innerHTML = `<div style="color:var(--text-grey);text-align:center;font-size:0.82rem;padding:12px;">No hay ${isReminderModal ? 'recordatorios' : 'mensajes programados'}.</div>`;
+                return;
+            }
+            
+            container.innerHTML = filtered.map(item => {
+                const isPending = item.status === 'pending';
+                const dateStr = new Date(item.scheduled_at).toLocaleString();
+                const badgeColor = item.status === 'sent' ? '#2ecc71' : (item.status === 'cancelled' ? '#95a5a6' : '#f1c40f');
+                const badgeText = item.status === 'sent' ? 'Enviado' : (item.status === 'cancelled' ? 'Cancelado' : 'Pendiente');
+                const type = isReminderModal ? 'reminder' : 'schedule';
+                
+                let actionButtons = '';
+                if (isPending) {
+                    actionButtons = `
+                        <button onclick="editAdminScheduled('${item.id}', \`${escapeHtml(item.content)}\`, '${item.scheduled_at}')" class="template-btn" style="padding:6px 12px;margin:0;font-size:0.75rem;background:transparent;border:1px solid var(--accent);color:var(--accent);cursor:pointer">✍️ Editar</button>
+                        <button onclick="deleteAdminScheduled('${item.id}')" class="template-btn" style="padding:6px 12px;margin:0;font-size:0.75rem;background:transparent;border:1px solid #ff4757;color:#ff4757;cursor:pointer">🗑️ Borrar</button>
+                        <button onclick="sendAdminScheduledNow('${item.id}', \`${escapeHtml(item.content)}\`)" class="template-btn" style="padding:6px 12px;margin:0;font-size:0.75rem;background:transparent;border:1px solid #2ecc71;color:#2ecc71;cursor:pointer">🚀 Enviar ya</button>
+                    `;
+                } else {
+                    actionButtons = `
+                        <button onclick="resendAdminScheduled(\`${escapeHtml(item.content)}\`)" class="template-btn" style="padding:6px 12px;margin:0;font-size:0.75rem;background:transparent;border:1px solid #2ecc71;color:#2ecc71;cursor:pointer">🔄 Volver a enviar</button>
+                    `;
+                }
+                
+                return `
+                    <div id="admin-scheduled-item-${item.id}" style="background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;margin-bottom:8px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                            <span style="font-size:0.75rem;color:var(--text-grey)">${dateStr}</span>
+                            <span style="font-size:0.7rem;padding:2px 6px;border-radius:6px;background:${badgeColor}20;color:${badgeColor};font-weight:700">${badgeText}</span>
+                        </div>
+                        <div class="scheduled-content" style="font-size:0.85rem;color:var(--text-main);word-break:break-word">${escapeHtml(item.content)}</div>
+                        <div class="scheduled-edit-form" style="display:none;flex-direction:column;gap:8px;margin-top:4px">
+                            <textarea class="edit-content-input modal-textarea" style="min-height:50px;font-size:0.85rem"></textarea>
+                            <input type="datetime-local" class="edit-date-input modal-datetime" style="font-size:0.85rem">
+                            <div style="display:flex;justify-content:flex-end;gap:8px">
+                                <button onclick="cancelEditAdminScheduled('${item.id}')" class="template-btn" style="padding:6px 12px;margin:0">Cancelar</button>
+                                <button onclick="saveEditAdminScheduled('${item.id}', '${type}')" class="template-btn selected" style="padding:6px 12px;margin:0;background:var(--accent);color:white">Guardar</button>
+                            </div>
+                        </div>
+                        <div class="scheduled-actions" style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid rgba(255,255,255,0.05);padding-top:8px;margin-top:4px">
+                            ${actionButtons}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        });
+    } catch (e) {
+        console.error('Error loading admin scheduled history:', e);
+        listContainers.forEach(container => {
+            if (container) container.innerHTML = '<div style="color:#ff4757;text-align:center;font-size:0.82rem;padding:12px;">Error al cargar el historial.</div>';
+        });
+    }
+}
+
+function editAdminScheduled(id, content, scheduledAt) {
+    const itemEl = document.getElementById(`admin-scheduled-item-${id}`);
+    if (!itemEl) return;
+    
+    itemEl.querySelector('.scheduled-content').style.display = 'none';
+    itemEl.querySelector('.scheduled-actions').style.display = 'none';
+    
+    const formEl = itemEl.querySelector('.scheduled-edit-form');
+    formEl.style.display = 'flex';
+    
+    const textarea = formEl.querySelector('.edit-content-input');
+    let editContent = content;
+    if (content.startsWith('🔔 Recordatorio: ')) {
+        editContent = content.substring('🔔 Recordatorio: '.length);
+    }
+    textarea.value = editContent;
+    
+    const dt = new Date(scheduledAt);
+    const pad = n => String(n).padStart(2, '0');
+    const dtVal = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+    formEl.querySelector('.edit-date-input').value = dtVal;
+}
+
+function cancelEditAdminScheduled(id) {
+    const itemEl = document.getElementById(`admin-scheduled-item-${id}`);
+    if (!itemEl) return;
+    
+    itemEl.querySelector('.scheduled-content').style.display = 'block';
+    itemEl.querySelector('.scheduled-actions').style.display = 'flex';
+    itemEl.querySelector('.scheduled-edit-form').style.display = 'none';
+}
+
+async function saveEditAdminScheduled(id, type) {
+    const itemEl = document.getElementById(`admin-scheduled-item-${id}`);
+    if (!itemEl) return;
+    
+    const formEl = itemEl.querySelector('.scheduled-edit-form');
+    let content = formEl.querySelector('.edit-content-input').value.trim();
+    const dtVal = formEl.querySelector('.edit-date-input').value;
+    
+    if (!content || !dtVal) { showToast('Rellena todos los campos'); return; }
+    
+    if (type === 'reminder') {
+        content = '🔔 Recordatorio: ' + content;
+    }
+    
+    try {
+        const { error } = await sb.from('chat_scheduled_messages').update({
+            content: content,
+            scheduled_at: new Date(dtVal).toISOString()
+        }).eq('id', id);
+        
+        if (error) throw error;
+        
+        showToast('Guardado ✅');
+        loadAdminScheduledHistory();
+    } catch(e) {
+        showToast('Error al guardar ❌');
+    }
+}
+
+async function deleteAdminScheduled(id) {
+    if (!confirm('¿Seguro que deseas borrar este elemento?')) return;
+    try {
+        const { error } = await sb.from('chat_scheduled_messages').delete().eq('id', id);
+        if (error) throw error;
+        showToast('Eliminado ✅');
+        loadAdminScheduledHistory();
+    } catch(e) {
+        showToast('Error al borrar ❌');
+    }
+}
+
+async function sendAdminMessageDirectly(msg) {
+    await sb.from('chat_messages').insert({
+        room_id: currentRoom.id,
+        sender_type: 'admin',
+        sender_name: adminName,
+        content: msg
+    });
+    await sb.from('chat_rooms').update({ 
+        last_message_at: new Date().toISOString(),
+        unread_count: (currentRoom.unread_count || 0) + 1
+    }).eq('id', currentRoom.id);
+    currentRoom.unread_count = (currentRoom.unread_count || 0) + 1;
+
+    await sb.from('chat_activities').insert({
+        room_id: currentRoom.id,
+        lead_name: currentRoom.lead_name || 'Lead',
+        action: 'send_message',
+        desc: `Gerard (admin) envió un mensaje: "${msg.substring(0, 100)}${msg.length > 100 ? '...' : ''}"`,
+        sender_type: 'admin'
+    });
+
+    fetch(`${API_BASE}/push`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'send',
+            room_id: currentRoom.id,
+            title: `${adminName} — iadebarrio`,
+            message: msg.length > 100 ? msg.substring(0, 100) + '...' : msg
+        })
+    }).catch(() => {});
+}
+
+async function sendAdminScheduledNow(id, content) {
+    if (!currentRoom) return;
+    try {
+        await sendAdminMessageDirectly(content);
+        await sb.from('chat_scheduled_messages').delete().eq('id', id);
+        showToast('Mensaje enviado ✅');
+        loadAdminScheduledHistory();
+    } catch(e) {
+        showToast('Error al enviar ❌');
+    }
+}
+
+async function resendAdminScheduled(content) {
+    if (!currentRoom) return;
+    try {
+        await sendAdminMessageDirectly(content);
+        showToast('Mensaje enviado ✅');
+        loadAdminScheduledHistory();
+    } catch(e) {
+        showToast('Error al enviar ❌');
+    }
+}
+
+// ===== LEAD SEARCH =====
+let leadSearchCache = [];
+let selectedLeadId = null;
+
+async function searchLeads(query) {
+    const container = document.getElementById('create-lead-results');
+    if (!container) return;
+    const q = query.toLowerCase().trim();
+    if (!q) { container.style.display = 'none'; return; }
+    
+    if (!leadSearchCache.length) {
+        try {
+            const { data } = await sb.from('outreach_leads').select('id, first_name, last_name, company_name, email, phone').order('first_name');
+            leadSearchCache = (data || []).map(l => ({
+                id: l.id,
+                nombre: [l.first_name, l.last_name].filter(Boolean).join(' '),
+                empresa: l.company_name || '',
+                email: l.email || '',
+                telefono: l.phone || ''
+            }));
+        } catch(e) { console.warn('Error loading leads:', e); }
+    }
+    
+    const filtered = leadSearchCache.filter(l =>
+        l.nombre.toLowerCase().includes(q) ||
+        l.empresa.toLowerCase().includes(q) ||
+        l.email.toLowerCase().includes(q)
+    ).slice(0, 8);
+    
+    if (!filtered.length) {
+        container.innerHTML = '<div style="padding:12px 16px;font-size:0.8rem;color:var(--text-grey)">Sin resultados</div>';
+        container.style.display = 'block';
+        return;
+    }
+    
+    container.innerHTML = filtered.map(l => `
+        <div onclick="selectLead('${l.id}')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--card-border)" ontouchstart="this.style.background='rgba(255,255,255,0.05)'" ontouchend="this.style.background='transparent'">
+            <div style="width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.75rem">${(l.nombre||'?')[0].toUpperCase()}</div>
+            <div style="flex:1;min-width:0">
+                <div style="font-size:0.82rem;font-weight:700">${l.nombre || 'Sin nombre'}</div>
+                <div style="font-size:0.7rem;color:var(--text-grey)">${l.empresa || ''} ${l.email ? '· ' + l.email : ''}</div>
+            </div>
+        </div>
+    `).join('');
+    container.style.display = 'block';
+}
+
+function selectLead(id) {
+    const lead = leadSearchCache.find(l => l.id === id);
+    if (!lead) return;
+    selectedLeadId = id;
+    document.getElementById('create-lead-name').value = lead.nombre;
+    document.getElementById('create-lead-company').value = lead.empresa;
+    document.getElementById('create-lead-email').value = lead.email;
+    document.getElementById('create-lead-phone').value = lead.telefono;
+    document.getElementById('create-lead-results').style.display = 'none';
+    document.getElementById('create-lead-search').value = '';
+    const badge = document.getElementById('create-lead-selected');
+    if (badge) {
+        badge.style.display = 'flex';
+        badge.innerHTML = `<span>✅ ${lead.nombre}</span><span onclick="clearLeadSelection()" style="cursor:pointer;font-size:1rem">✕</span>`;
+    }
+}
+
+function clearLeadSelection() {
+    selectedLeadId = null;
+    const badge = document.getElementById('create-lead-selected');
+    if (badge) badge.style.display = 'none';
+}
+
+// ===== CREATE LEAD =====
+function openCreateLeadModal() {
+    selectedLeadId = null;
+    leadSearchCache = [];
+    const badge = document.getElementById('create-lead-selected');
+    if (badge) badge.style.display = 'none';
+    document.getElementById('create-lead-search').value = '';
+    document.getElementById('create-lead-name').value = '';
+    document.getElementById('create-lead-company').value = '';
+    document.getElementById('create-lead-email').value = '';
+    document.getElementById('create-lead-phone').value = '';
+    const results = document.getElementById('create-lead-results');
+    if (results) results.style.display = 'none';
+    document.getElementById('create-lead-modal').classList.add('active');
+}
+function closeCreateLeadModal() {
+    document.getElementById('create-lead-modal').classList.remove('active');
+}
+async function createLeadRoom() {
+    const name = document.getElementById('create-lead-name')?.value.trim();
+    if (!name) { showToast('El nombre es obligatorio'); return; }
+    const company = document.getElementById('create-lead-company')?.value.trim() || '';
+    const email = document.getElementById('create-lead-email')?.value.trim() || '';
+    const phone = document.getElementById('create-lead-phone')?.value.trim() || '';
+
+    let leadId = selectedLeadId;
+
+    // Si no hay lead seleccionado del CRM, crear/buscar en outreach_leads
+    if (!leadId) {
+        try {
+            const leadEmail = email || (name.toLowerCase().replace(/\s+/g, '.') + '@chat-lead.local');
+            const nameParts = name.split(' ');
+            const firstName = nameParts[0] || name;
+            const lastName = nameParts.slice(1).join(' ') || '';
+
+            // Intentar buscar por email primero
+            const { data: existing } = await sb.from('outreach_leads')
+                .select('id').eq('email', leadEmail).maybeSingle();
+
+            if (existing) {
+                leadId = existing.id;
+                // Actualizar datos si hay nuevos
+                await sb.from('outreach_leads').update({
+                    first_name: firstName,
+                    company_name: company || undefined,
+                    phone: phone || undefined
+                }).eq('id', leadId);
+            } else {
+                // Crear nuevo lead
+                const { data: newLead, error: leadErr } = await sb.from('outreach_leads').insert({
+                    email: leadEmail,
+                    first_name: firstName,
+                    last_name: lastName,
+                    company_name: company,
+                    phone: phone,
+                    status: 'lead'
+                }).select('id').single();
+                if (!leadErr && newLead) leadId = newLead.id;
+            }
+        } catch(e) {
+            console.warn('No se pudo registrar en outreach_leads:', e.message);
+        }
+    }
+
+    const insertData = {
+        lead_name: name,
+        lead_company: company,
+        lead_email: email,
+        lead_phone: phone
+    };
+    if (leadId) insertData.lead_id = leadId;
+
+    try {
+        const { data, error } = await sb.from('chat_rooms').insert(insertData).select().single();
+        if (error) throw error;
+        closeCreateLeadModal();
+        showToast('Chat con ' + name + ' creado ✅');
+        await loadRooms();
+        openRoom(data.id);
+    } catch(e) {
+        showToast('Error al crear: ' + (e.message || ''));
+    }
+}
+
+// ===== CREATE GROUP =====
+let groupMembers = [];
+
+function openCreateGroupModal() {
+    groupMembers = [];
+    renderGroupMembers();
+    document.getElementById('create-group-name').value = '';
+    document.getElementById('create-group-desc').value = '';
+    document.getElementById('group-member-search').value = '';
+    const results = document.getElementById('group-member-results');
+    if (results) results.style.display = 'none';
+    document.getElementById('create-group-modal').classList.add('active');
+}
+function closeCreateGroupModal() { document.getElementById('create-group-modal').classList.remove('active'); }
+
+async function searchGroupMembers(query) {
+    const container = document.getElementById('group-member-results');
+    if (!container) return;
+    const q = query.toLowerCase().trim();
+    if (!q) { container.style.display = 'none'; return; }
+    
+    // Reuse leadSearchCache, load if empty
+    if (!leadSearchCache.length) {
+        try {
+            const { data } = await sb.from('outreach_leads').select('id, first_name, last_name, company_name, email, phone').order('first_name');
+            leadSearchCache = (data || []).map(l => ({
+                id: l.id,
+                nombre: [l.first_name, l.last_name].filter(Boolean).join(' '),
+                empresa: l.company_name || '',
+                email: l.email || '',
+                telefono: l.phone || ''
+            }));
+        } catch(e) {}
+    }
+    // Also add existing chat rooms
+    const existingIds = leadSearchCache.map(l => l.id);
+    rooms.forEach(r => {
+        if (!existingIds.includes(r.id)) {
+            leadSearchCache.push({ id: r.id, nombre: r.lead_name || '', empresa: r.lead_company || '', email: r.lead_email || '', telefono: '' });
+        }
+    });
+    
+    const filtered = leadSearchCache.filter(l =>
+        !groupMembers.find(m => m.id === l.id) &&
+        (l.nombre.toLowerCase().includes(q) || l.empresa.toLowerCase().includes(q) || l.email.toLowerCase().includes(q))
+    ).slice(0, 6);
+    
+    if (!filtered.length) {
+        container.innerHTML = '<div style="padding:12px;font-size:0.8rem;color:var(--text-grey)">Sin resultados</div>';
+        container.style.display = 'block';
+        return;
+    }
+    
+    container.innerHTML = filtered.map(l => `
+        <div onclick="addGroupMember('${l.id}','${(l.nombre||'').replace(/'/g,"\\'")}')"
+             style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--card-border)"
+             ontouchstart="this.style.background='rgba(255,255,255,0.05)'" ontouchend="this.style.background='transparent'">
+            <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.7rem">${(l.nombre||'?')[0].toUpperCase()}</div>
+            <div style="font-size:0.82rem;font-weight:600">${l.nombre}</div>
+        </div>
+    `).join('');
+    container.style.display = 'block';
+}
+
+function addGroupMember(id, nombre) {
+    if (groupMembers.find(m => m.id === id)) return;
+    groupMembers.push({ id, nombre });
+    renderGroupMembers();
+    document.getElementById('group-member-search').value = '';
+    document.getElementById('group-member-results').style.display = 'none';
+}
+
+function removeGroupMember(id) {
+    groupMembers = groupMembers.filter(m => m.id !== id);
+    renderGroupMembers();
+}
+
+function renderGroupMembers() {
+    const container = document.getElementById('group-members-list');
+    if (!container) return;
+    container.innerHTML = groupMembers.map(m => `
+        <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.3);border-radius:20px;font-size:0.78rem;font-weight:600;color:var(--accent)">
+            ${m.nombre}
+            <span onclick="removeGroupMember('${m.id}')" style="cursor:pointer;font-size:0.9rem">✕</span>
+        </span>
+    `).join('');
+}
+
+async function createGroup() {
+    const name = document.getElementById('create-group-name')?.value.trim();
+    if (!name) { showToast('El nombre es obligatorio'); return; }
+    if (groupMembers.length < 1) { showToast('Añade al menos un miembro'); return; }
+    const desc = document.getElementById('create-group-desc')?.value.trim() || '';
+    try {
+        // Create the group room
+        const { data, error } = await sb.from('chat_rooms').insert({
+            lead_name: name,
+            lead_company: desc,
+            lead_email: groupMembers.map(m => m.nombre).join(', '),
+            is_group: true
+        }).select().single();
+        if (error) throw error;
+
+        // Insert each member into chat_room_members with their own access_token
+        const memberInserts = groupMembers.map(m => ({
+            room_id: data.id,
+            lead_id: m.id || null,
+            lead_name: m.nombre,
+            lead_email: m.email || ''
+        }));
+        const { data: members, error: memErr } = await sb.from('chat_room_members')
+            .insert(memberInserts).select();
+        if (memErr) console.warn('Error inserting members:', memErr.message);
+
+        // System message with member list
+        await sb.from('chat_messages').insert({
+            room_id: data.id,
+            sender_type: 'system',
+            sender_name: 'Sistema',
+            content: '👥 Grupo creado con: ' + groupMembers.map(m => m.nombre).join(', ')
+        });
+
+        closeCreateGroupModal();
+
+        // Show links for each member
+        if (members && members.length) {
+            const origin = window.location.origin;
+            let linksMsg = '🔗 Links de acceso:\n';
+            members.forEach(m => {
+                linksMsg += `${m.lead_name}: ${origin}/chat?token=${m.access_token}\n`;
+            });
+            showToast('Grupo creado ✅');
+            // Show links in a copyable alert after a small delay
+            setTimeout(() => {
+                showGroupLinksModal(name, members);
+            }, 300);
+        } else {
+            showToast('Grupo "' + name + '" creado ✅');
+        }
+
+        await loadRooms();
+        openRoom(data.id);
+    } catch(e) {
+        showToast('Error: ' + (e.message || ''));
+    }
+}
+
+// ===== ADD MEMBERS TO EXISTING GROUP =====
+async function openAddMemberModal() {
+    if (!currentRoom || !currentRoom.is_group) return;
+    
+    // Load current members
+    const { data: existingMembers } = await sb
+        .from('chat_room_members')
+        .select('lead_id, lead_name, lead_email, access_token')
+        .eq('room_id', currentRoom.id);
+    
+    let existing = document.getElementById('add-member-modal');
+    if (existing) existing.remove();
+    
+    const modal = document.createElement('div');
+    modal.id = 'add-member-modal';
+    modal.className = 'fullscreen-modal active';
+    modal.innerHTML = `
+        <div class="modal-header">
+            <div class="modal-header-title">👥 Miembros: ${currentRoom.lead_name}</div>
+            <div class="modal-close" onclick="document.getElementById('add-member-modal').remove()">✕</div>
+        </div>
+        <div class="modal-body">
+            <div style="display:flex;flex-direction:column;gap:14px">
+                <div>
+                    <label class="create-lead-label">Miembros actuales</label>
+                    <div id="existing-members-list" style="display:flex;flex-direction:column;gap:6px">
+                        ${(existingMembers || []).map(m => `
+                            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--bg-tertiary);border:1px solid var(--card-border)">
+                                <div style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.75rem">${(m.lead_name||'?')[0].toUpperCase()}</div>
+                                <div style="flex:1;min-width:0">
+                                    <div style="font-size:0.82rem;font-weight:700">${m.lead_name || 'Sin nombre'}</div>
+                                    <div style="font-size:0.68rem;color:var(--text-grey)">${m.lead_email || ''}</div>
+                                </div>
+                                <span style="font-size:0.68rem;color:var(--green);font-weight:600">✓ Activo</span>
+                            </div>
+                        `).join('') || '<div style="font-size:0.8rem;color:var(--text-grey);padding:8px">Sin miembros</div>'}
+                    </div>
+                </div>
+                <div style="border-top:1px solid var(--card-border);padding-top:14px">
+                    <label class="create-lead-label">Añadir nuevo miembro</label>
+                    <input class="create-lead-input" id="add-member-search" type="text" placeholder="Buscar lead..." oninput="searchAddMember(this.value)" autocomplete="off">
+                    <div id="add-member-results" style="display:none;background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:12px;max-height:200px;overflow-y:auto;margin-top:4px"></div>
+                </div>
+                <div id="new-members-chips" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+                <button id="add-members-submit" style="display:none;width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#6c5ce7,#a855f7);border:none;color:#fff;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit" onclick="submitAddMembers()">Añadir miembros</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    window._addMemberExisting = (existingMembers || []).map(m => m.lead_id).filter(Boolean);
+    window._addMemberNew = [];
+}
+
+async function searchAddMember(query) {
+    const container = document.getElementById('add-member-results');
+    if (!container) return;
+    const q = query.toLowerCase().trim();
+    if (!q) { container.style.display = 'none'; return; }
+    
+    if (!leadSearchCache.length) {
+        try {
+            const { data } = await sb.from('outreach_leads').select('id, first_name, last_name, company_name, email, phone').order('first_name');
+            leadSearchCache = (data || []).map(l => ({
+                id: l.id,
+                nombre: [l.first_name, l.last_name].filter(Boolean).join(' '),
+                empresa: l.company_name || '',
+                email: l.email || '',
+                telefono: l.phone || ''
+            }));
+        } catch(e) {}
+    }
+    
+    const excludeIds = [...(window._addMemberExisting || []), ...(window._addMemberNew || []).map(m => m.id)];
+    const filtered = leadSearchCache.filter(l =>
+        !excludeIds.includes(l.id) &&
+        (l.nombre.toLowerCase().includes(q) || l.empresa.toLowerCase().includes(q) || l.email.toLowerCase().includes(q))
+    ).slice(0, 6);
+    
+    if (!filtered.length) {
+        container.innerHTML = '<div style="padding:12px;font-size:0.8rem;color:var(--text-grey)">Sin resultados</div>';
+        container.style.display = 'block';
+        return;
+    }
+    
+    container.innerHTML = filtered.map(l => `
+        <div onclick="pickAddMember('${l.id}','${(l.nombre||'').replace(/'/g,"\\'")}','${(l.email||'').replace(/'/g,"\\'")}')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--card-border)" ontouchstart="this.style.background='rgba(255,255,255,0.05)'" ontouchend="this.style.background='transparent'">
+            <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.7rem">${(l.nombre||'?')[0].toUpperCase()}</div>
+            <div style="flex:1">
+                <div style="font-size:0.82rem;font-weight:600">${l.nombre}</div>
+                <div style="font-size:0.68rem;color:var(--text-grey)">${l.email || l.empresa || ''}</div>
+            </div>
+        </div>
+    `).join('');
+    container.style.display = 'block';
+}
+
+function pickAddMember(id, nombre, email) {
+    if (!window._addMemberNew) window._addMemberNew = [];
+    if (window._addMemberNew.find(m => m.id === id)) return;
+    window._addMemberNew.push({ id, nombre, email });
+    document.getElementById('add-member-search').value = '';
+    document.getElementById('add-member-results').style.display = 'none';
+    renderNewMemberChips();
+}
+
+function removeNewMember(id) {
+    window._addMemberNew = (window._addMemberNew || []).filter(m => m.id !== id);
+    renderNewMemberChips();
+}
+
+function renderNewMemberChips() {
+    const container = document.getElementById('new-members-chips');
+    const btn = document.getElementById('add-members-submit');
+    if (!container) return;
+    const members = window._addMemberNew || [];
+    container.innerHTML = members.map(m => `
+        <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.3);border-radius:20px;font-size:0.78rem;font-weight:600;color:var(--accent)">
+            ${m.nombre}
+            <span onclick="removeNewMember('${m.id}')" style="cursor:pointer;font-size:0.9rem">✕</span>
+        </span>
+    `).join('');
+    if (btn) btn.style.display = members.length ? 'block' : 'none';
+}
+
+async function submitAddMembers() {
+    if (!currentRoom || !window._addMemberNew?.length) return;
+    try {
+        const memberInserts = window._addMemberNew.map(m => ({
+            room_id: currentRoom.id,
+            lead_id: m.id || null,
+            lead_name: m.nombre,
+            lead_email: m.email || ''
+        }));
+        const { data: newMembers, error } = await sb.from('chat_room_members').insert(memberInserts).select();
+        if (error) throw error;
+        
+        await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'system',
+            sender_name: 'Sistema',
+            content: '👥 Nuevos miembros añadidos: ' + window._addMemberNew.map(m => m.nombre).join(', ')
+        });
+        
+        document.getElementById('add-member-modal')?.remove();
+        showToast('Miembros añadidos ✅');
+        
+        if (newMembers && newMembers.length) {
+            setTimeout(() => showGroupLinksModal(currentRoom.lead_name, newMembers), 300);
+        }
+        
+        await loadRooms();
+    } catch(e) {
+        showToast('Error: ' + (e.message || ''));
+    }
+}
+
+function showGroupLinksModal(groupName, members) {
+    const origin = window.location.origin;
+    let existing = document.getElementById('group-links-modal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.id = 'group-links-modal';
+    modal.className = 'fullscreen-modal active';
+    modal.innerHTML = `
+        <div class="modal-header">
+            <div class="modal-header-title">🔗 Links del grupo: ${groupName}</div>
+            <div class="modal-close" onclick="document.getElementById('group-links-modal').remove()">✕</div>
+        </div>
+        <div class="modal-body">
+            <div style="display:flex;flex-direction:column;gap:10px">
+                <p style="font-size:0.8rem;color:var(--text-grey);margin:0">Cada miembro tiene su link personal. Toca para copiar:</p>
+                ${members.map(m => `
+                    <div style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:var(--bg-tertiary);border:1px solid var(--card-border);cursor:pointer;transition:border-color 0.15s"
+                         onclick="navigator.clipboard.writeText('${origin}/chat?token=${m.access_token}').then(()=>{this.style.borderColor='var(--green)';this.querySelector('.copy-status').textContent='✅ Copiado';setTimeout(()=>{this.style.borderColor='var(--card-border)';this.querySelector('.copy-status').textContent='📋 Copiar'},1500)})">
+                        <div style="width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;flex-shrink:0">${(m.lead_name||'?')[0].toUpperCase()}</div>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-size:0.85rem;font-weight:700">${m.lead_name}</div>
+                            <div style="font-size:0.68rem;color:var(--text-grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${origin}/chat?token=${m.access_token.substring(0,12)}...</div>
+                        </div>
+                        <span class="copy-status" style="font-size:0.72rem;color:var(--text-grey);white-space:nowrap;flex-shrink:0">📋 Copiar</span>
+                    </div>
+                `).join('')}
+                <button onclick="copyAllGroupLinks('${groupName}', ${JSON.stringify(members.map(m=>({n:m.lead_name,t:m.access_token}))).replace(/'/g,"\\'")})"
+                    style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#6c5ce7,#a855f7);border:none;color:#fff;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px">
+                    📋 Copiar todos los links
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function copyAllGroupLinks(groupName, members) {
+    const origin = window.location.origin;
+    let text = '👥 Grupo: ' + groupName + '\n\n';
+    members.forEach(m => {
+        text += m.n + ': ' + origin + '/chat?token=' + m.t + '\n';
+    });
+    navigator.clipboard.writeText(text).then(() => showToast('Todos los links copiados ✅'));
+}
+
+// ===== DICTATION (VOICE-TO-TEXT) =====
+let recognition = null;
+let isRecording = false;
+let micRetryCount = 0;
+
+function showMicHelp() {
+    document.getElementById('mic-help-modal').style.display = 'flex';
+}
+function closeMicHelp() {
+    document.getElementById('mic-help-modal').style.display = 'none';
+}
+
+function toggleDictation() {
+    if (isRecording) { stopDictation(); return; }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        showToast('Tu navegador no soporta dictado por voz');
+        return;
+    }
+    recognition = new SpeechRecognition();
+    recognition.lang = 'es-ES';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    
+    const input = document.getElementById('msg-input');
+    const btn = document.getElementById('mic-btn');
+    const startText = input.value;
+    
+    recognition.onstart = () => {
+        isRecording = true;
+        micRetryCount = 0;
+        btn.classList.add('recording');
+        btn.textContent = '⏹️';
+        input.placeholder = 'Escuchando...';
+    };
+    
+    recognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+        }
+        input.value = startText + (startText ? ' ' : '') + transcript;
+    };
+    
+    recognition.onerror = (event) => {
+        console.warn('Speech error:', event.error);
+        stopDictation();
+        if (event.error === 'not-allowed') {
+            if (micRetryCount === 0) {
+                showMicHelp();
+            } else {
+                showToast('Permite el acceso al micrófono en Ajustes');
+            }
+            micRetryCount++;
+        } else if (event.error === 'aborted' || event.error === 'audio-capture') {
+            // Permission was just granted but session failed - auto retry
+            if (micRetryCount < 2) {
+                micRetryCount++;
+                setTimeout(() => toggleDictation(), 300);
+            }
+        }
+    };
+    
+    recognition.onend = () => {
+        if (isRecording) stopDictation();
+    };
+    
+    try {
+        recognition.start();
+    } catch(e) {
+        // If start fails (e.g. after permission just granted), retry once
+        if (micRetryCount < 2) {
+            micRetryCount++;
+            setTimeout(() => toggleDictation(), 500);
+        }
+    }
+}
+
+function stopDictation() {
+    isRecording = false;
+    const btn = document.getElementById('mic-btn');
+    if (btn) {
+        btn.classList.remove('recording');
+        btn.textContent = '🎙️';
+    }
+    document.getElementById('msg-input').placeholder = 'Escribe un mensaje...';
+    if (recognition) {
+        try { recognition.stop(); } catch(e) {}
+        recognition = null;
+    }
+}
+
+// ===== EMOJI PICKER =====
+const EMOJI_CATEGORIES = {
+    '😊': ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','😋','😛','😜','🤪','😝','🤗','🤭','🤫','🤔','😐','😏','😒','🙄','😬','😌','😔','😪','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','😎','🤓','🧐','😕','😟','🙁','😮','😲','😳','🥺','😢','😭','😱','😤','😡','🤬','😈','💀','💩','🤡','👻','👽','🤖'],
+    '👋': ['👋','🤚','✋','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤝','🙏','💪','🤳','👀','👅','👄'],
+    '🐶': ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🐤','🦆','🦅','🦉','🐺','🐴','🦄','🐝','🦋','🐌','🐞','🐢','🐍','🐙','🐬','🐳','🌹','🌷','🌸','💐','🌈','☀️','🔥'],
+    '🍕': ['🍏','🍎','🍊','🍋','🍌','🍉','🍇','🍓','🍒','🍑','🍍','🍅','🥑','🍔','🍟','🍕','🌭','🌮','🍝','🍣','🍦','🎂','🍰','🍭','🍬','🍫','☕','🍵','🍺','🍻','🥂','🍷'],
+    '❤️': ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','💕','💞','💗','💖','💘','💝','💯','🔥','✨','⚡','🎉','🎊','✅','❌','⚠️','❓','❗']
+};
+let currentEmojiTab = '😊';
+
+function toggleEmojiPicker(e) {
+    if (e) e.stopPropagation();
+    const picker = document.getElementById('emoji-picker');
+    const isVisible = picker.style.display !== 'none' && picker.style.display !== '';
+    picker.style.display = isVisible ? 'none' : 'block';
+    if (!isVisible) {
+        renderEmojiTab(currentEmojiTab);
+        closePwaPlusMenu();
+    }
+}
+
+function renderEmojiTab(cat) {
+    currentEmojiTab = cat;
+    const picker = document.getElementById('emoji-picker');
+    const grid = document.getElementById('emoji-grid');
+    let tabsEl = picker.querySelector('.emoji-tabs');
+    if (!tabsEl) {
+        tabsEl = document.createElement('div');
+        tabsEl.className = 'emoji-tabs';
+        tabsEl.style.cssText = 'display:flex;gap:2px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--card-border);overflow-x:auto';
+        picker.insertBefore(tabsEl, grid);
+    }
+    tabsEl.innerHTML = Object.keys(EMOJI_CATEGORIES).map(k =>
+        `<span onclick="event.stopPropagation();renderEmojiTab('${k}')" style="cursor:pointer;padding:4px 6px;border-radius:6px;font-size:1.1rem;flex-shrink:0;${k===cat?'background:var(--accent-glow,rgba(108,92,231,0.2))':''}"> ${k}</span>`
+    ).join('');
+    grid.innerHTML = (EMOJI_CATEGORIES[cat] || []).map(e =>
+        `<span onclick="event.stopPropagation();insertEmoji('${e}')">${e}</span>`
+    ).join('');
+}
+
+function insertEmoji(emoji) {
+    const input = document.getElementById('msg-input');
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    input.value = input.value.substring(0, start) + emoji + input.value.substring(end);
+    input.focus();
+    input.selectionStart = input.selectionEnd = start + emoji.length;
+    document.getElementById('emoji-picker').style.display = 'none';
+}
+
+// ===== PWA PLUS MENU =====
+function togglePwaPlusMenu(e) {
+    if (e) e.stopPropagation();
+    const menu = document.getElementById('pwa-plus-menu');
+    const isVisible = menu.classList.contains('active');
+    if (isVisible) {
+        menu.classList.remove('active');
+    } else {
+        menu.classList.add('active');
+        const picker = document.getElementById('emoji-picker');
+        if (picker) picker.style.display = 'none';
+    }
+}
+
+function closePwaPlusMenu() {
+    const menu = document.getElementById('pwa-plus-menu');
+    if (menu) menu.classList.remove('active');
+}
+
+document.addEventListener('click', e => {
+    const picker = document.getElementById('emoji-picker');
+    if (picker && !picker.contains(e.target) && !e.target.closest('.btn-emoji')) {
+        picker.style.display = 'none';
+    }
+    const menu = document.getElementById('pwa-plus-menu');
+    if (menu && !menu.contains(e.target) && !e.target.closest('.btn-plus')) {
+        menu.classList.remove('active');
+    }
+});
+
+// ===== INIT =====
+if (!checkSession()) {
+    showScreen('login-screen');
+}
+</script>
+
+<!-- MIC HELP MODAL -->
+<div id="mic-help-modal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.65);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);align-items:center;justify-content:center;padding:24px">
+    <div style="background:linear-gradient(180deg,#1e1e2a 0%,#16161e 100%);border:1px solid rgba(255,255,255,0.1);border-radius:24px;max-width:340px;width:100%;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.6);animation:modalPop 0.35s cubic-bezier(0.34,1.56,0.64,1)">
+        <div style="padding:28px 24px 16px;text-align:center">
+            <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#ff4757,#ff6b81);display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin:0 auto 16px;box-shadow:0 8px 24px rgba(255,71,87,0.3)">🎙️</div>
+            <h3 style="font-size:1.15rem;font-weight:800;letter-spacing:-0.02em">Activar Micrófono</h3>
+            <p style="font-size:0.8rem;color:var(--text-grey);margin-top:6px;line-height:1.4">Para dictar mensajes por voz, necesitas permitir el acceso al micrófono</p>
+        </div>
+        <div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:flex-start;gap:14px;padding:14px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06)">
+                <div style="width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;flex-shrink:0">1</div>
+                <div style="font-size:0.82rem;line-height:1.5">Pulsa el botón <strong>🎙️</strong> del chat</div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:14px;padding:14px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06)">
+                <div style="width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;flex-shrink:0">2</div>
+                <div style="font-size:0.82rem;line-height:1.5">Cuando aparezca el aviso, pulsa <strong>"Permitir"</strong></div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:14px;padding:14px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06)">
+                <div style="width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;flex-shrink:0">3</div>
+                <div style="font-size:0.82rem;line-height:1.5">Pulsa <strong>🎙️ otra vez</strong> y empieza a hablar</div>
+            </div>
+        </div>
+        <button onclick="closeMicHelp()" style="display:block;width:calc(100% - 40px);margin:0 20px 20px;padding:14px;border-radius:14px;background:linear-gradient(135deg,#ff4757,#ff6b81);border:none;color:#fff;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:center">Entendido</button>
+    </div>
+</div>
+
+</body>
+</html>
