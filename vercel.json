@@ -9,5 +9,11 @@
     { "src": "/formulario/(.*)", "dest": "/formulario.html?id=$1" },
     { "src": "/chat", "dest": "/chat.html" },
     { "src": "/(.*)", "dest": "/$1" }
+  ],
+  "crons": [
+    {
+      "path": "/api/process-scheduled-requests",
+      "schedule": "*/10 * * * *"
+    }
   ]
 }

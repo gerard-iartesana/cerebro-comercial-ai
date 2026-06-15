@@ -746,6 +746,18 @@
         height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px)) !important;
         overflow-y: auto !important;
     }
+    .state-badge {
+        display: inline-block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 4px 8px;
+        border-radius: 6px;
+    }
+    .state-badge.pending { background: rgba(241, 196, 15, 0.15); color: #f1c40f; }
+    .state-badge.reviewing { background: rgba(14, 165, 233, 0.15); color: #0ea5e9; }
+    .state-badge.approved { background: rgba(46, 204, 113, 0.15); color: #2ecc71; }
+    .state-badge.rejected { background: rgba(255, 71, 87, 0.15); color: #ff4757; }
+    .state-badge.scheduled { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
 </style>
 </head>
 <body>
@@ -1274,6 +1286,16 @@
                 <label class="task-field-label">Notas o Instrucciones (Opcional)</label>
                 <textarea id="pwa-doc-request-notes" class="modal-input" style="min-height:60px;resize:vertical" placeholder="Ej: Asegúrate de que se vea claro el importe total..."></textarea>
             </div>
+
+            <div style="display:flex; align-items:center; gap:8px">
+                <input type="checkbox" id="pwa-doc-request-schedule-toggle" onchange="document.getElementById('pwa-doc-request-schedule-field').style.display = this.checked ? 'block' : 'none'" style="cursor:pointer; width:14px; height:14px">
+                <label for="pwa-doc-request-schedule-toggle" class="task-field-label" style="margin:0; cursor:pointer; user-select:none">Programar envío</label>
+            </div>
+
+            <div id="pwa-doc-request-schedule-field" style="display:none">
+                <label class="task-field-label">Fecha y Hora de Envío</label>
+                <input type="datetime-local" id="pwa-doc-request-schedule-time" class="modal-input">
+            </div>
         </div>
         <div class="modal-footer">
             <button class="modal-cancel-btn" onclick="closePwaDocRequestModal()">Cancelar</button>
@@ -1565,8 +1587,13 @@ async function loadAdminDocuments() {
             const clientName = doc.chat_rooms?.lead_name || 'Desconocido';
             const company = doc.chat_rooms?.lead_company ? ` (${doc.chat_rooms.lead_company})` : '';
             
-            const badgeClass = doc.status; // 'pending', 'approved', 'rejected', 'reviewing'
-            const badgeText = doc.status === 'approved' ? 'Aprobado' : (doc.status === 'reviewing' ? 'Revisar' : (doc.status === 'rejected' ? 'Rechazado' : 'Pendiente'));
+            let badgeClass = doc.status; // 'pending', 'approved', 'rejected', 'reviewing'
+            let badgeText = doc.status === 'approved' ? 'Aprobado' : (doc.status === 'reviewing' ? 'Revisar' : (doc.status === 'rejected' ? 'Rechazado' : 'Pendiente'));
+
+            if (doc.is_sent === false) {
+                badgeClass = 'scheduled';
+                badgeText = 'Programado';
+            }
 
             let fileAction = '';
             if (doc.uploaded_file_url) {
@@ -1590,7 +1617,7 @@ async function loadAdminDocuments() {
             }
 
             let reclaimAction = '';
-            if (doc.status !== 'pending' || doc.uploaded_file_url) {
+            if (doc.is_sent !== false && (doc.status !== 'pending' || doc.uploaded_file_url)) {
                 reclaimAction = `
                     <div style="margin-top: 8px;">
                         <button onclick="reclaimAdminDocPwa('${doc.id}', '${doc.document_name.replace(/'/g, "\\'")}', '${doc.room_id}', this)" class="event-card-btn" style="background: rgba(255,149,0,0.15); border-color: rgba(255,149,0,0.3); color: #ff9500; width: 100%; justify-content: center; padding: 6px 0; cursor:pointer;">
@@ -1600,10 +1627,16 @@ async function loadAdminDocuments() {
                 `;
             }
 
+            let nameHtml = doc.document_name;
+            if (doc.is_sent === false && doc.scheduled_at) {
+                const schedStr = new Date(doc.scheduled_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                nameHtml += `<div style="font-size:0.72rem; color:#a855f7; font-weight:400; margin-top:2px">⏰ Envío programado: ${schedStr}</div>`;
+            }
+
             return `
                 <div class="action-card-item" style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); border-radius: 16px; padding: 14px; margin-bottom: 4px;">
                     <div class="action-card-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <span class="action-card-title" style="font-weight:800; font-size:0.92rem;">${doc.document_name}</span>
+                        <span class="action-card-title" style="font-weight:800; font-size:0.92rem;">${nameHtml}</span>
                         <span class="state-badge ${badgeClass}" style="font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:6px;">${badgeText}</span>
                     </div>
                     <div style="font-size:0.75rem; color:var(--text-grey); margin-bottom:4px;">👤 Lead: <strong>${clientName}${company}</strong></div>
@@ -1951,6 +1984,9 @@ function checkSession() {
 // ===== ROOMS =====
 async function loadRooms() {
     showScreen('rooms-screen');
+
+    // Trigger processing of scheduled document requests
+    fetch('/api/process-scheduled-requests').catch(() => {});
 
     const { data, error } = await sb
         .from('chat_rooms')
@@ -3003,52 +3039,82 @@ async function savePwaDocRequest() {
     const dueDate = document.getElementById('pwa-doc-request-due-date').value;
     const notes = document.getElementById('pwa-doc-request-notes').value.trim();
 
+    const isScheduled = document.getElementById('pwa-doc-request-schedule-toggle')?.checked;
+    const scheduleTime = document.getElementById('pwa-doc-request-schedule-time')?.value;
+
     if (!name || !dueDate) { showToast('Rellena todos los campos ⚠️'); return; }
 
+    if (isScheduled && !scheduleTime) {
+        showToast('Selecciona una fecha y hora de envío ⚠️');
+        return;
+    }
+
     try {
-        const { data, error } = await sb.from('client_document_requests').insert({
+        const insertData = {
             room_id: currentRoom.id,
             document_name: name,
             due_date: new Date(dueDate).toISOString(),
             notes: notes || null,
-            status: 'pending'
-        });
+            status: 'pending',
+            is_sent: !isScheduled,
+            scheduled_at: isScheduled ? new Date(scheduleTime).toISOString() : null
+        };
+
+        const { data, error } = await sb.from('client_document_requests').insert(insertData);
 
         if (error) throw error;
 
-        const limitStr = new Date(dueDate).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-        const chatMsg = `🔔 Documento solicitado: **${name}**\n📅 Fecha límite: ${limitStr}\n${notes ? `📝 Notas: ${notes}` : ''}`;
-        
-        await sb.from('chat_messages').insert({
-            room_id: currentRoom.id,
-            sender_type: 'admin',
-            sender_name: adminName,
-            content: chatMsg
-        });
-
-        await sb.from('chat_activities').insert({
-            room_id: currentRoom.id,
-            lead_name: currentRoom.lead_name || 'Lead',
-            action: 'send_message',
-            desc: `Gerard (admin) solicitó un documento: "${name}"`,
-            sender_type: 'admin'
-        });
-
-        await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
-
-        showToast('Solicitud enviada ✅');
-        closePwaDocRequestModal();
-        
-        fetch(`${API_BASE}/push`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'send',
+        if (!isScheduled) {
+            const limitStr = new Date(dueDate).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const chatMsg = `🔔 Documento solicitado: **${name}**\n📅 Fecha límite: ${limitStr}\n${notes ? `📝 Notas: ${notes}` : ''}`;
+            
+            await sb.from('chat_messages').insert({
                 room_id: currentRoom.id,
-                title: 'Nuevo documento solicitado 📄',
-                message: `Gerard te ha solicitado: ${name}`
-            })
-        }).catch(() => {});
+                sender_type: 'admin',
+                sender_name: adminName,
+                content: chatMsg
+            });
+
+            await sb.from('chat_activities').insert({
+                room_id: currentRoom.id,
+                lead_name: currentRoom.lead_name || 'Lead',
+                action: 'send_message',
+                desc: `Gerard (admin) solicitó un documento: "${name}"`,
+                sender_type: 'admin'
+            });
+
+            await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+
+            showToast('Solicitud enviada ✅');
+            
+            fetch(`${API_BASE}/push`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'send',
+                    room_id: currentRoom.id,
+                    title: 'Nuevo documento solicitado 📄',
+                    message: `Gerard te ha solicitado: ${name}`
+                })
+            }).catch(() => {});
+        } else {
+            showToast('Solicitud programada con éxito ✅');
+        }
+
+        // Clear inputs
+        document.getElementById('pwa-doc-request-name').value = '';
+        document.getElementById('pwa-doc-request-notes').value = '';
+        if (document.getElementById('pwa-doc-request-schedule-toggle')) {
+            document.getElementById('pwa-doc-request-schedule-toggle').checked = false;
+        }
+        if (document.getElementById('pwa-doc-request-schedule-time')) {
+            document.getElementById('pwa-doc-request-schedule-time').value = '';
+        }
+        if (document.getElementById('pwa-doc-request-schedule-field')) {
+            document.getElementById('pwa-doc-request-schedule-field').style.display = 'none';
+        }
+
+        closePwaDocRequestModal();
         
     } catch(e) {
         console.error('Doc request error:', e);
@@ -3166,16 +3232,27 @@ async function loadPwaDocsList() {
 
         container.innerHTML = data.map(doc => {
             const dateStr = doc.due_date ? new Date(doc.due_date).toLocaleDateString() : 'Sin fecha';
-            const badgeColor = doc.status === 'approved' ? '#2ecc71' : (doc.status === 'reviewing' ? '#0ea5e9' : (doc.status === 'rejected' ? '#ff4757' : '#f1c40f'));
-            const badgeText = doc.status === 'approved' ? 'Gestionado' : (doc.status === 'reviewing' ? 'En revisión' : (doc.status === 'rejected' ? 'Requiere corrección' : 'Pendiente'));
+            let badgeColor = doc.status === 'approved' ? '#2ecc71' : (doc.status === 'reviewing' ? '#0ea5e9' : (doc.status === 'rejected' ? '#ff4757' : '#f1c40f'));
+            let badgeText = doc.status === 'approved' ? 'Gestionado' : (doc.status === 'reviewing' ? 'En revisión' : (doc.status === 'rejected' ? 'Requiere corrección' : 'Pendiente'));
+
+            if (doc.is_sent === false) {
+                badgeColor = '#a855f7';
+                badgeText = 'Programado';
+            }
+
+            let nameHtml = doc.document_name;
+            if (doc.is_sent === false && doc.scheduled_at) {
+                const schedStr = new Date(doc.scheduled_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                nameHtml += `<div style="font-size:0.72rem; color:#a855f7; font-weight:400; margin-top:2px">⏰ Envío programado: ${schedStr}</div>`;
+            }
 
             let actionsHtml = '';
-            if (doc.status === 'reviewing') {
+            if (doc.uploaded_file_url && doc.status === 'reviewing') {
                 actionsHtml = `
                     <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
                         <a href="${doc.uploaded_file_url}" target="_blank" class="template-btn" style="padding:4px 8px;margin:0;font-size:0.75rem;text-decoration:none;display:flex;align-items:center;background:rgba(255,255,255,0.05);color:var(--text-main);border:1px solid var(--card-border)">👁️ Ver Archivo</a>
-                        <button onclick="approvePwaDoc('${doc.id}', '${doc.document_name}')" class="template-btn" style="padding:4px 8px;margin:0;font-size:0.75rem;background:transparent;border:1px solid #2ecc71;color:#2ecc71;cursor:pointer">✅ Aprobar</button>
-                        <button onclick="rejectPwaDoc('${doc.id}', '${doc.document_name}')" class="template-btn" style="padding:4px 8px;margin:0;font-size:0.75rem;background:transparent;border:1px solid #ff4757;color:#ff4757;cursor:pointer">❌ Rechazar</button>
+                        <button onclick="approvePwaDoc('${doc.id}', '${doc.document_name.replace(/'/g, "\\'")}')" class="template-btn" style="padding:4px 8px;margin:0;font-size:0.75rem;background:transparent;border:1px solid #2ecc71;color:#2ecc71;cursor:pointer">✅ Aprobar</button>
+                        <button onclick="rejectPwaDoc('${doc.id}', '${doc.document_name.replace(/'/g, "\\'")}')" class="template-btn" style="padding:4px 8px;margin:0;font-size:0.75rem;background:transparent;border:1px solid #ff4757;color:#ff4757;cursor:pointer">❌ Rechazar</button>
                     </div>
                 `;
             } else if (doc.uploaded_file_url) {
@@ -3187,10 +3264,26 @@ async function loadPwaDocsList() {
                 `;
             }
 
+            if (doc.is_sent !== false && (doc.status !== 'pending' || doc.uploaded_file_url)) {
+                if (!actionsHtml) {
+                    actionsHtml = `
+                        <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
+                            <button onclick="reclaimAdminDocPwa('${doc.id}', '${doc.document_name.replace(/'/g, "\\'")}', '${doc.room_id}', this)" class="template-btn" style="padding:4px 8px;margin:0;font-size:0.75rem;background:transparent;border:1px solid #ff9500;color:#ff9500;cursor:pointer">🔄 Volver a pedir</button>
+                        </div>
+                    `;
+                } else {
+                    actionsHtml += `
+                        <div style="display:flex;gap:8px;margin-top:4px;justify-content:flex-end">
+                            <button onclick="reclaimAdminDocPwa('${doc.id}', '${doc.document_name.replace(/'/g, "\\'")}', '${doc.room_id}', this)" class="template-btn" style="padding:4px 8px;margin:0;font-size:0.75rem;background:transparent;border:1px solid #ff9500;color:#ff9500;cursor:pointer;width:100%;text-align:center">🔄 Volver a pedir</button>
+                        </div>
+                    `;
+                }
+            }
+
             return `
                 <div style="background:var(--bg-secondary);border:1px solid var(--card-border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-                        <strong style="font-size:0.88rem;color:var(--text-main)">${doc.document_name}</strong>
+                        <strong style="font-size:0.88rem;color:var(--text-main)">${nameHtml}</strong>
                         <span style="font-size:0.7rem;padding:2px 6px;border-radius:6px;background:${badgeColor}20;color:${badgeColor};font-weight:700">${badgeText}</span>
                     </div>
                     <div style="font-size:0.78rem;color:var(--text-grey)">Límite: ${dateStr}</div>

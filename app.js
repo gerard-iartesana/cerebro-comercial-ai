@@ -13868,6 +13868,9 @@ window.loadDesktopClientDashboard = async function() {
     const selector = document.getElementById('desktop-client-selector');
     if (!selector) return;
 
+    // Trigger processing of scheduled document requests
+    fetch('/api/process-scheduled-requests').catch(() => {});
+
     try {
         // Fetch all rooms
         const { data: rooms, error } = await _supabase
@@ -13960,8 +13963,13 @@ window.loadGlobalDocumentsHistory = async function() {
         } else {
             tbody.innerHTML = docs.map(doc => {
                 const dateStr = doc.due_date ? new Date(doc.due_date).toLocaleDateString() : 'Sin fecha';
-                const badgeColor = doc.status === 'approved' ? '#2ecc71' : (doc.status === 'reviewing' ? '#0ea5e9' : (doc.status === 'rejected' ? '#ff4757' : '#f1c40f'));
-                const badgeText = doc.status === 'approved' ? 'Gestionado' : (doc.status === 'reviewing' ? 'En revisión' : (doc.status === 'rejected' ? 'Corregir' : 'Pendiente'));
+                let badgeColor = doc.status === 'approved' ? '#2ecc71' : (doc.status === 'reviewing' ? '#0ea5e9' : (doc.status === 'rejected' ? '#ff4757' : '#f1c40f'));
+                let badgeText = doc.status === 'approved' ? 'Gestionado' : (doc.status === 'reviewing' ? 'En revisión' : (doc.status === 'rejected' ? 'Corregir' : 'Pendiente'));
+
+                if (doc.is_sent === false) {
+                    badgeColor = '#a855f7';
+                    badgeText = 'Programado';
+                }
                 
                 const clientName = doc.chat_rooms?.lead_name || 'Desconocido';
                 const comp = doc.chat_rooms?.lead_company ? ` (${doc.chat_rooms.lead_company})` : '';
@@ -13978,17 +13986,24 @@ window.loadGlobalDocumentsHistory = async function() {
                 if (doc.uploaded_file_url && doc.status !== 'rejected') {
                     actions += `<button onclick="rejectDesktopDoc('${doc.id}', '${doc.document_name}', '${doc.room_id}')" style="background:none; border:1px solid #ff4757; color:#ff4757; padding:3px 6px; border-radius:6px; cursor:pointer; font-size:0.75rem; margin-right:4px">❌ Rechazar</button>`;
                 }
-                if (doc.status !== 'pending' || doc.uploaded_file_url) {
+                if (doc.is_sent !== false && (doc.status !== 'pending' || doc.uploaded_file_url)) {
                     actions += `<button onclick="reclaimDesktopDoc('${doc.id}', '${doc.document_name}', '${doc.room_id}')" style="background:none; border:1px solid #ff9500; color:#ff9500; padding:3px 6px; border-radius:6px; cursor:pointer; font-size:0.75rem; margin-right:4px">🔄 Re-pedir</button>`;
                 }
                 actions += `<button onclick="deleteDesktopDocRequest('${doc.id}', '${doc.room_id}')" style="background:none; border:none; color:var(--text-grey); cursor:pointer; font-size:0.8rem">🗑️</button>`;
+
+                let nameHtml = doc.document_name;
+                if (doc.is_sent === false && doc.scheduled_at) {
+                    const schedStr = new Date(doc.scheduled_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                    nameHtml += `<div style="font-size:0.72rem; color:#a855f7; font-weight:400; margin-top:2px">⏰ Envío programado: ${schedStr}</div>`;
+                } else if (doc.status === 'rejected' && doc.notes) {
+                    nameHtml += `<div style="font-size:0.72rem; color:#ff4757; font-weight:400; margin-top:2px">⚠️ Motivo: ${doc.notes}</div>`;
+                }
 
                 return `
                     <tr style="border-bottom:1px solid var(--card-border)">
                         <td style="padding:10px 8px; font-weight:600; color:var(--text-main)">${clientName}${comp}</td>
                         <td style="padding:10px 8px; font-weight:600; color:var(--text-main)">
-                            ${doc.document_name}
-                            ${doc.status === 'rejected' && doc.notes ? `<div style="font-size:0.72rem; color:#ff4757; font-weight:400; margin-top:2px">⚠️ Motivo: ${doc.notes}</div>` : ''}
+                            ${nameHtml}
                         </td>
                         <td style="padding:10px 8px; color:var(--text-grey)">${dateStr}</td>
                         <td style="padding:10px 8px"><span style="font-size:0.7rem; padding:2px 6px; border-radius:6px; background:${badgeColor}20; color:${badgeColor}; font-weight:700">${badgeText}</span></td>
@@ -14058,8 +14073,13 @@ window.loadClientDashboardData = async function(roomId) {
         } else {
             tbodyDocs.innerHTML = docs.map(doc => {
                 const dateStr = doc.due_date ? new Date(doc.due_date).toLocaleDateString() : 'Sin fecha';
-                const badgeColor = doc.status === 'approved' ? '#2ecc71' : (doc.status === 'reviewing' ? '#0ea5e9' : (doc.status === 'rejected' ? '#ff4757' : '#f1c40f'));
-                const badgeText = doc.status === 'approved' ? 'Gestionado' : (doc.status === 'reviewing' ? 'En revisión' : (doc.status === 'rejected' ? 'Corregir' : 'Pendiente'));
+                let badgeColor = doc.status === 'approved' ? '#2ecc71' : (doc.status === 'reviewing' ? '#0ea5e9' : (doc.status === 'rejected' ? '#ff4757' : '#f1c40f'));
+                let badgeText = doc.status === 'approved' ? 'Gestionado' : (doc.status === 'reviewing' ? 'En revisión' : (doc.status === 'rejected' ? 'Corregir' : 'Pendiente'));
+
+                if (doc.is_sent === false) {
+                    badgeColor = '#a855f7';
+                    badgeText = 'Programado';
+                }
 
                 let fileCell = '—';
                 if (doc.uploaded_file_url) {
@@ -14076,16 +14096,23 @@ window.loadClientDashboardData = async function(roomId) {
                     actions += `<button onclick="rejectDesktopDoc('${doc.id}', '${doc.document_name}')" style="background:none; border:1px solid #ff4757; color:#ff4757; padding:3px 6px; border-radius:6px; cursor:pointer; font-size:0.75rem; margin-right:4px">❌ Rechazar</button>`;
                 }
                 // Re-request button: show if status is not pending or if there is an uploaded file
-                if (doc.status !== 'pending' || doc.uploaded_file_url) {
+                if (doc.is_sent !== false && (doc.status !== 'pending' || doc.uploaded_file_url)) {
                     actions += `<button onclick="reclaimDesktopDoc('${doc.id}', '${doc.document_name}')" style="background:none; border:1px solid #ff9500; color:#ff9500; padding:3px 6px; border-radius:6px; cursor:pointer; font-size:0.75rem; margin-right:4px">🔄 Volver a pedir</button>`;
                 }
                 actions += `<button onclick="deleteDesktopDocRequest('${doc.id}')" style="background:none; border:none; color:var(--text-grey); cursor:pointer; font-size:0.8rem">🗑️</button>`;
 
+                let nameHtml = doc.document_name;
+                if (doc.is_sent === false && doc.scheduled_at) {
+                    const schedStr = new Date(doc.scheduled_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                    nameHtml += `<div style="font-size:0.72rem; color:#a855f7; font-weight:400; margin-top:2px">⏰ Envío programado: ${schedStr}</div>`;
+                } else if (doc.status === 'rejected' && doc.notes) {
+                    nameHtml += `<div style="font-size:0.72rem; color:#ff4757; font-weight:400; margin-top:2px">⚠️ Motivo: ${doc.notes}</div>`;
+                }
+
                 return `
                     <tr style="border-bottom:1px solid var(--border-color)">
                         <td style="padding:10px 8px; font-weight:600; color:var(--text-main)">
-                            ${doc.document_name}
-                            ${doc.status === 'rejected' && doc.notes ? `<div style="font-size:0.72rem; color:#ff4757; font-weight:400; margin-top:2px">⚠️ Motivo: ${doc.notes}</div>` : ''}
+                            ${nameHtml}
                         </td>
                         <td style="padding:10px 8px; color:var(--text-grey)">${dateStr}</td>
                         <td style="padding:10px 8px"><span style="font-size:0.7rem; padding:2px 6px; border-radius:6px; background:${badgeColor}20; color:${badgeColor}; font-weight:700">${badgeText}</span></td>
@@ -14153,64 +14180,89 @@ window.createDesktopDocRequest = async function() {
     const name = document.getElementById('desktop-newdoc-name').value.trim();
     const dueDate = document.getElementById('desktop-newdoc-duedate').value;
     const notes = document.getElementById('desktop-newdoc-notes').value.trim();
+    
+    const isScheduled = document.getElementById('desktop-newdoc-schedule-toggle')?.checked;
+    const scheduleTime = document.getElementById('desktop-newdoc-scheduletime')?.value;
 
     if (!name || !dueDate) {
         showToast('El nombre del documento y la fecha límite son obligatorios ⚠️');
         return;
     }
 
+    if (isScheduled && !scheduleTime) {
+        showToast('Debes seleccionar una fecha y hora para programar el envío ⚠️');
+        return;
+    }
+
     try {
+        const insertData = {
+            room_id: _desktopActiveRoomId,
+            document_name: name,
+            due_date: new Date(dueDate).toISOString(),
+            notes: notes || null,
+            status: 'pending',
+            is_sent: !isScheduled,
+            scheduled_at: isScheduled ? new Date(scheduleTime).toISOString() : null
+        };
+
         const { error } = await _supabase
             .from('client_document_requests')
-            .insert({
-                room_id: _desktopActiveRoomId,
-                document_name: name,
-                due_date: new Date(dueDate).toISOString(),
-                notes: notes || null,
-                status: 'pending'
-            });
+            .insert(insertData);
 
         if (error) throw error;
 
-        // Post chat message alert to lead
-        const limitStr = new Date(dueDate).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-        const chatMsg = `🔔 Documento solicitado: **${name}**\n📅 Fecha límite: ${limitStr}\n${notes ? `📝 Notas: ${notes}` : ''}`;
-        
-        await _supabase.from('chat_messages').insert({
-            room_id: _desktopActiveRoomId,
-            sender_type: 'admin',
-            sender_name: 'Gerard',
-            content: chatMsg
-        });
-
-        await _supabase.from('chat_activities').insert({
-            room_id: _desktopActiveRoomId,
-            lead_name: _desktopRoomsCache.find(r => r.id === _desktopActiveRoomId)?.lead_name || 'Lead',
-            action: 'send_message',
-            desc: `Gerard (admin) solicitó un documento: "${name}"`,
-            sender_type: 'admin'
-        });
-
-        // Update last_message_at
-        await _supabase.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', _desktopActiveRoomId);
-
-        // Push notification
-        fetch(`https://cerebrocomercial-ai.iadebarrio.com/api/push`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'send',
+        if (!isScheduled) {
+            // Post chat message alert to lead
+            const limitStr = new Date(dueDate).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const chatMsg = `🔔 Documento solicitado: **${name}**\n📅 Fecha límite: ${limitStr}\n${notes ? `📝 Notas: ${notes}` : ''}`;
+            
+            await _supabase.from('chat_messages').insert({
                 room_id: _desktopActiveRoomId,
-                title: 'Nuevo documento solicitado 📄',
-                message: `Gerard te ha solicitado: ${name}`
-            })
-        }).catch(() => {});
+                sender_type: 'admin',
+                sender_name: 'Gerard',
+                content: chatMsg
+            });
 
-        showToast('Solicitud creada y notificada ✅');
+            await _supabase.from('chat_activities').insert({
+                room_id: _desktopActiveRoomId,
+                lead_name: _desktopRoomsCache.find(r => r.id === _desktopActiveRoomId)?.lead_name || 'Lead',
+                action: 'send_message',
+                desc: `Gerard (admin) solicitó un documento: "${name}"`,
+                sender_type: 'admin'
+            });
+
+            // Update last_message_at
+            await _supabase.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', _desktopActiveRoomId);
+
+            // Push notification
+            fetch(`https://cerebrocomercial-ai.iadebarrio.com/api/push`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'send',
+                    room_id: _desktopActiveRoomId,
+                    title: 'Nuevo documento solicitado 📄',
+                    message: `Gerard te ha solicitado: ${name}`
+                })
+            }).catch(() => {});
+
+            showToast('Solicitud creada y notificada ✅');
+        } else {
+            showToast('Solicitud programada con éxito ✅');
+        }
         
         // Clear inputs
         document.getElementById('desktop-newdoc-name').value = '';
         document.getElementById('desktop-newdoc-notes').value = '';
+        if (document.getElementById('desktop-newdoc-schedule-toggle')) {
+            document.getElementById('desktop-newdoc-schedule-toggle').checked = false;
+        }
+        if (document.getElementById('desktop-newdoc-scheduletime')) {
+            document.getElementById('desktop-newdoc-scheduletime').value = '';
+        }
+        if (document.getElementById('desktop-newdoc-schedule-field')) {
+            document.getElementById('desktop-newdoc-schedule-field').style.display = 'none';
+        }
 
         window.loadClientDashboardData(_desktopActiveRoomId);
 

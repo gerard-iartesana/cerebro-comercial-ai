@@ -1312,6 +1312,8 @@ function getCookie(name) {
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
+    // Trigger background processing of scheduled document requests
+    fetch('/api/process-scheduled-requests').catch(() => {});
     // Explicitly hide any error/exit/no-token screens first (handling caching/bfcache restore states)
     const exitEl = document.getElementById('exit-screen');
     if (exitEl) exitEl.style.display = 'none';
@@ -1828,6 +1830,7 @@ async function handleFileUpload(inputEl) {
                 .from('client_document_requests')
                 .select('*')
                 .eq('room_id', currentRoom.id)
+                .eq('is_sent', true)
                 .in('status', ['pending', 'rejected'])
                 .order('due_date', { ascending: true });
 
@@ -3217,6 +3220,7 @@ async function loadPwaClientDashboard() {
             .from('client_document_requests')
             .select('*')
             .eq('room_id', currentRoom.id)
+            .eq('is_sent', true)
             .order('created_at', { ascending: false });
 
         if (docsErr) throw docsErr;
@@ -3330,6 +3334,7 @@ async function loadPwaDocumentsList() {
             .from('client_document_requests')
             .select('*')
             .eq('room_id', currentRoom.id)
+            .eq('is_sent', true)
             .order('created_at', { ascending: false });
 
         if (error) throw error;

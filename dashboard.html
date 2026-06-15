@@ -3973,6 +3973,14 @@
                                     <label class="cfg-label" style="font-size:0.75rem">Indicaciones o Notas (Opcional)</label>
                                     <textarea class="cfg-input" id="desktop-newdoc-notes" placeholder="Ej: Sube el PDF del último trimestre..." rows="2" style="padding:8px 12px; font-size:0.8rem; height:auto; resize:vertical"></textarea>
                                 </div>
+                                <div class="cfg-field" style="margin:0; display:flex; align-items:center; gap:8px">
+                                    <input type="checkbox" id="desktop-newdoc-schedule-toggle" onchange="document.getElementById('desktop-newdoc-schedule-field').style.display = this.checked ? 'block' : 'none'" style="cursor:pointer; width:14px; height:14px">
+                                    <label for="desktop-newdoc-schedule-toggle" class="cfg-label" style="font-size:0.75rem; margin:0; cursor:pointer; user-select:none">Programar envío</label>
+                                </div>
+                                <div class="cfg-field" id="desktop-newdoc-schedule-field" style="margin:0; display:none">
+                                    <label class="cfg-label" style="font-size:0.75rem">Fecha y Hora de Envío</label>
+                                    <input class="cfg-input" id="desktop-newdoc-scheduletime" type="datetime-local" style="padding:8px 12px; font-size:0.8rem">
+                                </div>
                                 <button onclick="createDesktopDocRequest()" class="btn-primary" style="width:100%; padding:10px; font-size:0.82rem; font-weight:700; border-radius:8px">
                                     Enviar Solicitud
                                 </button>
