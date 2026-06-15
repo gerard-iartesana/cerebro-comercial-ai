@@ -6910,15 +6910,17 @@ async function loadCalendarEvents() {
                 console.warn('[Cal] Milestones query error:', mileErr);
             } else if (mileData && mileData.length > 0) {
                 mileData.forEach(m => {
-                    const leadName = m.chat_rooms?.lead_name || 'Cliente';
-                    const prefix = m.status === 'pending' ? '⏳ [Pendiente] ' : '🤝 ';
+                    let prefix = '🤝 ';
+                    if (m.status === 'pending') prefix = '⏳ [Pendiente] ';
+                    else if (m.status === 'rejected') prefix = '❌ [Rechazado] ';
+                    else if (m.status === 'completed') prefix = '✅ [Completado] ';
                     calEvents.push({
-                        id: m.id,
-                        title: `${prefix}${leadName}: ${m.title}`,
-                        date: m.date,
-                        type: 'milestone',
-                        milestoneStatus: m.status,
-                        room_id: m.room_id
+                         id: m.id,
+                         title: `${prefix}${leadName}: ${m.title}`,
+                         date: m.date,
+                         type: 'milestone',
+                         milestoneStatus: m.status,
+                         room_id: m.room_id
                     });
                 });
             }
@@ -7141,6 +7143,7 @@ function renderCalEvent(ev) {
     else if (ev.type === 'milestone') {
         if (ev.milestoneStatus === 'pending') evClass = 'ev-milestone-pending';
         else if (ev.milestoneStatus === 'accepted') evClass = 'ev-milestone-accepted';
+        else if (ev.milestoneStatus === 'rejected') evClass = 'ev-milestone-rejected';
         else evClass = 'ev-milestone';
     }
     else if (ev.meetingType === 'gcal') evClass = 'ev-business';
@@ -13993,11 +13996,17 @@ window.loadClientDashboardData = async function(roomId) {
                 }
 
                 let actions = '';
-                if (doc.status === 'reviewing') {
-                    actions = `
-                        <button onclick="approveDesktopDoc('${doc.id}', '${doc.document_name}')" style="background:none; border:1px solid #2ecc71; color:#2ecc71; padding:3px 6px; border-radius:6px; cursor:pointer; font-size:0.75rem; margin-right:4px">✅ Aprobar</button>
-                        <button onclick="rejectDesktopDoc('${doc.id}', '${doc.document_name}')" style="background:none; border:1px solid #ff4757; color:#ff4757; padding:3px 6px; border-radius:6px; cursor:pointer; font-size:0.75rem; margin-right:4px">❌ Rechazar</button>
-                    `;
+                // Approve button: show if file is uploaded and not already approved
+                if (doc.uploaded_file_url && doc.status !== 'approved') {
+                    actions += `<button onclick="approveDesktopDoc('${doc.id}', '${doc.document_name}')" style="background:none; border:1px solid #2ecc71; color:#2ecc71; padding:3px 6px; border-radius:6px; cursor:pointer; font-size:0.75rem; margin-right:4px">✅ Aprobar</button>`;
+                }
+                // Reject button: show if file is uploaded and not already rejected
+                if (doc.uploaded_file_url && doc.status !== 'rejected') {
+                    actions += `<button onclick="rejectDesktopDoc('${doc.id}', '${doc.document_name}')" style="background:none; border:1px solid #ff4757; color:#ff4757; padding:3px 6px; border-radius:6px; cursor:pointer; font-size:0.75rem; margin-right:4px">❌ Rechazar</button>`;
+                }
+                // Re-request button: show if status is not pending or if there is an uploaded file
+                if (doc.status !== 'pending' || doc.uploaded_file_url) {
+                    actions += `<button onclick="reclaimDesktopDoc('${doc.id}', '${doc.document_name}')" style="background:none; border:1px solid #ff9500; color:#ff9500; padding:3px 6px; border-radius:6px; cursor:pointer; font-size:0.75rem; margin-right:4px">🔄 Volver a pedir</button>`;
                 }
                 actions += `<button onclick="deleteDesktopDocRequest('${doc.id}')" style="background:none; border:none; color:var(--text-grey); cursor:pointer; font-size:0.8rem">🗑️</button>`;
 
@@ -14030,23 +14039,32 @@ window.loadClientDashboardData = async function(roomId) {
                 if (m.status === 'accepted') {
                     badgeColor = '#34c759'; // green for accepted
                     badgeText = 'Aceptado';
+                } else if (m.status === 'rejected') {
+                    badgeColor = '#ff3b30'; // red for rejected
+                    badgeText = 'Rechazado';
                 } else if (m.status === 'completed') {
                     badgeColor = '#007aff'; // blue for completed
                     badgeText = 'Completado';
                 }
                 
-                if (isPast && m.status !== 'completed' && m.status !== 'accepted') {
+                if (isPast && m.status !== 'completed' && m.status !== 'accepted' && m.status !== 'rejected') {
                     badgeColor = '#ff3b30'; // red for expired
                     badgeText = 'Expirado';
                 }
+
+                let mileActions = '';
+                if (m.status === 'accepted') {
+                    mileActions += `<button onclick="completeDesktopMilestone('${m.id}', '${m.title.replace(/'/g, "\\'")}')" style="background:none; border:1px solid #34c759; color:#34c759; padding:3px 6px; border-radius:6px; cursor:pointer; font-size:0.75rem; margin-right:4px">✅ Completar</button>`;
+                }
+                mileActions += `<button onclick="deleteDesktopMilestone('${m.id}')" style="background:none; border:none; color:var(--text-grey); cursor:pointer; font-size:0.8rem">🗑️</button>`;
 
                 return `
                     <tr style="border-bottom:1px solid var(--border-color)">
                         <td style="padding:10px 8px; font-weight:600; color:var(--text-main)">${m.title}</td>
                         <td style="padding:10px 8px; color:var(--text-grey)">${dateStr}</td>
                         <td style="padding:10px 8px"><span style="font-size:0.7rem; padding:2px 6px; border-radius:6px; background:${badgeColor}20; color:${badgeColor}; font-weight:700">${badgeText}</span></td>
-                        <td style="padding:10px 8px; text-align:right">
-                            <button onclick="deleteDesktopMilestone('${m.id}')" style="background:none; border:none; color:var(--text-grey); cursor:pointer; font-size:0.8rem">🗑️</button>
+                        <td style="padding:10px 8px; text-align:right; white-space:nowrap">
+                            ${mileActions}
                         </td>
                     </tr>
                 `;
@@ -14227,6 +14245,59 @@ window.deleteDesktopDocRequest = async function(requestId) {
     }
 };
 
+window.reclaimDesktopDoc = async function(requestId, docName) {
+    if (!await showConfirm('Volver a Pedir Documento', `¿Seguro que deseas volver a pedir el documento "${docName}"? Esto reiniciará el estado a pendiente y borrará el archivo anterior.`, '🔄', 'Volver a pedir', 'warning')) return;
+
+    try {
+        const { error } = await _supabase
+            .from('client_document_requests')
+            .update({
+                status: 'pending',
+                uploaded_file_url: null,
+                uploaded_at: null,
+                notes: null
+            })
+            .eq('id', requestId);
+
+        if (error) throw error;
+
+        // Post chat re-request message
+        await _supabase.from('chat_messages').insert({
+            room_id: _desktopActiveRoomId,
+            sender_type: 'admin',
+            sender_name: 'Gerard',
+            content: `🔄 Se ha vuelto a solicitar el documento: **${docName}**. Por favor, súbelo de nuevo.`
+        });
+
+        await _supabase.from('chat_activities').insert({
+            room_id: _desktopActiveRoomId,
+            lead_name: _desktopRoomsCache.find(r => r.id === _desktopActiveRoomId)?.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) volvió a solicitar el documento: "${docName}"`,
+            sender_type: 'admin'
+        });
+
+        // Push notification
+        fetch(`/api/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'send',
+                room_id: _desktopActiveRoomId,
+                title: 'Documento vuelto a solicitar 📄',
+                message: `Gerard te ha solicitado volver a subir: ${docName}`
+            })
+        }).catch(() => {});
+
+        showToast('Documento vuelto a solicitar ✅');
+        window.loadClientDashboardData(_desktopActiveRoomId);
+
+    } catch (e) {
+        console.error('Error reclaiming doc:', e);
+        showToast('Error al solicitar de nuevo ❌');
+    }
+};
+
 window.createDesktopMilestone = async function() {
     if (!_desktopActiveRoomId) return;
 
@@ -14239,16 +14310,48 @@ window.createDesktopMilestone = async function() {
     }
 
     try {
-        const { error } = await _supabase
-            .from('client_milestones')
-            .insert({
+        const res = await fetch('/api/milestones', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
                 room_id: _desktopActiveRoomId,
                 title: title,
                 date: new Date(date).toISOString(),
                 status: 'pending'
-            });
+            })
+        });
 
-        if (error) throw error;
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Failed to save milestone');
+
+        // Post chat message
+        const dateFormatted = new Date(date).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        await _supabase.from('chat_messages').insert({
+            room_id: _desktopActiveRoomId,
+            sender_type: 'admin',
+            sender_name: 'Gerard',
+            content: `📅 Se ha programado un nuevo hito/fecha importante: **${title}** para el **${dateFormatted}**.\nPor favor, confírmalo desde tu panel.`
+        });
+
+        await _supabase.from('chat_activities').insert({
+            room_id: _desktopActiveRoomId,
+            lead_name: _desktopRoomsCache.find(r => r.id === _desktopActiveRoomId)?.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) creó el hito: "${title}" para el ${dateFormatted}`,
+            sender_type: 'admin'
+        });
+
+        // Send push notification
+        fetch(`/api/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'send',
+                room_id: _desktopActiveRoomId,
+                title: 'Nuevo hito programado 📅',
+                message: `Gerard ha programado el hito: ${title}`
+            })
+        }).catch(() => {});
 
         showToast('Hito añadido ✅');
         document.getElementById('desktop-newmilestone-title').value = '';
@@ -14264,18 +14367,58 @@ window.deleteDesktopMilestone = async function(milestoneId) {
     if (!await showConfirm('Eliminar Hito', '¿Seguro que deseas eliminar este hito?', '📅', 'Eliminar', 'danger')) return;
 
     try {
-        const { error } = await _supabase
-            .from('client_milestones')
-            .delete()
-            .eq('id', milestoneId);
+        const res = await fetch(`/api/milestones?id=${milestoneId}`, {
+            method: 'DELETE'
+        });
 
-        if (error) throw error;
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Failed to delete milestone');
 
         showToast('Hito eliminado 🗑️');
         window.loadClientDashboardData(_desktopActiveRoomId);
     } catch(e) {
         console.error('Error deleting milestone:', e);
         showToast('Error al eliminar hito ❌');
+    }
+};
+
+window.completeDesktopMilestone = async function(milestoneId, milestoneTitle) {
+    if (!await showConfirm('Completar Hito', `¿Marcar el hito "${milestoneTitle}" como completado?`, '📅', 'Completar', 'success')) return;
+
+    try {
+        const res = await fetch('/api/milestones', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: milestoneId,
+                status: 'completed'
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Failed to update milestone');
+
+        // Post chat message
+        await _supabase.from('chat_messages').insert({
+            room_id: _desktopActiveRoomId,
+            sender_type: 'admin',
+            sender_name: 'Gerard',
+            content: `✅ El hito **${milestoneTitle}** ha sido marcado como **Completado**.`
+        });
+
+        await _supabase.from('chat_activities').insert({
+            room_id: _desktopActiveRoomId,
+            lead_name: _desktopRoomsCache.find(r => r.id === _desktopActiveRoomId)?.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) marcó el hito "${milestoneTitle}" como completado`,
+            sender_type: 'admin'
+        });
+
+        showToast('Hito completado ✅');
+        window.loadClientDashboardData(_desktopActiveRoomId);
+    } catch(e) {
+        console.error('Error completing milestone:', e);
+        showToast('Error al completar el hito ❌');
     }
 };
 

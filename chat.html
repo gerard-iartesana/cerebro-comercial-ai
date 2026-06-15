@@ -608,12 +608,22 @@
         .nav-item .icon {
             font-size: 1.25rem;
             transition: transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-grey);
         }
         .nav-item.active {
             color: var(--accent);
         }
         .nav-item.active .icon {
+            color: var(--accent);
             transform: translateY(-2px);
+        }
+        .nav-item .icon svg {
+            stroke: currentColor;
+            fill: none;
+            transition: stroke 0.2s;
         }
 
         /* --- Tab contents --- */
@@ -943,7 +953,11 @@
 <!-- Rooms Screen (mini dashboard) -->
 <div class="rooms-screen" id="rooms-screen">
     <div class="rooms-header">
-        <div class="avatar" style="width:38px;height:38px;font-size:0.9rem">💬</div>
+        <div class="avatar" style="width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:rgba(108,92,231,0.15);color:var(--accent)">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+        </div>
         <div class="rooms-title" onclick="handleHeaderClick()" style="cursor:pointer">Mis Chats</div>
         <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
             <button class="header-install-btn" id="rooms-install-btn" onclick="showInstallModal()" title="Instalar app"><span class="install-icon">📲</span> Instalar</button>
@@ -966,8 +980,18 @@
         </div>
         <button class="header-install-btn" id="header-install-btn" onclick="showInstallModal()" title="Instalar app"><span class="install-icon">📲</span> Instalar</button>
         <div style="display:flex;gap:6px;flex-shrink:0">
-            <button onclick="openLeadReminderModal()" style="width:36px;height:36px;border-radius:50%;background:var(--bg-tertiary,#1e1e2a);border:1px solid var(--card-border);display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;flex-shrink:0" title="Recordatorio">🔔</button>
-            <button onclick="openLeadScheduleModal()" style="width:36px;height:36px;border-radius:50%;background:var(--bg-tertiary,#1e1e2a);border:1px solid var(--card-border);display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;flex-shrink:0" title="Programar mensaje">⏰</button>
+            <button onclick="openLeadReminderModal()" style="width:36px;height:36px;border-radius:50%;background:var(--bg-tertiary,#1e1e2a);border:1px solid var(--card-border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-main);flex-shrink:0" title="Recordatorio">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+            </button>
+            <button onclick="openLeadScheduleModal()" style="width:36px;height:36px;border-radius:50%;background:var(--bg-tertiary,#1e1e2a);border:1px solid var(--card-border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-main);flex-shrink:0" title="Programar mensaje">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+            </button>
         </div>
     </div>
 
@@ -1114,19 +1138,44 @@
     <!-- Bottom Navigation Bar -->
     <div class="bottom-nav">
         <button class="nav-item active" onclick="switchLeadTab('chat')" id="nav-btn-chat">
-            <span class="icon">💬</span>
+            <span class="icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+            </span>
             <span class="label">Chat</span>
         </button>
         <button class="nav-item" onclick="switchLeadTab('dashboard')" id="nav-btn-dashboard">
-            <span class="icon">📊</span>
+            <span class="icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="9"></rect>
+                    <rect x="14" y="3" width="7" height="5"></rect>
+                    <rect x="14" y="12" width="7" height="9"></rect>
+                    <rect x="3" y="16" width="7" height="5"></rect>
+                </svg>
+            </span>
             <span class="label">Resumen</span>
         </button>
         <button class="nav-item" onclick="switchLeadTab('documents')" id="nav-btn-documents">
-            <span class="icon">📁</span>
+            <span class="icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+            </span>
             <span class="label">Documentos</span>
         </button>
         <button class="nav-item" onclick="switchLeadTab('calendar')" id="nav-btn-calendar">
-            <span class="icon">📅</span>
+            <span class="icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+            </span>
             <span class="label">Calendario</span>
         </button>
     </div>
@@ -3315,7 +3364,15 @@ function renderPwaDocumentsFiltered() {
         if (doc.uploaded_file_url) {
             fileLinkHtml = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; font-size:0.76rem; background:rgba(255,255,255,0.02); border:1px solid var(--card-border); padding:6px 10px; border-radius:8px">
-                    <a href="${doc.uploaded_file_url}" target="_blank" style="color:var(--accent); text-decoration:none; display:flex; align-items:center; gap:4px">📄 Ver archivo subido</a>
+                    <a href="${doc.uploaded_file_url}" target="_blank" style="color:var(--accent); text-decoration:none; display:flex; align-items:center; gap:4px">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; display: inline-block;">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                        Ver archivo subido
+                    </a>
                     <span style="font-size:0.68rem; color:var(--text-grey)">${doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : ''}</span>
                 </div>
             `;
@@ -3325,7 +3382,12 @@ function renderPwaDocumentsFiltered() {
         if (doc.status === 'pending' || doc.status === 'rejected') {
             actionHtml = `
                 <button class="action-card-btn" style="margin-top:8px; padding:6px 12px; font-size:0.76rem" onclick="requestDocUpload('${doc.id}')">
-                    <span>📤</span> Subir archivo
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; display: inline-block;">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Subir archivo
                 </button>
             `;
         }
@@ -3552,18 +3614,27 @@ function loadPwaCalendarEventsForDay(date) {
             badgeColor = 'rgba(52, 199, 89, 0.15)';
             badgeTextColor = '#34c759';
             badgeText = 'Confirmado y Aceptado';
+        } else if (m.status === 'rejected') {
+            badgeColor = 'rgba(255, 59, 48, 0.15)';
+            badgeTextColor = '#ff3b30';
+            badgeText = 'Rechazado';
         } else if (m.status === 'completed') {
             badgeColor = 'rgba(0, 122, 255, 0.15)';
             badgeTextColor = '#007aff';
             badgeText = 'Completado';
         }
 
-        let acceptBtn = '';
+        let actionBtns = '';
         if (m.status === 'pending') {
-            acceptBtn = `
-                <button onclick="acceptPwaMilestone('${m.id}', '${m.title.replace(/'/g, "\\'")}')" class="event-card-btn" style="background: rgba(52,199,89,0.15); border-color: rgba(52,199,89,0.3); color: #34c759; width: 100%; justify-content: center; margin-top: 8px;">
-                    ✅ Aceptar y Confirmar Hito
-                </button>
+            actionBtns = `
+                <div style="display: flex; gap: 8px; margin-top: 8px; width: 100%;">
+                    <button onclick="acceptPwaMilestone('${m.id}', '${m.title.replace(/'/g, "\\'")}')" class="event-card-btn" style="background: rgba(52,199,89,0.15); border-color: rgba(52,199,89,0.3); color: #34c759; flex: 1; justify-content: center; margin-top: 0; padding: 6px 4px;">
+                        Aceptar
+                    </button>
+                    <button onclick="rejectPwaMilestone('${m.id}', '${m.title.replace(/'/g, "\\'")}')" class="event-card-btn" style="background: rgba(255,59,48,0.15); border-color: rgba(255,59,48,0.3); color: #ff3b30; flex: 1; justify-content: center; margin-top: 0; padding: 6px 4px;">
+                        Rechazar
+                    </button>
+                </div>
             `;
         }
 
@@ -3573,13 +3644,23 @@ function loadPwaCalendarEventsForDay(date) {
                     <span class="event-card-title">${m.title}</span>
                     <span style="font-size:0.65rem; padding:2px 6px; border-radius:6px; background:${badgeColor}; color:${badgeTextColor}; font-weight:700; white-space:nowrap">${badgeText}</span>
                 </div>
-                <div class="event-card-time">
-                    <span>⏰</span> Hora: ${timeStr}
+                <div class="event-card-time" style="display: flex; align-items: center; gap: 4px;">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span>Hora: ${timeStr}</span>
                 </div>
-                <a href="${gcalUrl}" target="_blank" class="event-card-btn">
-                    🗓️ Añadir a mi calendario
+                <a href="${gcalUrl}" target="_blank" class="event-card-btn" style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    Añadir a mi calendario
                 </a>
-                ${acceptBtn}
+                ${actionBtns}
             </div>
         `;
     }).join('');
@@ -3589,12 +3670,16 @@ async function acceptPwaMilestone(milestoneId, milestoneTitle) {
     if (!currentRoom) return;
     
     try {
-        const { error } = await sb
-            .from('client_milestones')
-            .update({ status: 'accepted' })
-            .eq('id', milestoneId);
-            
-        if (error) throw error;
+        const resp = await fetch(`${API_BASE}/milestones`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: milestoneId,
+                status: 'accepted'
+            })
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.success) throw new Error(data.error || 'Failed to accept milestone');
         
         const leadName = leadIdentity?.name || currentRoom.lead_name || 'Cliente';
         const chatMsg = `🤝 El cliente ha **Aceptado y Confirmado** el hito: **${milestoneTitle}**`;
@@ -3634,6 +3719,62 @@ async function acceptPwaMilestone(milestoneId, milestoneTitle) {
     } catch(e) {
         console.error('Error accepting milestone:', e);
         showToast('Error al confirmar el hito ❌');
+    }
+}
+
+async function rejectPwaMilestone(milestoneId, milestoneTitle) {
+    if (!currentRoom) return;
+    
+    try {
+        const resp = await fetch(`${API_BASE}/milestones`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: milestoneId,
+                status: 'rejected'
+            })
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.success) throw new Error(data.error || 'Failed to reject milestone');
+        
+        const leadName = leadIdentity?.name || currentRoom.lead_name || 'Cliente';
+        const chatMsg = `❌ El cliente ha **Rechazado** el hito: **${milestoneTitle}**`;
+        
+        await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'lead',
+            sender_name: leadName,
+            content: chatMsg
+        });
+        
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'reject_milestone',
+            desc: `${leadName} rechazó el hito: "${milestoneTitle}"`,
+            sender_type: 'lead'
+        });
+        
+        await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+        
+        fetch(`${API_BASE}/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'send',
+                room_id: 'admin-global',
+                title: 'Hito Rechazado ❌',
+                message: `${leadName} ha rechazado: ${milestoneTitle}`
+            })
+        }).catch(() => {});
+        
+        showToast('Hito rechazado ❌');
+        
+        await loadPwaClientDashboard();
+        renderPwaCalendar(currentCalYear, currentCalMonth);
+    } catch(e) {
+        console.error('Error rejecting milestone:', e);
+        showToast('Error al rechazar el hito ❌');
     }
 }
 </script>
