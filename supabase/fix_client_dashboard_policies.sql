@@ -9,10 +9,12 @@
 DROP POLICY IF EXISTS "Admins can manage document requests" ON client_document_requests;
 DROP POLICY IF EXISTS "Leads can select their document requests" ON client_document_requests;
 DROP POLICY IF EXISTS "Leads can update their document requests" ON client_document_requests;
+DROP POLICY IF EXISTS "Public manage document requests" ON client_document_requests;
 
 -- 2. Drop existing policies for client_milestones
 DROP POLICY IF EXISTS "Admins can manage client milestones" ON client_milestones;
 DROP POLICY IF EXISTS "Leads can select their milestones" ON client_milestones;
+DROP POLICY IF EXISTS "Public manage client milestones" ON client_milestones;
 
 -- 3. Create new public access policies for client_document_requests
 CREATE POLICY "Public manage document requests"

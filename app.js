@@ -6898,6 +6898,34 @@ async function loadCalendarEvents() {
             status: m.status
         }));
 
+        // Load client milestones
+        try {
+            const { data: mileData, error: mileErr } = await _supabase
+                .from('client_milestones')
+                .select('*, chat_rooms(lead_name)')
+                .gte('date', from)
+                .lte('date', to);
+
+            if (mileErr) {
+                console.warn('[Cal] Milestones query error:', mileErr);
+            } else if (mileData && mileData.length > 0) {
+                mileData.forEach(m => {
+                    const leadName = m.chat_rooms?.lead_name || 'Cliente';
+                    const prefix = m.status === 'pending' ? '⏳ [Pendiente] ' : '🤝 ';
+                    calEvents.push({
+                        id: m.id,
+                        title: `${prefix}${leadName}: ${m.title}`,
+                        date: m.date,
+                        type: 'milestone',
+                        milestoneStatus: m.status,
+                        room_id: m.room_id
+                    });
+                });
+            }
+        } catch(e) {
+            console.warn('[Cal] Milestones load error:', e);
+        }
+
         // Also load tasks — expand multi-day tasks to appear on each day
         try {
             const { data: taskData, error: taskErr } = await _supabase
@@ -7000,7 +7028,7 @@ async function renderCalGrid() {
         const dateStr = calDate.getFullYear() + '-' + String(calDate.getMonth()+1).padStart(2,'0') + '-' + String(calDate.getDate()).padStart(2,'0');
         const isToday = dateStr === todayStr;
         let dayEvents = getEventsForDate(dateStr);
-        if (calFilter === 'meetings') dayEvents = dayEvents.filter(e => e.type === 'meeting');
+        if (calFilter === 'meetings') dayEvents = dayEvents.filter(e => e.type === 'meeting' || e.type === 'milestone');
         if (calFilter === 'tasks') dayEvents = dayEvents.filter(e => e.type === 'task');
 
         let html = `<div class="cal-cell${isToday ? ' today' : ''}" style="min-height:400px">`;
@@ -7034,7 +7062,7 @@ async function renderCalGrid() {
             const dateStr = cellDate.getFullYear() + '-' + String(cellDate.getMonth()+1).padStart(2,'0') + '-' + String(cellDate.getDate()).padStart(2,'0');
             const isToday = dateStr === todayStr;
             let dayEvents = getEventsForDate(dateStr);
-            if (calFilter === 'meetings') dayEvents = dayEvents.filter(e => e.type === 'meeting');
+            if (calFilter === 'meetings') dayEvents = dayEvents.filter(e => e.type === 'meeting' || e.type === 'milestone');
             if (calFilter === 'tasks') dayEvents = dayEvents.filter(e => e.type === 'task');
 
             html += `<div class="cal-cell${isToday ? ' today' : ''}" style="min-height:200px">`;
@@ -7070,7 +7098,7 @@ async function renderCalGrid() {
             const isToday = dateStr === todayStr;
 
             let dayEvents = getEventsForDate(dateStr);
-            if (calFilter === 'meetings') dayEvents = dayEvents.filter(e => e.type === 'meeting');
+            if (calFilter === 'meetings') dayEvents = dayEvents.filter(e => e.type === 'meeting' || e.type === 'milestone');
             if (calFilter === 'tasks') dayEvents = dayEvents.filter(e => e.type === 'task');
 
             const maxShow = 3;
@@ -7110,6 +7138,11 @@ function renderCalEvent(ev) {
         else if (ev.taskType === 'application') evClass = 'ev-task-app';
         else evClass = 'ev-task-business'; // default business
     }
+    else if (ev.type === 'milestone') {
+        if (ev.milestoneStatus === 'pending') evClass = 'ev-milestone-pending';
+        else if (ev.milestoneStatus === 'accepted') evClass = 'ev-milestone-accepted';
+        else evClass = 'ev-milestone';
+    }
     else if (ev.meetingType === 'gcal') evClass = 'ev-business';
     else if (ev.meetingType === 'followup' || ev.meetingType === 'closing' || ev.meetingType === 'support') evClass = 'ev-business';
     if (ev.status === 'done') evClass = 'ev-done';
@@ -7117,9 +7150,32 @@ function renderCalEvent(ev) {
     let label = ev.title;
     if (ev.type === 'task') label = `[${typeLabels[ev.taskType] || 'Tarea'}] ${ev.title}`;
     else if (ev.isGcal) label = `📅 ${ev.title}`;
-    const clickAction = ev.type === 'task' ? `onclick="openTaskModal('${ev.id}')"` : (ev.isGcal ? '' : `onclick="openMeetingModal('${ev.id}')"`);
+    
+    let clickAction = '';
+    if (ev.type === 'task') {
+        clickAction = `onclick="openTaskModal('${ev.id}')"`;
+    } else if (ev.type === 'milestone') {
+        clickAction = `onclick="openMilestoneInDashboard('${ev.room_id}')"`;
+    } else if (!ev.isGcal) {
+        clickAction = `onclick="openMeetingModal('${ev.id}')"`;
+    }
+    
     return `<div class="cal-event ${evClass}" ${clickAction} style="cursor:pointer"><span class="cal-ev-time">${evTime}</span><span class="cal-ev-badge"></span>${label}</div>`;
 }
+
+window.openMilestoneInDashboard = async function(roomId) {
+    if (!roomId) return;
+    const btn = document.querySelector('.sidebar-nav-item[data-section="dashboard-client"]');
+    if (btn) {
+        btn.click();
+        await window.loadDesktopClientDashboard();
+        const selector = document.getElementById('desktop-client-selector');
+        if (selector) {
+            selector.value = roomId;
+            window.onDesktopClientSelected(roomId);
+        }
+    }
+};
 
 function scrollToMeeting(id) {
     // Switch to meetings section and highlight
@@ -13968,8 +14024,21 @@ window.loadClientDashboardData = async function(roomId) {
             tbodyMiles.innerHTML = milestones.map(m => {
                 const dateStr = new Date(m.date).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
                 const isPast = new Date(m.date) < now;
-                const badgeColor = isPast ? '#ff4757' : '#2ecc71';
-                const badgeText = isPast ? 'Expirado/Pasado' : 'Vigente';
+                
+                let badgeColor = '#ff9500'; // orange for pending
+                let badgeText = 'Pendiente';
+                if (m.status === 'accepted') {
+                    badgeColor = '#34c759'; // green for accepted
+                    badgeText = 'Aceptado';
+                } else if (m.status === 'completed') {
+                    badgeColor = '#007aff'; // blue for completed
+                    badgeText = 'Completado';
+                }
+                
+                if (isPast && m.status !== 'completed' && m.status !== 'accepted') {
+                    badgeColor = '#ff3b30'; // red for expired
+                    badgeText = 'Expirado';
+                }
 
                 return `
                     <tr style="border-bottom:1px solid var(--border-color)">

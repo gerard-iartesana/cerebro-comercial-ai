@@ -3544,18 +3544,97 @@ function loadPwaCalendarEventsForDay(date) {
         const endUTC = new Date(mDate.getTime() + 60 * 60000 - mDate.getTimezoneOffset() * 60000).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
         const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(m.title)}&dates=${startUTC}/${endUTC}&details=${encodeURIComponent('Hito / Fecha de interés programada desde el panel.')}`;
 
+        let badgeColor = 'rgba(255, 149, 0, 0.15)';
+        let badgeTextColor = '#ff9500';
+        let badgeText = 'Pendiente de Aceptar';
+
+        if (m.status === 'accepted') {
+            badgeColor = 'rgba(52, 199, 89, 0.15)';
+            badgeTextColor = '#34c759';
+            badgeText = 'Confirmado y Aceptado';
+        } else if (m.status === 'completed') {
+            badgeColor = 'rgba(0, 122, 255, 0.15)';
+            badgeTextColor = '#007aff';
+            badgeText = 'Completado';
+        }
+
+        let acceptBtn = '';
+        if (m.status === 'pending') {
+            acceptBtn = `
+                <button onclick="acceptPwaMilestone('${m.id}', '${m.title.replace(/'/g, "\\'")}')" class="event-card-btn" style="background: rgba(52,199,89,0.15); border-color: rgba(52,199,89,0.3); color: #34c759; width: 100%; justify-content: center; margin-top: 8px;">
+                    ✅ Aceptar y Confirmar Hito
+                </button>
+            `;
+        }
+
         return `
             <div class="event-card">
-                <span class="event-card-title">${m.title}</span>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                    <span class="event-card-title">${m.title}</span>
+                    <span style="font-size:0.65rem; padding:2px 6px; border-radius:6px; background:${badgeColor}; color:${badgeTextColor}; font-weight:700; white-space:nowrap">${badgeText}</span>
+                </div>
                 <div class="event-card-time">
                     <span>⏰</span> Hora: ${timeStr}
                 </div>
                 <a href="${gcalUrl}" target="_blank" class="event-card-btn">
                     🗓️ Añadir a mi calendario
                 </a>
+                ${acceptBtn}
             </div>
         `;
     }).join('');
+}
+
+async function acceptPwaMilestone(milestoneId, milestoneTitle) {
+    if (!currentRoom) return;
+    
+    try {
+        const { error } = await sb
+            .from('client_milestones')
+            .update({ status: 'accepted' })
+            .eq('id', milestoneId);
+            
+        if (error) throw error;
+        
+        const leadName = leadIdentity?.name || currentRoom.lead_name || 'Cliente';
+        const chatMsg = `🤝 El cliente ha **Aceptado y Confirmado** el hito: **${milestoneTitle}**`;
+        
+        await sb.from('chat_messages').insert({
+            room_id: currentRoom.id,
+            sender_type: 'lead',
+            sender_name: leadName,
+            content: chatMsg
+        });
+        
+        await sb.from('chat_activities').insert({
+            room_id: currentRoom.id,
+            lead_name: currentRoom.lead_name || 'Lead',
+            action: 'accept_milestone',
+            desc: `${leadName} aceptó y confirmó el hito: "${milestoneTitle}"`,
+            sender_type: 'lead'
+        });
+        
+        await sb.from('chat_rooms').update({ last_message_at: new Date().toISOString() }).eq('id', currentRoom.id);
+        
+        fetch(`${API_BASE}/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'send',
+                room_id: 'admin-global',
+                title: 'Hito Aceptado 🤝',
+                message: `${leadName} ha confirmado: ${milestoneTitle}`
+            })
+        }).catch(() => {});
+        
+        showToast('Hito aceptado y confirmado ✅');
+        
+        await loadPwaClientDashboard();
+        renderPwaCalendar(currentCalYear, currentCalMonth);
+    } catch(e) {
+        console.error('Error accepting milestone:', e);
+        showToast('Error al confirmar el hito ❌');
+    }
 }
 </script>
 </body>

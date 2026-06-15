@@ -1741,6 +1741,12 @@ body.role-guest td button {
 .cal-event.ev-task-app .cal-ev-badge { background: #5856d6; }
 .cal-event.ev-done { background: rgba(52,199,89,0.08); color: #34c759; }
 .cal-event.ev-done .cal-ev-badge { background: #34c759; }
+.cal-event.ev-milestone { background: rgba(168,85,247,0.10); color: #a855f7; }
+.cal-event.ev-milestone .cal-ev-badge { background: #a855f7; }
+.cal-event.ev-milestone-pending { background: rgba(255,149,0,0.10); color: #FF9500; }
+.cal-event.ev-milestone-pending .cal-ev-badge { background: #FF9500; }
+.cal-event.ev-milestone-accepted { background: rgba(52,199,89,0.10); color: #34C759; }
+.cal-event.ev-milestone-accepted .cal-ev-badge { background: #34C759; }
 .cal-more {
     font-size: 0.62rem; color: var(--text-grey);
     padding: 1px 0; cursor: pointer; font-weight: 600;
