@@ -6910,6 +6910,7 @@ async function loadCalendarEvents() {
                 console.warn('[Cal] Milestones query error:', mileErr);
             } else if (mileData && mileData.length > 0) {
                 mileData.forEach(m => {
+                    const leadName = m.chat_rooms?.lead_name || 'Cliente';
                     let prefix = '🤝 ';
                     if (m.status === 'pending') prefix = '⏳ [Pendiente] ';
                     else if (m.status === 'rejected') prefix = '❌ [Rechazado] ';
@@ -13894,6 +13895,9 @@ window.loadDesktopClientDashboard = async function() {
         } else {
             document.getElementById('desktop-client-active-area').style.display = 'none';
             document.getElementById('desktop-client-empty-area').style.display = 'flex';
+            const globalHist = document.getElementById('desktop-global-documents-history');
+            if (globalHist) globalHist.style.display = 'block';
+            window.loadGlobalDocumentsHistory();
         }
     } catch(e) {
         console.error('Error loading desktop client dashboard rooms:', e);
@@ -13904,15 +13908,19 @@ window.onDesktopClientSelected = function(roomId) {
     _desktopActiveRoomId = roomId;
     const activeArea = document.getElementById('desktop-client-active-area');
     const emptyArea = document.getElementById('desktop-client-empty-area');
+    const globalHist = document.getElementById('desktop-global-documents-history');
 
     if (!roomId) {
         activeArea.style.display = 'none';
         emptyArea.style.display = 'flex';
+        if (globalHist) globalHist.style.display = 'block';
+        window.loadGlobalDocumentsHistory();
         return;
     }
 
     activeArea.style.display = 'flex';
     emptyArea.style.display = 'none';
+    if (globalHist) globalHist.style.display = 'none';
 
     // Set default fields to blank/now
     document.getElementById('desktop-newdoc-name').value = '';
@@ -13930,6 +13938,69 @@ window.onDesktopClientSelected = function(roomId) {
     document.getElementById('desktop-newmilestone-date').value = dtVal;
 
     window.loadClientDashboardData(roomId);
+};
+
+window.loadGlobalDocumentsHistory = async function() {
+    try {
+        const { data: docs, error } = await _supabase
+            .from('client_document_requests')
+            .select('*, chat_rooms(lead_name, lead_company)')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const countLabel = document.getElementById('desktop-global-doc-count-label');
+        if (countLabel) countLabel.textContent = `${docs?.length || 0} solicitudes`;
+
+        const tbody = document.getElementById('desktop-global-documents-tbody');
+        if (!tbody) return;
+
+        if (!docs || docs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="padding:20px; text-align:center; color:var(--text-grey)">No hay solicitudes de documentos creadas.</td></tr>';
+        } else {
+            tbody.innerHTML = docs.map(doc => {
+                const dateStr = doc.due_date ? new Date(doc.due_date).toLocaleDateString() : 'Sin fecha';
+                const badgeColor = doc.status === 'approved' ? '#2ecc71' : (doc.status === 'reviewing' ? '#0ea5e9' : (doc.status === 'rejected' ? '#ff4757' : '#f1c40f'));
+                const badgeText = doc.status === 'approved' ? 'Gestionado' : (doc.status === 'reviewing' ? 'En revisión' : (doc.status === 'rejected' ? 'Corregir' : 'Pendiente'));
+                
+                const clientName = doc.chat_rooms?.lead_name || 'Desconocido';
+                const comp = doc.chat_rooms?.lead_company ? ` (${doc.chat_rooms.lead_company})` : '';
+
+                let fileCell = '—';
+                if (doc.uploaded_file_url) {
+                    fileCell = `<a href="${doc.uploaded_file_url}" target="_blank" style="color:var(--accent-purple); text-decoration:none; font-weight:700">👁️ Ver archivo</a>`;
+                }
+
+                let actions = '';
+                if (doc.uploaded_file_url && doc.status !== 'approved') {
+                    actions += `<button onclick="approveDesktopDoc('${doc.id}', '${doc.document_name}', '${doc.room_id}')" style="background:none; border:1px solid #2ecc71; color:#2ecc71; padding:3px 6px; border-radius:6px; cursor:pointer; font-size:0.75rem; margin-right:4px">✅ Aprobar</button>`;
+                }
+                if (doc.uploaded_file_url && doc.status !== 'rejected') {
+                    actions += `<button onclick="rejectDesktopDoc('${doc.id}', '${doc.document_name}', '${doc.room_id}')" style="background:none; border:1px solid #ff4757; color:#ff4757; padding:3px 6px; border-radius:6px; cursor:pointer; font-size:0.75rem; margin-right:4px">❌ Rechazar</button>`;
+                }
+                if (doc.status !== 'pending' || doc.uploaded_file_url) {
+                    actions += `<button onclick="reclaimDesktopDoc('${doc.id}', '${doc.document_name}', '${doc.room_id}')" style="background:none; border:1px solid #ff9500; color:#ff9500; padding:3px 6px; border-radius:6px; cursor:pointer; font-size:0.75rem; margin-right:4px">🔄 Re-pedir</button>`;
+                }
+                actions += `<button onclick="deleteDesktopDocRequest('${doc.id}', '${doc.room_id}')" style="background:none; border:none; color:var(--text-grey); cursor:pointer; font-size:0.8rem">🗑️</button>`;
+
+                return `
+                    <tr style="border-bottom:1px solid var(--card-border)">
+                        <td style="padding:10px 8px; font-weight:600; color:var(--text-main)">${clientName}${comp}</td>
+                        <td style="padding:10px 8px; font-weight:600; color:var(--text-main)">
+                            ${doc.document_name}
+                            ${doc.status === 'rejected' && doc.notes ? `<div style="font-size:0.72rem; color:#ff4757; font-weight:400; margin-top:2px">⚠️ Motivo: ${doc.notes}</div>` : ''}
+                        </td>
+                        <td style="padding:10px 8px; color:var(--text-grey)">${dateStr}</td>
+                        <td style="padding:10px 8px"><span style="font-size:0.7rem; padding:2px 6px; border-radius:6px; background:${badgeColor}20; color:${badgeColor}; font-weight:700">${badgeText}</span></td>
+                        <td style="padding:10px 8px">${fileCell}</td>
+                        <td style="padding:10px 8px; text-align:right; white-space:nowrap">${actions}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    } catch (e) {
+        console.error('Error loading global documents history:', e);
+    }
 };
 
 window.loadClientDashboardData = async function(roomId) {
@@ -14149,8 +14220,11 @@ window.createDesktopDocRequest = async function() {
     }
 };
 
-window.approveDesktopDoc = async function(requestId, docName) {
+window.approveDesktopDoc = async function(requestId, docName, targetRoomId = null) {
     if (!await showConfirm('Aprobar Documento', `¿Aprobar el documento "${docName}"?`, '📄', 'Aprobar', 'success')) return;
+
+    const roomId = targetRoomId || _desktopActiveRoomId;
+    if (!roomId) return;
 
     try {
         const { error } = await _supabase
@@ -14162,22 +14236,26 @@ window.approveDesktopDoc = async function(requestId, docName) {
 
         // Post chat confirmation
         await _supabase.from('chat_messages').insert({
-            room_id: _desktopActiveRoomId,
+            room_id: roomId,
             sender_type: 'admin',
             sender_name: 'Gerard',
             content: `✅ El documento **${docName}** ha sido **Aprobado**.`
         });
 
         await _supabase.from('chat_activities').insert({
-            room_id: _desktopActiveRoomId,
-            lead_name: _desktopRoomsCache.find(r => r.id === _desktopActiveRoomId)?.lead_name || 'Lead',
+            room_id: roomId,
+            lead_name: _desktopRoomsCache.find(r => r.id === roomId)?.lead_name || 'Lead',
             action: 'send_message',
             desc: `Gerard (admin) aprobó el documento: "${docName}"`,
             sender_type: 'admin'
         });
 
         showToast('Documento aprobado ✅');
-        window.loadClientDashboardData(_desktopActiveRoomId);
+        if (_desktopActiveRoomId) {
+            window.loadClientDashboardData(_desktopActiveRoomId);
+        } else {
+            window.loadGlobalDocumentsHistory();
+        }
 
     } catch (e) {
         console.error('Error approving doc:', e);
@@ -14185,10 +14263,13 @@ window.approveDesktopDoc = async function(requestId, docName) {
     }
 };
 
-window.rejectDesktopDoc = async function(requestId, docName) {
+window.rejectDesktopDoc = async function(requestId, docName, targetRoomId = null) {
     const reason = await showPrompt('Rechazar Documento', `Escribe el motivo del rechazo / corrección para "${docName}":`, '❌', '', 'Ej: Documento borroso, formato incorrecto...');
     if (reason === null) return;
     if (!reason.trim()) { showToast('El motivo es obligatorio ⚠️'); return; }
+
+    const roomId = targetRoomId || _desktopActiveRoomId;
+    if (!roomId) return;
 
     try {
         const { error } = await _supabase
@@ -14203,22 +14284,26 @@ window.rejectDesktopDoc = async function(requestId, docName) {
 
         // Post chat rejection message
         await _supabase.from('chat_messages').insert({
-            room_id: _desktopActiveRoomId,
+            room_id: roomId,
             sender_type: 'admin',
             sender_name: 'Gerard',
             content: `❌ El documento **${docName}** ha sido **Rechazado**.\n⚠️ Motivo de corrección: ${reason.trim()}`
         });
 
         await _supabase.from('chat_activities').insert({
-            room_id: _desktopActiveRoomId,
-            lead_name: _desktopRoomsCache.find(r => r.id === _desktopActiveRoomId)?.lead_name || 'Lead',
+            room_id: roomId,
+            lead_name: _desktopRoomsCache.find(r => r.id === roomId)?.lead_name || 'Lead',
             action: 'send_message',
             desc: `Gerard (admin) rechazó el documento: "${docName}". Motivo: ${reason}`,
             sender_type: 'admin'
         });
 
         showToast('Documento rechazado ❌');
-        window.loadClientDashboardData(_desktopActiveRoomId);
+        if (_desktopActiveRoomId) {
+            window.loadClientDashboardData(_desktopActiveRoomId);
+        } else {
+            window.loadGlobalDocumentsHistory();
+        }
 
     } catch (e) {
         console.error('Error rejecting doc:', e);
@@ -14226,7 +14311,7 @@ window.rejectDesktopDoc = async function(requestId, docName) {
     }
 };
 
-window.deleteDesktopDocRequest = async function(requestId) {
+window.deleteDesktopDocRequest = async function(requestId, targetRoomId = null) {
     if (!await showConfirm('Eliminar Solicitud', '¿Seguro que quieres eliminar esta solicitud de documento?', '🗑️', 'Eliminar', 'danger')) return;
 
     try {
@@ -14238,15 +14323,22 @@ window.deleteDesktopDocRequest = async function(requestId) {
         if (error) throw error;
 
         showToast('Solicitud eliminada 🗑️');
-        window.loadClientDashboardData(_desktopActiveRoomId);
+        if (_desktopActiveRoomId) {
+            window.loadClientDashboardData(_desktopActiveRoomId);
+        } else {
+            window.loadGlobalDocumentsHistory();
+        }
     } catch (e) {
         console.error('Error deleting doc request:', e);
         showToast('Error al eliminar ❌');
     }
 };
 
-window.reclaimDesktopDoc = async function(requestId, docName) {
+window.reclaimDesktopDoc = async function(requestId, docName, targetRoomId = null) {
     if (!await showConfirm('Volver a Pedir Documento', `¿Seguro que deseas volver a pedir el documento "${docName}"? Esto reiniciará el estado a pendiente y borrará el archivo anterior.`, '🔄', 'Volver a pedir', 'warning')) return;
+
+    const roomId = targetRoomId || _desktopActiveRoomId;
+    if (!roomId) return;
 
     try {
         const { error } = await _supabase
@@ -14263,15 +14355,15 @@ window.reclaimDesktopDoc = async function(requestId, docName) {
 
         // Post chat re-request message
         await _supabase.from('chat_messages').insert({
-            room_id: _desktopActiveRoomId,
+            room_id: roomId,
             sender_type: 'admin',
             sender_name: 'Gerard',
             content: `🔄 Se ha vuelto a solicitar el documento: **${docName}**. Por favor, súbelo de nuevo.`
         });
 
         await _supabase.from('chat_activities').insert({
-            room_id: _desktopActiveRoomId,
-            lead_name: _desktopRoomsCache.find(r => r.id === _desktopActiveRoomId)?.lead_name || 'Lead',
+            room_id: roomId,
+            lead_name: _desktopRoomsCache.find(r => r.id === roomId)?.lead_name || 'Lead',
             action: 'send_message',
             desc: `Gerard (admin) volvió a solicitar el documento: "${docName}"`,
             sender_type: 'admin'
@@ -14283,14 +14375,18 @@ window.reclaimDesktopDoc = async function(requestId, docName) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 action: 'send',
-                room_id: _desktopActiveRoomId,
+                room_id: roomId,
                 title: 'Documento vuelto a solicitar 📄',
                 message: `Gerard te ha solicitado volver a subir: ${docName}`
             })
         }).catch(() => {});
 
         showToast('Documento vuelto a solicitar ✅');
-        window.loadClientDashboardData(_desktopActiveRoomId);
+        if (_desktopActiveRoomId) {
+            window.loadClientDashboardData(_desktopActiveRoomId);
+        } else {
+            window.loadGlobalDocumentsHistory();
+        }
 
     } catch (e) {
         console.error('Error reclaiming doc:', e);

@@ -623,6 +623,129 @@
         max-width: 100%; border-radius: 10px; margin-top: 4px;
     }
     .chat-msg .msg-content video { max-height: 280px; }
+
+    /* --- Bottom Navigation --- */
+    .bottom-nav {
+        display: none;
+        justify-content: space-around;
+        align-items: center;
+        background: rgba(22, 22, 30, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-top: 1px solid var(--card-border);
+        padding: 8px 6px calc(8px + env(safe-area-inset-bottom, 0px));
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        flex-shrink: 0;
+    }
+    .nav-item {
+        background: none;
+        border: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: var(--text-grey);
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 0.72rem;
+        font-weight: 500;
+        padding: 4px 12px;
+        border-radius: 12px;
+        transition: all 0.2s;
+        flex: 1;
+    }
+    .nav-item .icon {
+        font-size: 1.25rem;
+        transition: transform 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .nav-item.active {
+        color: var(--accent);
+    }
+    .nav-item:active .icon { transform: scale(0.9); }
+
+    /* Calendar styles from chat.html */
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+    .calendar-month-title {
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: #fff;
+    }
+    .calendar-nav-btn {
+        background: var(--bg-tertiary);
+        border: 1px solid var(--card-border);
+        color: var(--text-main);
+        width: 32px; height: 32px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; font-size: 0.95rem;
+    }
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+        margin-bottom: 18px;
+    }
+    .calendar-day-header {
+        text-align: center;
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: var(--text-grey);
+        padding: 6px 0;
+    }
+    .calendar-day-box {
+        aspect-ratio: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,0.02);
+        border: 1px solid var(--card-border);
+        border-radius: 8px;
+        font-size: 0.82rem;
+        color: var(--text-main);
+        position: relative;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .calendar-day-box:active { transform: scale(0.9); }
+    .calendar-day-box.empty {
+        background: none; border-color: transparent; cursor: default;
+    }
+    .calendar-day-box.selected {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+        font-weight: 700;
+    }
+    .calendar-day-box.today {
+        border-color: var(--accent);
+    }
+    .calendar-day-box .dot-indicator {
+        width: 4px; height: 4px; border-radius: 50%;
+        background: #a855f7; position: absolute; bottom: 4px;
+    }
+    .calendar-day-box.selected .dot-indicator {
+        background: #fff;
+    }
+
+    /* Screen height override for bottom nav spacing */
+    .screen-with-nav {
+        padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+        height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px)) !important;
+        overflow-y: auto !important;
+    }
 </style>
 </head>
 <body>
@@ -641,7 +764,7 @@
 </div>
 
 <!-- ROOMS SCREEN -->
-<div id="rooms-screen" class="screen">
+<div id="rooms-screen" class="screen screen-with-nav">
     <div class="rooms-header">
         <h1>Chats</h1>
         <div class="subtitle">Conversaciones con leads</div>
@@ -657,10 +780,92 @@
     <div class="rooms-list" id="rooms-list">
         <div class="rooms-empty">Cargando conversaciones...</div>
     </div>
-    <div style="position:absolute;bottom:24px;right:20px;display:flex;flex-direction:row;gap:12px;z-index:10">
+    <div style="position:absolute;bottom:80px;right:20px;display:flex;flex-direction:row;gap:12px;z-index:10">
         <button class="fab-nuevo-chat" onclick="openCreateGroupModal()" style="background:linear-gradient(135deg,#0ea5e9,#06b6d4);box-shadow:0 4px 20px rgba(14,165,233,0.45)" title="Nuevo grupo">👥</button>
         <button class="fab-nuevo-chat" onclick="openCreateLeadModal()" title="Nuevo chat">+</button>
     </div>
+</div>
+
+<!-- DOCUMENTS SCREEN -->
+<div id="documents-screen" class="screen screen-with-nav" style="background: var(--bg-primary);">
+    <div class="rooms-header">
+        <h1>Documentos</h1>
+        <div class="subtitle">Historial de solicitudes de todos los leads</div>
+    </div>
+    <div style="flex:1; overflow-y:auto; padding:16px 16px 24px;" id="pwa-global-docs-list-container">
+        <div id="pwa-global-docs-list" style="display:flex; flex-direction:column; gap:12px; padding-bottom: 24px;">
+            <div class="rooms-empty">Cargando solicitudes...</div>
+        </div>
+    </div>
+</div>
+
+<!-- CALENDAR SCREEN -->
+<div id="calendar-screen" class="screen screen-with-nav" style="background: var(--bg-primary); overflow-y:auto;">
+    <div class="rooms-header">
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <div>
+                <h1>Calendario</h1>
+                <div class="subtitle">Hitos, citas y entregas programadas</div>
+            </div>
+        </div>
+    </div>
+    <div style="flex:1; padding:16px; display:flex; flex-direction:column; gap:16px; padding-bottom: 32px;">
+        <!-- Calendar wrapper -->
+        <div style="background:rgba(255,255,255,0.02); border:1px solid var(--card-border); border-radius:18px; padding:14px">
+            <div class="calendar-header">
+                <button class="calendar-nav-btn" onclick="navAdminCalendar(-1)">‹</button>
+                <span class="calendar-month-title" id="pwa-calendar-title">Junio 2026</span>
+                <button class="calendar-nav-btn" onclick="navAdminCalendar(1)">›</button>
+            </div>
+            <div class="calendar-grid" id="pwa-calendar-grid">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+        <!-- Event Details -->
+        <div>
+            <div class="rooms-header" style="padding: 10px 0; border: none; background: none; backdrop-filter: none; -webkit-backdrop-filter: none;">
+                <h3 style="font-size:1.05rem; font-weight:800; margin:0;" id="pwa-selected-date-label">📅 Hitos del día</h3>
+            </div>
+            <div id="pwa-calendar-events-list" style="display:flex; flex-direction:column; gap:10px;">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Navigation Bar -->
+<div class="bottom-nav" id="admin-bottom-nav">
+    <button class="nav-item active" onclick="switchAdminTab('chat')" id="nav-btn-chat">
+        <span class="icon">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+        </span>
+        <span class="label">Chats</span>
+    </button>
+    <button class="nav-item" onclick="switchAdminTab('documents')" id="nav-btn-documents">
+        <span class="icon">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+        </span>
+        <span class="label">Documentos</span>
+    </button>
+    <button class="nav-item" onclick="switchAdminTab('calendar')" id="nav-btn-calendar">
+        <span class="icon">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+        </span>
+        <span class="label">Calendario</span>
+    </button>
 </div>
 
 <!-- CHAT SCREEN -->
@@ -1294,9 +1499,408 @@ let messagesSub = null;
 let roomsSub = null;
 
 // ===== NAVIGATION =====
+// ===== NAVIGATION =====
 function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
+    
+    // Toggle bottom-nav visibility
+    const botNav = document.getElementById('admin-bottom-nav');
+    if (botNav) {
+        if (id === 'rooms-screen' || id === 'documents-screen' || id === 'calendar-screen') {
+            botNav.style.display = 'flex';
+            // Highlight current tab
+            document.querySelectorAll('#admin-bottom-nav .nav-item').forEach(btn => btn.classList.remove('active'));
+            if (id === 'rooms-screen') document.getElementById('nav-btn-chat').classList.add('active');
+            else if (id === 'documents-screen') document.getElementById('nav-btn-documents').classList.add('active');
+            else if (id === 'calendar-screen') document.getElementById('nav-btn-calendar').classList.add('active');
+        } else {
+            botNav.style.display = 'none';
+        }
+    }
+}
+
+let currentAdminTab = 'chat';
+function switchAdminTab(tabName) {
+    currentAdminTab = tabName;
+    
+    // Toggle active classes in nav buttons
+    document.querySelectorAll('#admin-bottom-nav .nav-item').forEach(btn => btn.classList.remove('active'));
+    
+    if (tabName === 'chat') {
+        document.getElementById('nav-btn-chat').classList.add('active');
+        showScreen('rooms-screen');
+        loadRooms();
+    } else if (tabName === 'documents') {
+        document.getElementById('nav-btn-documents').classList.add('active');
+        showScreen('documents-screen');
+        loadAdminDocuments();
+    } else if (tabName === 'calendar') {
+        document.getElementById('nav-btn-calendar').classList.add('active');
+        showScreen('calendar-screen');
+        initAdminCalendar();
+    }
+}
+
+async function loadAdminDocuments() {
+    const listEl = document.getElementById('pwa-global-docs-list');
+    if (!listEl) return;
+    listEl.innerHTML = '<div class="rooms-empty">Cargando solicitudes...</div>';
+
+    try {
+        const { data: docs, error } = await sb
+            .from('client_document_requests')
+            .select('*, chat_rooms(lead_name, lead_company)')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!docs || docs.length === 0) {
+            listEl.innerHTML = '<div class="rooms-empty">No hay solicitudes de documentos.</div>';
+            return;
+        }
+
+        listEl.innerHTML = docs.map(doc => {
+            const dateStr = doc.due_date ? new Date(doc.due_date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }) : 'Sin fecha';
+            const clientName = doc.chat_rooms?.lead_name || 'Desconocido';
+            const company = doc.chat_rooms?.lead_company ? ` (${doc.chat_rooms.lead_company})` : '';
+            
+            const badgeClass = doc.status; // 'pending', 'approved', 'rejected', 'reviewing'
+            const badgeText = doc.status === 'approved' ? 'Aprobado' : (doc.status === 'reviewing' ? 'Revisar' : (doc.status === 'rejected' ? 'Rechazado' : 'Pendiente'));
+
+            let fileAction = '';
+            if (doc.uploaded_file_url) {
+                fileAction = `
+                    <div style="margin-top: 8px; display: flex; gap: 8px;">
+                        <a href="${doc.uploaded_file_url}" target="_blank" class="event-card-btn" style="flex: 1; text-align: center; text-decoration: none; color: #fff; background: var(--bg-tertiary); display: inline-flex; align-items: center; justify-content: center; padding: 6px 0; border-radius: 8px; font-size: 0.75rem;">
+                            👁️ Ver Archivo
+                        </a>
+                        ${doc.status !== 'approved' ? `
+                            <button onclick="approveAdminDocPwa('${doc.id}', '${doc.document_name.replace(/'/g, "\\'")}', '${doc.room_id}', this)" class="event-card-btn" style="background: rgba(52,199,89,0.15); border-color: rgba(52,199,89,0.3); color: #34c759; flex: 1; padding: 6px 0; cursor:pointer;">
+                                Aprobar
+                            </button>
+                        ` : ''}
+                        ${doc.status !== 'rejected' ? `
+                            <button onclick="rejectAdminDocPwa('${doc.id}', '${doc.document_name.replace(/'/g, "\\'")}', '${doc.room_id}', this)" class="event-card-btn" style="background: rgba(255,59,48,0.15); border-color: rgba(255,59,48,0.3); color: #ff3b30; flex: 1; padding: 6px 0; cursor:pointer;">
+                                Rechazar
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            let reclaimAction = '';
+            if (doc.status !== 'pending' || doc.uploaded_file_url) {
+                reclaimAction = `
+                    <div style="margin-top: 8px;">
+                        <button onclick="reclaimAdminDocPwa('${doc.id}', '${doc.document_name.replace(/'/g, "\\'")}', '${doc.room_id}', this)" class="event-card-btn" style="background: rgba(255,149,0,0.15); border-color: rgba(255,149,0,0.3); color: #ff9500; width: 100%; justify-content: center; padding: 6px 0; cursor:pointer;">
+                            🔄 Volver a pedir
+                        </button>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="action-card-item" style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); border-radius: 16px; padding: 14px; margin-bottom: 4px;">
+                    <div class="action-card-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <span class="action-card-title" style="font-weight:800; font-size:0.92rem;">${doc.document_name}</span>
+                        <span class="state-badge ${badgeClass}" style="font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:6px;">${badgeText}</span>
+                    </div>
+                    <div style="font-size:0.75rem; color:var(--text-grey); margin-bottom:4px;">👤 Lead: <strong>${clientName}${company}</strong></div>
+                    <div class="action-card-meta" style="font-size:0.72rem; color:var(--text-grey);">📅 Límite: ${dateStr}</div>
+                    ${doc.status === 'rejected' && doc.notes ? `<div style="font-size:0.75rem; color:#ff4757; margin-top:6px; background:rgba(255,59,48,0.08); padding:6px 10px; border-radius:8px;">⚠️ Motivo: ${doc.notes}</div>` : ''}
+                    ${fileAction}
+                    ${reclaimAction}
+                </div>
+            `;
+        }).join('');
+
+    } catch (e) {
+        console.error('Error loading global documents list in admin PWA:', e);
+        listEl.innerHTML = '<div class="rooms-empty">Error al cargar solicitudes.</div>';
+    }
+}
+
+async function approveAdminDocPwa(requestId, docName, roomId, btnEl) {
+    if (!confirm(`¿Aprobar el documento "${docName}"?`)) return;
+
+    if (btnEl) btnEl.disabled = true;
+
+    try {
+        const { error } = await sb
+            .from('client_document_requests')
+            .update({ status: 'approved' })
+            .eq('id', requestId);
+
+        if (error) throw error;
+
+        // Post chat message
+        await sb.from('chat_messages').insert({
+            room_id: roomId,
+            sender_type: 'admin',
+            sender_name: 'Gerard',
+            content: `✅ El documento **${docName}** ha sido **Aprobado**.`
+        });
+
+        await sb.from('chat_activities').insert({
+            room_id: roomId,
+            lead_name: rooms.find(r => r.id === roomId)?.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) aprobó el documento: "${docName}"`,
+            sender_type: 'admin'
+        });
+
+        showToast('Documento aprobado ✅');
+        loadAdminDocuments();
+    } catch (e) {
+        console.error('Error approving doc request:', e);
+        showToast('Error al aprobar ❌');
+        if (btnEl) btnEl.disabled = false;
+    }
+}
+
+async function rejectAdminDocPwa(requestId, docName, roomId, btnEl) {
+    const reason = prompt(`Escribe el motivo del rechazo para "${docName}":`);
+    if (reason === null) return;
+    if (!reason.trim()) { showToast('El motivo es obligatorio ⚠️'); return; }
+
+    if (btnEl) btnEl.disabled = true;
+
+    try {
+        const { error } = await sb
+            .from('client_document_requests')
+            .update({
+                status: 'rejected',
+                notes: reason.trim()
+            })
+            .eq('id', requestId);
+
+        if (error) throw error;
+
+        // Post chat message
+        await sb.from('chat_messages').insert({
+            room_id: roomId,
+            sender_type: 'admin',
+            sender_name: 'Gerard',
+            content: `❌ El documento **${docName}** ha sido **Rechazado**.\n⚠️ Motivo de corrección: ${reason.trim()}`
+        });
+
+        await sb.from('chat_activities').insert({
+            room_id: roomId,
+            lead_name: rooms.find(r => r.id === roomId)?.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) rechazó el documento: "${docName}". Motivo: ${reason}`,
+            sender_type: 'admin'
+        });
+
+        showToast('Documento rechazado ❌');
+        loadAdminDocuments();
+    } catch (e) {
+        console.error('Error rejecting doc request:', e);
+        showToast('Error al rechazar ❌');
+        if (btnEl) btnEl.disabled = false;
+    }
+}
+
+async function reclaimAdminDocPwa(requestId, docName, roomId, btnEl) {
+    if (!confirm(`¿Seguro que deseas volver a pedir el documento "${docName}"?`)) return;
+
+    if (btnEl) btnEl.disabled = true;
+
+    try {
+        const { error } = await sb
+            .from('client_document_requests')
+            .update({
+                status: 'pending',
+                uploaded_file_url: null,
+                uploaded_at: null,
+                notes: null
+            })
+            .eq('id', requestId);
+
+        if (error) throw error;
+
+        // Post chat message
+        await sb.from('chat_messages').insert({
+            room_id: roomId,
+            sender_type: 'admin',
+            sender_name: 'Gerard',
+            content: `🔄 Se ha vuelto a solicitar el documento: **${docName}**. Por favor, súbelo de nuevo.`
+        });
+
+        await sb.from('chat_activities').insert({
+            room_id: roomId,
+            lead_name: rooms.find(r => r.id === roomId)?.lead_name || 'Lead',
+            action: 'send_message',
+            desc: `Gerard (admin) volvió a solicitar el documento: "${docName}"`,
+            sender_type: 'admin'
+        });
+
+        // Push notification
+        fetch(`${API_BASE}/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'send',
+                room_id: roomId,
+                title: 'Documento vuelto a solicitar 📄',
+                message: `Gerard te ha solicitado volver a subir: ${docName}`
+            })
+        }).catch(() => {});
+
+        showToast('Documento solicitado de nuevo ✅');
+        loadAdminDocuments();
+    } catch (e) {
+        console.error('Error reclaiming doc request:', e);
+        showToast('Error al solicitar de nuevo ❌');
+        if (btnEl) btnEl.disabled = false;
+    }
+}
+
+let adminSelectedCalDate = new Date();
+let adminCalYear = new Date().getFullYear();
+let adminCalMonth = new Date().getMonth();
+let adminMilestonesCache = [];
+
+async function initAdminCalendar() {
+    try {
+        const { data, error } = await sb
+            .from('client_milestones')
+            .select('*, chat_rooms(lead_name, lead_company)')
+            .order('date', { ascending: true });
+
+        if (error) throw error;
+        adminMilestonesCache = data || [];
+
+        renderAdminCalendar(adminCalYear, adminCalMonth);
+    } catch (e) {
+        console.error('Error loading milestones for admin calendar:', e);
+        showToast('Error al cargar calendario ❌');
+    }
+}
+
+function navAdminCalendar(dir) {
+    adminCalMonth += dir;
+    if (adminCalMonth < 0) {
+        adminCalMonth = 11;
+        adminCalYear--;
+    } else if (adminCalMonth > 11) {
+        adminCalMonth = 0;
+        adminCalYear++;
+    }
+    renderAdminCalendar(adminCalYear, adminCalMonth);
+}
+
+function selectAdminCalDate(year, month, day) {
+    adminSelectedCalDate = new Date(year, month, day);
+    renderAdminCalendar(year, month);
+}
+
+function renderAdminCalendar(year, month) {
+    const title = document.getElementById('pwa-calendar-title');
+    const grid = document.getElementById('pwa-calendar-grid');
+    if (!title || !grid) return;
+
+    const monthNames = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    title.textContent = `${monthNames[month]} ${year}`;
+
+    grid.innerHTML = '';
+
+    const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    days.forEach(d => {
+        grid.innerHTML += `<div class="calendar-day-header">${d}</div>`;
+    });
+
+    const firstDay = new Date(year, month, 1);
+    let startDay = firstDay.getDay() - 1;
+    if (startDay < 0) startDay = 6;
+
+    const totalDays = new Date(year, month + 1, 0).getDate();
+
+    for (let i = 0; i < startDay; i++) {
+        grid.innerHTML += '<div class="calendar-day-box empty"></div>';
+    }
+
+    const today = new Date();
+
+    for (let d = 1; d <= totalDays; d++) {
+        const cellDate = new Date(year, month, d);
+        
+        const isToday = cellDate.getDate() === today.getDate() && cellDate.getMonth() === today.getMonth() && cellDate.getFullYear() === today.getFullYear();
+        const isSelected = cellDate.getDate() === adminSelectedCalDate.getDate() && cellDate.getMonth() === adminSelectedCalDate.getMonth() && cellDate.getFullYear() === adminSelectedCalDate.getFullYear();
+        
+        const hasMilestone = adminMilestonesCache.some(m => {
+            const mDate = new Date(m.date);
+            return mDate.getDate() === d && mDate.getMonth() === month && mDate.getFullYear() === year;
+        });
+
+        const classes = ['calendar-day-box'];
+        if (isToday) classes.push('today');
+        if (isSelected) classes.push('selected');
+
+        const indicator = hasMilestone ? `<span class="dot-indicator"></span>` : '';
+
+        grid.innerHTML += `
+            <div class="${classes.join(' ')}" onclick="selectAdminCalDate(${year}, ${month}, ${d})">
+                ${d}
+                ${indicator}
+            </div>
+        `;
+    }
+
+    loadAdminCalendarEventsForDay(adminSelectedCalDate);
+}
+
+function loadAdminCalendarEventsForDay(date) {
+    const listContainer = document.getElementById('pwa-calendar-events-list');
+    const dateLabel = document.getElementById('pwa-selected-date-label');
+    if (!listContainer || !dateLabel) return;
+
+    const opt = { weekday: 'long', day: 'numeric', month: 'long' };
+    const dateTitle = date.toLocaleDateString('es-ES', opt);
+    dateLabel.innerHTML = `<span>📅</span> Hitos del ${dateTitle}`;
+
+    const dayMilestones = adminMilestonesCache.filter(m => {
+        const mDate = new Date(m.date);
+        return mDate.getDate() === date.getDate() && mDate.getMonth() === date.getMonth() && mDate.getFullYear() === date.getFullYear();
+    });
+
+    if (dayMilestones.length === 0) {
+        listContainer.innerHTML = `
+            <div style="text-align:center; padding:20px; font-size:0.8rem; color:var(--text-grey); background:rgba(255,255,255,0.01); border:1px dashed var(--card-border); border-radius:12px">
+                No hay hitos o reuniones programadas para este día.
+            </div>
+        `;
+        return;
+    }
+
+    listContainer.innerHTML = dayMilestones.map(m => {
+        const mDate = new Date(m.date);
+        const timeStr = mDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        
+        let statusBadgeColor = '#f1c40f';
+        let statusBadgeText = 'Pendiente';
+        if (m.status === 'accepted') { statusBadgeColor = '#2ecc71'; statusBadgeText = 'Confirmado'; }
+        else if (m.status === 'rejected') { statusBadgeColor = '#e74c3c'; statusBadgeText = 'Rechazado'; }
+        else if (m.status === 'completed') { statusBadgeColor = '#9b59b6'; statusBadgeText = 'Completado'; }
+
+        const clientName = m.chat_rooms?.lead_name || 'Desconocido';
+        const company = m.chat_rooms?.lead_company ? ` (${m.chat_rooms.lead_company})` : '';
+
+        return `
+            <div class="action-card-item" style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); border-radius: 16px; padding: 14px; margin-bottom: 4px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-weight:800; font-size:0.92rem;">${m.title}</span>
+                    <span style="font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:6px; background:${statusBadgeColor}20; color:${statusBadgeColor};">${statusBadgeText}</span>
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-grey); margin-bottom:4px;">👤 Lead: <strong>${clientName}${company}</strong></div>
+                <div style="font-size:0.72rem; color:var(--text-grey);">⏰ Hora: ${timeStr}</div>
+            </div>
+        `;
+    }).join('');
 }
 
 // ===== LOGIN =====

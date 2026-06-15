@@ -3245,11 +3245,40 @@ async function loadPwaClientDashboard() {
 
         // Get next date
         let nextDateStr = 'Ninguna';
-        const now = new Date();
-        const futureMilestones = pwaMilestonesCache.filter(m => new Date(m.date) >= now);
-        if (futureMilestones.length > 0) {
-            const nextMilestone = futureMilestones[0];
-            nextDateStr = new Date(nextMilestone.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const parseMilestoneDateToLocal = (dateStr) => {
+            if (!dateStr) return new Date();
+            const cleanStr = dateStr.replace(' ', 'T');
+            const parts = cleanStr.split('T');
+            const dateParts = parts[0].split('-');
+            const year = parseInt(dateParts[0], 10);
+            const month = parseInt(dateParts[1], 10) - 1;
+            const day = parseInt(dateParts[2], 10);
+            
+            let hours = 0;
+            let minutes = 0;
+            if (parts[1]) {
+                const timeParts = parts[1].split(':');
+                hours = parseInt(timeParts[0], 10) || 0;
+                minutes = parseInt(timeParts[1], 10) || 0;
+            }
+            return new Date(year, month, day, hours, minutes);
+        };
+
+        const activeMilestones = pwaMilestonesCache.filter(m => {
+            if (m.status === 'rejected') return false;
+            const mDate = parseMilestoneDateToLocal(m.date);
+            return mDate >= todayStart;
+        });
+
+        if (activeMilestones.length > 0) {
+            // Sort to ensure chronological order
+            activeMilestones.sort((a, b) => new Date(a.date) - new Date(b.date));
+            const nextMilestone = activeMilestones[0];
+            const nextMDate = parseMilestoneDateToLocal(nextMilestone.date);
+            nextDateStr = nextMDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
         }
 
         // Render stats
@@ -3628,10 +3657,10 @@ function loadPwaCalendarEventsForDay(date) {
         if (m.status === 'pending') {
             actionBtns = `
                 <div style="display: flex; gap: 8px; margin-top: 8px; width: 100%;">
-                    <button onclick="acceptPwaMilestone('${m.id}', '${m.title.replace(/'/g, "\\'")}')" class="event-card-btn" style="background: rgba(52,199,89,0.15); border-color: rgba(52,199,89,0.3); color: #34c759; flex: 1; justify-content: center; margin-top: 0; padding: 6px 4px;">
+                    <button onclick="acceptPwaMilestone('${m.id}', '${m.title.replace(/'/g, "\\'")}', this)" class="event-card-btn" style="background: rgba(52,199,89,0.15); border-color: rgba(52,199,89,0.3); color: #34c759; flex: 1; justify-content: center; margin-top: 0; padding: 6px 4px;">
                         Aceptar
                     </button>
-                    <button onclick="rejectPwaMilestone('${m.id}', '${m.title.replace(/'/g, "\\'")}')" class="event-card-btn" style="background: rgba(255,59,48,0.15); border-color: rgba(255,59,48,0.3); color: #ff3b30; flex: 1; justify-content: center; margin-top: 0; padding: 6px 4px;">
+                    <button onclick="rejectPwaMilestone('${m.id}', '${m.title.replace(/'/g, "\\'")}', this)" class="event-card-btn" style="background: rgba(255,59,48,0.15); border-color: rgba(255,59,48,0.3); color: #ff3b30; flex: 1; justify-content: center; margin-top: 0; padding: 6px 4px;">
                         Rechazar
                     </button>
                 </div>
@@ -3666,8 +3695,21 @@ function loadPwaCalendarEventsForDay(date) {
     }).join('');
 }
 
-async function acceptPwaMilestone(milestoneId, milestoneTitle) {
+async function acceptPwaMilestone(milestoneId, milestoneTitle, btnEl = null) {
     if (!currentRoom) return;
+    
+    let siblingButtons = [];
+    let originalText = '';
+    if (btnEl) {
+        originalText = btnEl.innerText;
+        btnEl.innerText = 'Confirmando...';
+        siblingButtons = Array.from(btnEl.parentElement.querySelectorAll('button'));
+        siblingButtons.forEach(btn => {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.pointerEvents = 'none';
+        });
+    }
     
     try {
         const resp = await fetch(`${API_BASE}/milestones`, {
@@ -3719,11 +3761,32 @@ async function acceptPwaMilestone(milestoneId, milestoneTitle) {
     } catch(e) {
         console.error('Error accepting milestone:', e);
         showToast('Error al confirmar el hito ❌');
+        if (btnEl) {
+            btnEl.innerText = originalText;
+            siblingButtons.forEach(btn => {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+            });
+        }
     }
 }
 
-async function rejectPwaMilestone(milestoneId, milestoneTitle) {
+async function rejectPwaMilestone(milestoneId, milestoneTitle, btnEl = null) {
     if (!currentRoom) return;
+    
+    let siblingButtons = [];
+    let originalText = '';
+    if (btnEl) {
+        originalText = btnEl.innerText;
+        btnEl.innerText = 'Rechazando...';
+        siblingButtons = Array.from(btnEl.parentElement.querySelectorAll('button'));
+        siblingButtons.forEach(btn => {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.pointerEvents = 'none';
+        });
+    }
     
     try {
         const resp = await fetch(`${API_BASE}/milestones`, {
@@ -3774,7 +3837,15 @@ async function rejectPwaMilestone(milestoneId, milestoneTitle) {
         renderPwaCalendar(currentCalYear, currentCalMonth);
     } catch(e) {
         console.error('Error rejecting milestone:', e);
-        showToast('Error al rechazar el hito ❌');
+        showToast('Error al rechazar the hito ❌');
+        if (btnEl) {
+            btnEl.innerText = originalText;
+            siblingButtons.forEach(btn => {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+            });
+        }
     }
 }
 </script>

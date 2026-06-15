@@ -4006,6 +4006,35 @@
                         Selecciona un cliente del menú desplegable superior para ver su estado, gestionar sus solicitudes de documentos y programar hitos en su calendario.
                     </p>
                 </div>
+
+                <!-- Global Documents History (Visible when no client is selected) -->
+                <div id="desktop-global-documents-history" style="margin-top: 24px; display: block;">
+                    <div class="stat-card-glass" style="padding:20px; display:flex; flex-direction:column; gap:16px">
+                        <div style="display:flex; justify-content:space-between; align-items:center">
+                            <h3 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-main)">📋 Historial Global de Documentos Pedidos</h3>
+                            <span style="font-size:0.75rem; color:var(--text-grey)" id="desktop-global-doc-count-label">0 solicitudes</span>
+                        </div>
+                        <div style="overflow-x:auto; width:100%">
+                            <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.85rem">
+                                <thead>
+                                    <tr style="border-bottom:1px solid var(--card-border); color:var(--text-grey)">
+                                        <th style="padding:10px 8px; font-weight:600">Cliente</th>
+                                        <th style="padding:10px 8px; font-weight:600">Documento</th>
+                                        <th style="padding:10px 8px; font-weight:600">Vencimiento</th>
+                                        <th style="padding:10px 8px; font-weight:600">Estado</th>
+                                        <th style="padding:10px 8px; font-weight:600">Archivo</th>
+                                        <th style="padding:10px 8px; font-weight:600; text-align:right">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="desktop-global-documents-tbody">
+                                    <tr>
+                                        <td colspan="6" style="padding:20px; text-align:center; color:var(--text-grey)">Cargando historial...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
 
         </main>
