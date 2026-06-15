@@ -5559,3 +5559,59 @@ body.role-guest td button {
 .toggle-switch input:checked + span::before {
     transform: translateX(22px);
 }
+
+/* Brain Chat Links & File Previews */
+.brain-chat-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border-bottom: 1px dashed var(--accent);
+    padding-bottom: 1px;
+}
+.brain-chat-link:hover {
+    color: var(--accent-light, #0a84ff);
+    border-bottom-style: solid;
+}
+.brain-chat-link.file-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(10, 132, 255, 0.08);
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(10, 132, 255, 0.18);
+    font-size: 0.85rem;
+    margin: 4px 2px;
+    cursor: pointer;
+    vertical-align: middle;
+    color: var(--accent);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+.brain-chat-link.file-link:hover {
+    background: rgba(10, 132, 255, 0.15);
+    border-color: rgba(10, 132, 255, 0.35);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(10, 132, 255, 0.1);
+}
+.brain-chat-link.file-link:active {
+    transform: translateY(0);
+}
+.brain-chat-link .link-icon {
+    font-size: 0.95rem;
+}
+
+#file-viewer-modal .macos-modal-box {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(25px) saturate(190%);
+    -webkit-backdrop-filter: blur(25px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+[data-theme="dark"] #file-viewer-modal .macos-modal-box {
+    background: rgba(30, 30, 30, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+

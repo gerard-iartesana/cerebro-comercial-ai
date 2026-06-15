@@ -626,6 +626,9 @@ OTRAS HERRAMIENTAS:
   * queryContracts: Para consultar las propuestas y contratos de leads.
   * queryChatRooms: Para consultar salas de chat, tokens, emails e historial.
 
+REGLA DE PRESENTACIÓN DE ARCHIVOS Y DOCUMENTOS:
+- Cuando respondas sobre solicitudes de documentos o archivos que tengan una URL ('uploaded_file_url' o 'archivo_url'), DEBES proporcionar un enlace directo en formato markdown estricto: '[📄 Abrir archivo: Nombre del Documento](URL_DEL_ARCHIVO)'. El frontend utilizará este formato para renderizar un botón interactivo y abrir el archivo en un visualizador macOS premium directamente dentro de la aplicación.
+
 REGLA DE ADVERTENCIA DE CRÉDITOS:
 - Siempre que el usuario te pida buscar leads o consultar estadísticas, revisa los datos de créditos retornados por las herramientas ('hunter_credits_used' y 'hunter_credits_limit').
 - Si los créditos consumidos superan el 80% del límite total (es decir, si quedan menos de 10 créditos libres de los 50 mensuales), DEBES inyectar una advertencia proactiva y visible al final de tu respuesta (ej: "⚠️ **Aviso del Sistema**: Nos estamos acercando al límite mensual de créditos de Hunter.io (X/50 usados). Por favor, tenlo en cuenta para no agotar la cuota de prospección.").` }]

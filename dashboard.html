@@ -216,6 +216,23 @@
         </div>
     </div>
 
+    <!-- File Viewer Modal (macOS Style) -->
+    <div class="macos-modal-overlay" id="file-viewer-modal" style="display: none;" onclick="if(event.target===this)closeFileViewer()">
+        <div class="macos-modal-box" style="width: 850px; max-width: 95%; height: 85vh; display: flex; flex-direction: column; padding: 20px; border-radius: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 class="macos-alert-title" id="file-viewer-title" style="margin: 0; text-align: left; font-size: 1.1rem; font-weight: 700;">Visualizador de Archivo</h3>
+                <button class="email-preview-close" onclick="closeFileViewer()" style="position: static; font-size: 1.2rem; background: none; border: none; color: var(--text-grey); cursor: pointer;">✕</button>
+            </div>
+            <div id="file-viewer-container" style="flex: 1; border-radius: 12px; overflow: hidden; background: rgba(0, 0, 0, 0.05); display: flex; align-items: center; justify-content: center; position: relative; border: 1px solid var(--border-color);">
+                <!-- Content will be injected dynamically -->
+            </div>
+            <div style="margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px;">
+                <a class="btn-primary" id="file-viewer-download" href="#" target="_blank" style="padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; text-decoration: none; display: flex; align-items: center; gap: 6px; background: var(--accent); color: white; font-weight: 600; cursor: pointer;">📥 Descargar</a>
+                <button class="btn-secondary" onclick="closeFileViewer()" style="padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-main); cursor: pointer; font-weight: 600;">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- macOS Lock Screen Authentication (Professional Login Form - Light Theme) -->
     <div class="macos-lock-screen" id="lock-screen">
         <div class="macos-lock-card" style="width: 100%; max-width: 380px; padding: 32px; border-radius: 24px; background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(0, 0, 0, 0.08); backdrop-filter: blur(35px); box-shadow: 0 20px 50px rgba(0,0,0,0.08); display: flex; flex-direction: column; align-items: stretch; text-align: left;">

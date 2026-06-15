@@ -4479,7 +4479,7 @@ async function sendToBrain() {
 
             const brainDiv = document.createElement('div');
             brainDiv.className = 'chat-bubble model';
-            brainDiv.innerHTML = data.text.replace(/\n/g, '<br>');
+            brainDiv.innerHTML = formatBrainResponse(data.text);
             chatMessages.appendChild(brainDiv);
             
             // Save to history
@@ -6510,6 +6510,98 @@ function closeEmailPreview() {
     document.getElementById('email-preview-modal').classList.remove('active');
 }
 
+function formatBrainResponse(text) {
+    if (!text) return '';
+    let html = text;
+    
+    // Regex for markdown links: [Link Text](URL)
+    const markdownLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+    
+    html = html.replace(markdownLinkRegex, (match, label, url) => {
+        const isFile = url.includes('/storage/v1/object/public/') || 
+                       url.match(/\.(pdf|png|jpg|jpeg|gif|webp|svg|docx|xlsx|zip)/i) ||
+                       label.toLowerCase().includes('archivo') || 
+                       label.toLowerCase().includes('documento') || 
+                       label.toLowerCase().includes('contrato') || 
+                       label.toLowerCase().includes('abrir') ||
+                       label.toLowerCase().includes('ver');
+        
+        if (isFile) {
+            const cleanLabel = label.replace(/^[📄\s]+/, '').trim();
+            return `<a href="javascript:void(0)" onclick="openFileViewer('${url}', '${cleanLabel.replace(/'/g, "\\'")}')" class="brain-chat-link file-link"><span class="link-icon">📄</span>${label}</a>`;
+        }
+        return `<a href="${url}" target="_blank" class="brain-chat-link">${label}</a>`;
+    });
+    
+    // Parse bold text **bold** -> <strong>bold</strong>
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    
+    // Parse bullet points
+    const lines = html.split('\n');
+    const formattedLines = lines.map(line => {
+        let trimmed = line.trim();
+        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            return `<li style="margin-left: 20px; margin-bottom: 4px; list-style-type: disc;">${trimmed.substring(2)}</li>`;
+        }
+        return line;
+    });
+    
+    html = formattedLines.join('\n');
+    html = html.replace(/\n/g, '<br>');
+    return html;
+}
+
+function openFileViewer(url, name) {
+    const modal = document.getElementById('file-viewer-modal');
+    if (!modal) return;
+    
+    document.getElementById('file-viewer-title').textContent = name || 'Visualizador de Archivo';
+    
+    const container = document.getElementById('file-viewer-container');
+    container.innerHTML = '';
+    
+    const downloadBtn = document.getElementById('file-viewer-download');
+    if (downloadBtn) {
+        downloadBtn.href = url;
+        downloadBtn.download = name || 'archivo';
+    }
+    
+    const lowerUrl = url.toLowerCase();
+    
+    if (lowerUrl.includes('.pdf') || lowerUrl.endsWith('.pdf')) {
+        container.innerHTML = `<iframe src="${url}" style="width: 100%; height: 100%; border: none; background: white;"></iframe>`;
+    } else if (lowerUrl.match(/\.(png|jpg|jpeg|gif|webp|svg)/) || lowerUrl.includes('/storage/v1/object/public/')) {
+        container.innerHTML = `
+            <img src="${url}" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;" 
+                 onerror="this.onerror=null; this.style.display='none'; document.getElementById('file-viewer-fallback').style.display='block';">
+            <div id="file-viewer-fallback" style="display: none; text-align: center; color: var(--text-grey); padding: 20px;">
+                <span style="font-size: 3rem; display: block; margin-bottom: 15px;">📄</span>
+                <p style="margin-bottom: 15px;">No se puede previsualizar este archivo directamente.</p>
+                <a href="${url}" target="_blank" class="btn-primary" style="display: inline-block; text-decoration: none; padding: 8px 16px; border-radius: 8px; background: var(--accent); color: white;">Abrir en pestaña nueva</a>
+            </div>
+        `;
+    } else {
+        container.innerHTML = `
+            <div style="text-align: center; color: var(--text-grey); padding: 20px;">
+                <span style="font-size: 3rem; display: block; margin-bottom: 15px;">📄</span>
+                <p style="margin-bottom: 15px;">Este archivo (${name || 'documento'}) no se puede previsualizar.</p>
+                <a href="${url}" target="_blank" class="btn-primary" style="display: inline-block; text-decoration: none; padding: 8px 16px; border-radius: 8px; background: var(--accent); color: white;">Abrir en pestaña nueva</a>
+            </div>
+        `;
+    }
+    
+    modal.classList.add('active');
+}
+
+function closeFileViewer() {
+    const modal = document.getElementById('file-viewer-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        const container = document.getElementById('file-viewer-container');
+        if (container) container.innerHTML = '';
+    }
+}
+
 // --- AI Generate Dialog ---
 let _aiDialogTarget = null;
 
@@ -6793,6 +6885,8 @@ window.filterProposalHistorial = filterProposalHistorial;
 window.renderOutreachSendList = renderOutreachSendList;
 window.previewOutreachEmail = previewOutreachEmail;
 window.closeEmailPreview = closeEmailPreview;
+window.openFileViewer = openFileViewer;
+window.closeFileViewer = closeFileViewer;
 window.openAIGenerateDialog = openAIGenerateDialog;
 window.closeAIGenerateDialog = closeAIGenerateDialog;
 window.executeAIGenerate = executeAIGenerate;
