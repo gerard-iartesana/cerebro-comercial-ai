@@ -801,6 +801,16 @@
                                             <span class="status-dot status-idle"></span> Inactivo
                                         </div>
                                     </div>
+                                    <div class="agent-node agent-node-child-v" id="node-gestor">
+                                        <div class="agent-node-icon">💼</div>
+                                        <div class="agent-node-info">
+                                            <div class="agent-node-name">Gestor</div>
+                                            <div class="agent-node-role">CRM / Calendario / Tareas</div>
+                                        </div>
+                                        <div class="agent-node-status" id="status-gestor">
+                                            <span class="status-dot status-idle"></span> Inactivo
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -902,6 +912,25 @@
                                         <button class="rating-btn rating-up" onclick="rateAgent('consultor', 'up')" title="Buen trabajo">👍</button>
                                         <button class="rating-btn rating-down" onclick="rateAgent('consultor', 'down')" title="Puede mejorar">👎</button>
                                         <span class="rating-score" id="score-consultor">—</span>
+                                    </div>
+                                </div>
+                                <div class="agent-card" id="card-gestor">
+                                    <div class="agent-card-header">
+                                        <span class="agent-card-icon">💼</span>
+                                        <div>
+                                            <div class="agent-card-name">Agente Gestor</div>
+                                            <div class="agent-card-tech">CRM & Tareas</div>
+                                        </div>
+                                        <span class="agent-card-badge badge-idle" id="badge-gestor">💤 Inactivo</span>
+                                    </div>
+                                    <div class="agent-card-log" id="log-gestor">
+                                        <div class="log-entry log-empty">Sin actividad reciente</div>
+                                    </div>
+                                    <div class="agent-card-rating">
+                                        <span class="rating-label">Valorar:</span>
+                                        <button class="rating-btn rating-up" onclick="rateAgent('gestor', 'up')" title="Buen trabajo">👍</button>
+                                        <button class="rating-btn rating-down" onclick="rateAgent('gestor', 'down')" title="Puede mejorar">👎</button>
+                                        <span class="rating-score" id="score-gestor">—</span>
                                     </div>
                                 </div>
                             </div>

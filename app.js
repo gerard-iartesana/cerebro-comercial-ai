@@ -4083,7 +4083,8 @@ const AGENT_NAMES = {
     enricher: { name: 'Enriquecedor', icon: '🕷️', tech: 'Scraping + IA' },
     emailer: { name: 'Email', icon: '📧', tech: 'Resend' },
     analytics: { name: 'Analítico', icon: '📊', tech: 'Supabase' },
-    consultor: { name: 'Consultor', icon: '👥', tech: 'Base de Datos' }
+    consultor: { name: 'Consultor', icon: '👥', tech: 'Base de Datos' },
+    gestor: { name: 'Gestor', icon: '💼', tech: 'Task & CRM Manager' }
 };
 
 function setAgentStatus(agentId, status, message) {
@@ -4190,8 +4191,18 @@ async function rateAgent(agentId, rating) {
         }
     }
 
-    // Log the feedback
-    addAgentLog(agentId, `Valoración: ${rating === 'up' ? '👍 Positiva' : '👎 Negativa'}`, rating === 'up' ? 'done' : 'error');
+    // Update rating in agent history
+    const historyKey = 'cc_agent_history';
+    const history = JSON.parse(localStorage.getItem(historyKey) || '{}');
+    if (history[agentId] && history[agentId].length > 0) {
+        // Update the most recent history entry
+        history[agentId][0].rating = rating;
+        localStorage.setItem(historyKey, JSON.stringify(history));
+        renderAgentHistories();
+    } else {
+        // Fallback: Log the feedback if no history exists yet
+        addAgentLog(agentId, `Valoración: ${rating === 'up' ? '👍 Positiva' : '👎 Negativa'}`, rating === 'up' ? 'done' : 'error');
+    }
 
     // Try to persist in Supabase (non-blocking)
     try {
@@ -4553,7 +4564,23 @@ function renderAgentHistories() {
             const icon = entry.success ? '✅' : '❌';
             const div = document.createElement('div');
             div.className = `log-entry ${statusClass}`;
-            div.innerHTML = `<span>${icon} ${entry.action}</span> <span class="log-time">${time}</span><br><span class="log-query">"${entry.query}"</span>`;
+            
+            // Visual enhancement for rated actions
+            let ratingBadge = '';
+            let ratedStyle = '';
+            if (entry.rating === 'up') {
+                ratingBadge = ' <span class="log-rating-badge badge-positive" style="background:rgba(52,199,89,0.2);color:#30d158;padding:2px 6px;border-radius:4px;font-size:0.68rem;font-weight:bold;margin-left:8px;display:inline-block;vertical-align:middle">👍 Valorado</span>';
+                ratedStyle = 'background: rgba(52, 199, 89, 0.08) !important; border-left: 3px solid #30d158 !important; padding-left: 8px;';
+            } else if (entry.rating === 'down') {
+                ratingBadge = ' <span class="log-rating-badge badge-negative" style="background:rgba(255,69,58,0.2);color:#ff453a;padding:2px 6px;border-radius:4px;font-size:0.68rem;font-weight:bold;margin-left:8px;display:inline-block;vertical-align:middle">👎 Valorado</span>';
+                ratedStyle = 'background: rgba(255, 69, 58, 0.08) !important; border-left: 3px solid #ff453a !important; padding-left: 8px;';
+            }
+            
+            if (ratedStyle) {
+                div.style.cssText = ratedStyle;
+            }
+            
+            div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;width:100%"><span>${icon} <strong>${entry.action}</strong>${ratingBadge}</span> <span class="log-time">${time}</span></div><div class="log-query" style="margin-top:2px;font-size:0.75rem;opacity:0.85">"${entry.query}"</div>`;
             logEl.appendChild(div);
         });
     });

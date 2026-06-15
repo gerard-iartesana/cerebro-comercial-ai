@@ -22,7 +22,11 @@ const agentMap = {
   queryDocuments: 'consultor',
   queryMilestones: 'consultor',
   queryContracts: 'consultor',
-  queryChatRooms: 'consultor'
+  queryChatRooms: 'consultor',
+  createTask: 'gestor',
+  createMilestone: 'gestor',
+  sendChatMessage: 'gestor',
+  updateClientProfile: 'gestor'
 };
 
 // Define tools available for Gemini
@@ -116,6 +120,65 @@ const geminiTools = [
           properties: {
             search: { type: "STRING", description: "Opcional. Término de búsqueda (nombre o email del cliente) para encontrar su sala." }
           }
+        }
+      },
+      {
+        name: "createTask",
+        description: "Crea una nueva tarea en el dashboard asignada a un responsable, con prioridad, estado y descripción.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            title: { type: "STRING", description: "El título de la tarea." },
+            description: { type: "STRING", description: "Opcional. Descripción o detalles de la tarea." },
+            responsible: { type: "STRING", description: "Opcional. Responsable de la tarea, ej. 'Gerard' o 'Cerebro'." },
+            status: { type: "STRING", description: "Opcional. Estado de la tarea: 'pending', 'in_progress', 'completed'." },
+            priority: { type: "STRING", description: "Opcional. Prioridad de la tarea: 'low', 'medium', 'high'." },
+            due_date: { type: "STRING", description: "Opcional. Fecha de vencimiento en formato YYYY-MM-DD." },
+            notes: { type: "STRING", description: "Opcional. Notas o comentarios adicionales." }
+          },
+          required: ["title"]
+        }
+      },
+      {
+        name: "createMilestone",
+        description: "Crea y programa un hito o reunión de calendario para un cliente específico.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            lead_name: { type: "STRING", description: "El nombre del cliente al que asociar el hito/reunión." },
+            title: { type: "STRING", description: "El título o motivo de la reunión o hito." },
+            date: { type: "STRING", description: "La fecha y hora del evento en formato ISO o YYYY-MM-DD HH:MM." },
+            status: { type: "STRING", description: "Opcional. Estado del hito: 'pending', 'completed'." }
+          },
+          required: ["lead_name", "title", "date"]
+        }
+      },
+      {
+        name: "sendChatMessage",
+        description: "Envía un mensaje de chat de parte del administrador (Gerard) a la sala de chat de un cliente.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            lead_name: { type: "STRING", description: "El nombre del cliente al que enviar el mensaje." },
+            content: { type: "STRING", description: "El contenido del mensaje a enviar." }
+          },
+          required: ["lead_name", "content"]
+        }
+      },
+      {
+        name: "updateClientProfile",
+        description: "Actualiza los datos de contacto o el estado en la ficha de un lead/cliente.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            lead_name: { type: "STRING", description: "El nombre del cliente a actualizar." },
+            status: { type: "STRING", description: "Opcional. Nuevo estado: 'lead', 'contacted', 'replied', 'booked', 'enriched'." },
+            phone: { type: "STRING", description: "Opcional. Nuevo número de teléfono." },
+            company_name: { type: "STRING", description: "Opcional. Nuevo nombre de empresa/negocio." },
+            web: { type: "STRING", description: "Opcional. Nueva URL del sitio web." },
+            position: { type: "STRING", description: "Opcional. Nuevo cargo o profesión." }
+          },
+          required: ["lead_name"]
         }
       }
     ]
@@ -521,6 +584,156 @@ const implementations = {
       console.error('Error in queryChatRooms:', err);
       return { error: err.message };
     }
+  },
+
+  async createTask({ title, description, responsible, status, priority, due_date, notes }) {
+    try {
+      const taskData = {
+        title,
+        description: description || '',
+        responsible: responsible || 'Gerard',
+        status: status || 'pending',
+        priority: priority || 'medium',
+        due_date: due_date || null,
+        notes: notes || '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      const { data, error } = await supabase.from('tasks').insert([taskData]).select();
+      if (error) throw error;
+      return {
+        success: true,
+        message: `Tarea "${title}" creada con éxito para ${taskData.responsible}.`,
+        task: data[0]
+      };
+    } catch (err) {
+      console.error('Error in createTask:', err);
+      return { error: err.message };
+    }
+  },
+
+  async createMilestone({ lead_name, title, date, status }) {
+    try {
+      const { data: rooms, error: roomError } = await supabase
+        .from('chat_rooms')
+        .select('id, lead_name')
+        .ilike('lead_name', `%${lead_name}%`)
+        .limit(1);
+      
+      if (roomError) throw roomError;
+      if (!rooms || rooms.length === 0) {
+        return { error: `No se encontró ningún cliente/sala con el nombre "${lead_name}". Por favor, asegúrate de que el nombre es correcto.` };
+      }
+      
+      const roomId = rooms[0].id;
+      const milestoneData = {
+        room_id: roomId,
+        title,
+        date: new Date(date).toISOString(),
+        status: status || 'pending',
+        created_at: new Date().toISOString()
+      };
+      
+      const { data, error } = await supabase.from('client_milestones').insert([milestoneData]).select();
+      if (error) throw error;
+      
+      return {
+        success: true,
+        message: `Hito/Reunión "${title}" programada con éxito para ${rooms[0].lead_name} el ${new Date(date).toLocaleString('es-ES')}.`,
+        milestone: data[0]
+      };
+    } catch (err) {
+      console.error('Error in createMilestone:', err);
+      return { error: err.message };
+    }
+  },
+
+  async sendChatMessage({ lead_name, content }) {
+    try {
+      const { data: rooms, error: roomError } = await supabase
+        .from('chat_rooms')
+        .select('*')
+        .ilike('lead_name', `%${lead_name}%`)
+        .limit(1);
+      
+      if (roomError) throw roomError;
+      if (!rooms || rooms.length === 0) {
+        return { error: `No se encontró ningún chat activo para el cliente "${lead_name}".` };
+      }
+      
+      const room = rooms[0];
+      const insertData = {
+        room_id: room.id,
+        sender_type: 'admin',
+        sender_name: 'Gerard',
+        content: content,
+        created_at: new Date().toISOString()
+      };
+      
+      const { data: msgData, error: msgError } = await supabase.from('chat_messages').insert([insertData]).select();
+      if (msgError) throw msgError;
+      
+      await supabase.from('chat_rooms').update({
+        last_message_at: new Date().toISOString(),
+        unread_count: (room.unread_count || 0) + 1
+      }).eq('id', room.id);
+      
+      await supabase.from('chat_activities').insert({
+        room_id: room.id,
+        lead_name: room.lead_name || 'Lead',
+        action: 'send_message',
+        desc: `Gerard (IA) envió mensaje: "${content.substring(0, 80)}"`,
+        sender_type: 'admin',
+        created_at: new Date().toISOString()
+      });
+      
+      return {
+        success: true,
+        message: `Mensaje enviado con éxito al chat de ${room.lead_name}: "${content}"`,
+        message_data: msgData[0]
+      };
+    } catch (err) {
+      console.error('Error in sendChatMessage:', err);
+      return { error: err.message };
+    }
+  },
+
+  async updateClientProfile({ lead_name, status, phone, company_name, web, position }) {
+    try {
+      const { data: leads, error: leadError } = await supabase
+        .from('outreach_leads')
+        .select('*')
+        .ilike('first_name', `%${lead_name}%`)
+        .limit(1);
+      
+      if (leadError) throw leadError;
+      if (!leads || leads.length === 0) {
+        return { error: `No se encontró ningún lead/cliente con el nombre "${lead_name}".` };
+      }
+      
+      const lead = leads[0];
+      const updateData = {
+        updated_at: new Date().toISOString()
+      };
+      
+      if (status) updateData.status = status;
+      if (phone) updateData.phone = phone;
+      if (company_name) updateData.company_name = company_name;
+      if (web) updateData.web = web;
+      if (position) updateData.position = position;
+      
+      const { data, error } = await supabase.from('outreach_leads').update(updateData).eq('id', lead.id).select();
+      if (error) throw error;
+      
+      return {
+        success: true,
+        message: `Ficha del cliente ${lead.first_name} actualizada correctamente.`,
+        lead: data[0]
+      };
+    } catch (err) {
+      console.error('Error in updateClientProfile:', err);
+      return { error: err.message };
+    }
   }
 };
 
@@ -581,8 +794,8 @@ module.exports = async function handler(req, res) {
 
     const systemInstruction = {
       parts: [{ text: `Actúas como "El Cerebro", el orquestador cognitivo principal de CerebroComercial AI (marca iadebarrio.com). 
-Tienes acceso a un equipo de agentes especializados: 🔍 Buscador (Hunter.io), 🕷️ Enriquecedor (Scraping+IA), 📧 Email (Resend), 📊 Analítico (Supabase) y 👥 Consultor (Base de Datos). Cuando necesites ejecutar una acción, delegas al agente correspondiente.
-Tu tono de voz es cercano, directo, amigable (tuteando, ej: "¡Hola! Claro, ahora mismo busco leads...") y extremadamente resolutivo. Evita formalidades y rodeos cliché.
+Tienes acceso a un equipo de agentes especializados: 🔍 Buscador (Hunter.io), 🕷️ Enriquecedor (Scraping+IA), 📧 Email (Resend), 📊 Analítico (Supabase), 👥 Consultor (Base de Datos) y 💼 Gestor (CRM/Calendario/Tareas/Chats). Cuando necesites ejecutar una acción, delegas al agente correspondiente.
+Tu tono de voz es cercano, directo, amigable (tuteando, ej: "¡Hola! Claro, ahora mismo busco leads...") y extremadamente resolutivo. Evita formalidades and rodeos cliché.
 
 REGLAS CRÍTICAS PARA BÚSQUEDA DE LEADS:
 - **FILTRO GEOGRÁFICO OBLIGATORIO**: Si el usuario te pide buscar leads de un sector, industria o deporte en España pero NO indica la ubicación geográfica (provincia, región o Comunidad Autónoma), DEBES responder primero preguntando amablemente en qué zona o región desea buscar (ej: "¿En qué provincia o Comunidad Autónoma te gustaría realizar la búsqueda?") y DETENER la ejecución sin llamar a ninguna herramienta. NUNCA asumas una región por defecto (como Baleares o Cataluña) si no ha sido explícitamente especificada por el usuario.
@@ -625,6 +838,11 @@ OTRAS HERRAMIENTAS:
   * queryMilestones: Para consultar hitos y citas del calendario.
   * queryContracts: Para consultar las propuestas y contratos de leads.
   * queryChatRooms: Para consultar salas de chat, tokens, emails e historial.
+- Si te piden ejecutar, programar o gestionar tareas, hitos, chats o perfiles de clientes, usa las herramientas del agente Gestor:
+  * createTask: Para crear una nueva tarea en el dashboard (título, responsable, etc.).
+  * createMilestone: Para agendar/crear un hito o reunión de calendario para un cliente.
+  * sendChatMessage: Para enviar un mensaje de chat al cliente.
+  * updateClientProfile: Para actualizar el perfil, estado o datos de contacto de un cliente.
 
 REGLA DE PRESENTACIÓN DE ARCHIVOS Y DOCUMENTOS:
 - Cuando respondas sobre solicitudes de documentos o archivos que tengan una URL ('uploaded_file_url' o 'archivo_url'), DEBES proporcionar un enlace directo en formato markdown estricto: '[📄 Abrir archivo: Nombre del Documento](URL_DEL_ARCHIVO)'. El frontend utilizará este formato para renderizar un botón interactivo y abrir el archivo en un visualizador macOS premium directamente dentro de la aplicación.
