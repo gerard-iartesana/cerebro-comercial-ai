@@ -2677,7 +2677,7 @@ async function loadStorageData() {
                 const itemPath = f.path.replace(/'/g, "\\'");
                 
                 if (f.url) {
-                    actionHtml += `<a href="${f.url}" target="_blank" style="color:#007AFF;font-size:0.75rem;font-weight:600;text-decoration:none;white-space:nowrap;padding:4px 10px;border-radius:6px;border:1px solid rgba(0,113,227,0.2);background:rgba(0,113,227,0.04);transition:all 0.15s" onmouseenter="this.style.background='rgba(0,113,227,0.1)'" onmouseleave="this.style.background='rgba(0,113,227,0.04)'">⬇️ Abrir</a>`;
+                    actionHtml += `<a href="javascript:void(0)" onclick="openFileViewer('${f.url}', '${cleanName}')" style="color:#007AFF;font-size:0.75rem;font-weight:600;text-decoration:none;white-space:nowrap;padding:4px 10px;border-radius:6px;border:1px solid rgba(0,113,227,0.2);background:rgba(0,113,227,0.04);transition:all 0.15s" onmouseenter="this.style.background='rgba(0,113,227,0.1)'" onmouseleave="this.style.background='rgba(0,113,227,0.04)'">👁️ Abrir</a>`;
                     actionHtml += `<button onclick="sendStorageFile('${f.url}', '${cleanName}')" style="color:#6c5ce7;font-size:0.75rem;font-weight:600;white-space:nowrap;padding:4px 10px;border-radius:6px;border:1px solid rgba(108,92,231,0.2);background:rgba(108,92,231,0.04);transition:all 0.15s;cursor:pointer;font-family:inherit" onmouseenter="this.style.background='rgba(108,92,231,0.1)'" onmouseleave="this.style.background='rgba(108,92,231,0.04)'">📤 Enviar</button>`;
                 }
                 actionHtml += `<button onclick="deleteStorageFile('${f.source}', '${f.bucket}', '${itemPath}', '${f.meta?.id || f.id || ''}', '${cleanName}')" style="color:#ff453a;font-size:0.75rem;font-weight:600;white-space:nowrap;padding:4px 10px;border-radius:6px;border:1px solid rgba(255,69,58,0.2);background:rgba(255,69,58,0.04);transition:all 0.15s;cursor:pointer;font-family:inherit" onmouseenter="this.style.background='rgba(255,69,58,0.1)'" onmouseleave="this.style.background='rgba(255,69,58,0.04)'">🗑️ Borrar</button>`;
@@ -11990,13 +11990,13 @@ function renderChatMessages(messages) {
             const isAudio = /\.(webm|mp3|ogg|m4a|wav|mp4)$/i.test(fn) && fn.startsWith('audio_');
             const isVideo = /\.(mp4|mov|webm|avi|mkv)$/i.test(fn) && !fn.startsWith('audio_');
             if (isImg) {
-                fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" style="max-width:260px;border-radius:10px;margin-top:6px;cursor:pointer" onclick="window.open('${m.file_url}','_blank')">`;
+                fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" style="max-width:260px;border-radius:10px;margin-top:6px;cursor:pointer" onclick="openFileViewer('${m.file_url}', '${m.file_name.replace(/'/g, "\\'")}')">`;
             } else if (isAudio) {
                 fileHtml = `<audio controls preload="none" src="${m.file_url}" style="max-width:260px;margin-top:6px"></audio>`;
             } else if (isVideo) {
                 fileHtml = `<video controls src="${m.file_url}" preload="metadata" playsinline style="max-width:260px;max-height:200px;border-radius:10px;margin-top:6px"></video>`;
             } else {
-                fileHtml = `<a href="${m.file_url}" target="_blank" style="display:inline-flex;gap:4px;align-items:center;margin-top:6px;font-size:0.78rem;color:${isAdmin?'#ffffff':'var(--accent)'};text-decoration:underline">📄 ${m.file_name || 'Archivo'}</a>`;
+                fileHtml = `<a href="javascript:void(0)" onclick="openFileViewer('${m.file_url}', '${m.file_name.replace(/'/g, "\\'")}')" style="display:inline-flex;gap:4px;align-items:center;margin-top:6px;font-size:0.78rem;color:${isAdmin?'#ffffff':'var(--accent)'};text-decoration:underline">📄 ${m.file_name || 'Archivo'}</a>`;
             }
         }
 
@@ -12041,13 +12041,13 @@ function subscribeToChatRoom(roomId) {
                 const isAudio = /\.(webm|mp3|ogg|m4a|wav|mp4)$/i.test(fn) && fn.startsWith('audio_');
                 const isVideo = /\.(mp4|mov|webm|avi|mkv)$/i.test(fn) && !fn.startsWith('audio_');
                 if (isImg) {
-                    fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" style="max-width:260px;border-radius:10px;margin-top:6px;cursor:pointer" onclick="window.open('${m.file_url}','_blank')">`;
+                    fileHtml = `<img src="${m.file_url}" alt="${m.file_name}" style="max-width:260px;border-radius:10px;margin-top:6px;cursor:pointer" onclick="openFileViewer('${m.file_url}', '${m.file_name.replace(/'/g, "\\'")}')">`;
                 } else if (isAudio) {
                     fileHtml = `<audio controls preload="none" src="${m.file_url}" style="max-width:260px;margin-top:6px"></audio>`;
                 } else if (isVideo) {
                     fileHtml = `<video controls src="${m.file_url}" preload="metadata" playsinline style="max-width:260px;max-height:200px;border-radius:10px;margin-top:6px"></video>`;
                 } else {
-                    fileHtml = `<a href="${m.file_url}" target="_blank" style="display:inline-flex;gap:4px;align-items:center;margin-top:6px;font-size:0.78rem;color:${isAdmin?'#ffffff':'var(--accent)'};text-decoration:underline">📄 ${m.file_name || 'Archivo'}</a>`;
+                    fileHtml = `<a href="javascript:void(0)" onclick="openFileViewer('${m.file_url}', '${m.file_name.replace(/'/g, "\\'")}')" style="display:inline-flex;gap:4px;align-items:center;margin-top:6px;font-size:0.78rem;color:${isAdmin?'#ffffff':'var(--accent)'};text-decoration:underline">📄 ${m.file_name || 'Archivo'}</a>`;
                 }
             }
 
@@ -13798,7 +13798,7 @@ window.generatePdfChatReport = async function(event) {
             
             let attachmentHtml = '';
             if (m.file_url) {
-                attachmentHtml = `<div style="margin-top:6px;font-size:0.8rem;color:#4f46e5;font-style:italic">📎 Adjunto: <a href="${m.file_url}" target="_blank" style="color:#4f46e5;text-decoration:underline">${m.file_name || 'Archivo'}</a></div>`;
+                attachmentHtml = `<div style="margin-top:6px;font-size:0.8rem;color:#4f46e5;font-style:italic">📎 Adjunto: <a href="javascript:void(0)" onclick="openFileViewer('${m.file_url}', '${(m.file_name || 'Archivo').replace(/'/g, "\\'")}')" style="color:#4f46e5;text-decoration:underline">${m.file_name || 'Archivo'}</a></div>`;
             }
             
             messagesHtml += `
@@ -14071,7 +14071,7 @@ window.loadGlobalDocumentsHistory = async function() {
 
                 let fileCell = '—';
                 if (doc.uploaded_file_url) {
-                    fileCell = `<a href="${doc.uploaded_file_url}" target="_blank" style="color:var(--accent-purple); text-decoration:none; font-weight:700">👁️ Ver archivo</a>`;
+                    fileCell = `<a href="javascript:void(0)" onclick="openFileViewer('${doc.uploaded_file_url}', '${doc.document_name.replace(/'/g, "\\'")}')" style="color:var(--accent-purple); text-decoration:none; font-weight:700">👁️ Ver archivo</a>`;
                 }
 
                 let actions = '';
@@ -14178,7 +14178,7 @@ window.loadClientDashboardData = async function(roomId) {
 
                 let fileCell = '—';
                 if (doc.uploaded_file_url) {
-                    fileCell = `<a href="${doc.uploaded_file_url}" target="_blank" style="color:var(--accent-purple); text-decoration:none; font-weight:700">👁️ Descargar / Ver</a>`;
+                    fileCell = `<a href="javascript:void(0)" onclick="openFileViewer('${doc.uploaded_file_url}', '${doc.document_name.replace(/'/g, "\\'")}')" style="color:var(--accent-purple); text-decoration:none; font-weight:700">👁️ Descargar / Ver</a>`;
                 }
 
                 let actions = '';
