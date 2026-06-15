@@ -18,7 +18,11 @@ const agentMap = {
   enrichLead: 'enricher',
   sendSequence: 'emailer',
   getOutboxStats: 'analytics',
-  listLeads: 'analytics'
+  listLeads: 'analytics',
+  queryDocuments: 'consultor',
+  queryMilestones: 'consultor',
+  queryContracts: 'consultor',
+  queryChatRooms: 'consultor'
 };
 
 // Define tools available for Gemini
@@ -70,6 +74,47 @@ const geminiTools = [
           type: "OBJECT",
           properties: {
             status: { type: "STRING", description: "Filtro opcional. Ej: 'replied', 'booked', 'lead', 'enriched'." }
+          }
+        }
+      },
+      {
+        name: "queryDocuments",
+        description: "Consulta las solicitudes de documentos realizadas a los clientes (nombre, estado, vencimiento, URL del archivo).",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            lead_name: { type: "STRING", description: "Opcional. Nombre o parte del nombre del cliente para filtrar." },
+            status: { type: "STRING", description: "Opcional. Filtro por estado: 'pending', 'reviewing', 'approved', 'rejected'." }
+          }
+        }
+      },
+      {
+        name: "queryMilestones",
+        description: "Consulta las fechas importantes, hitos y reuniones programadas en el calendario de los clientes.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            lead_name: { type: "STRING", description: "Opcional. Nombre o parte del nombre del cliente para filtrar." }
+          }
+        }
+      },
+      {
+        name: "queryContracts",
+        description: "Consulta las propuestas comerciales y contratos creados para los clientes (código, estado, datos de pago y cliente).",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            lead_name: { type: "STRING", description: "Opcional. Nombre o parte del nombre del cliente para filtrar." }
+          }
+        }
+      },
+      {
+        name: "queryChatRooms",
+        description: "Consulta las salas de chat activas de los leads, sus emails y tokens de acceso.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            search: { type: "STRING", description: "Opcional. Término de búsqueda (nombre o email del cliente) para encontrar su sala." }
           }
         }
       }
@@ -335,6 +380,147 @@ const implementations = {
     if (getErr || !lead) return { error: `Lead no encontrado` };
     if (lead.status !== 'enriched') return { error: `El lead debe estar en estado 'enriched' para enviar. Estado actual: ${lead.status}` };
     return { success: true, message: `Secuencia preparada para ${lead.email}. Ejecuta /api/send-sequence para procesar el envío.` };
+  },
+
+  async queryDocuments({ lead_name, status }) {
+    try {
+      let query = supabase.from('client_document_requests').select('*, chat_rooms(lead_name, lead_company)');
+      
+      if (lead_name) {
+        const { data: rooms } = await supabase.from('chat_rooms').select('id').ilike('lead_name', `%${lead_name}%`);
+        const roomIds = (rooms || []).map(r => r.id);
+        if (roomIds.length === 0) {
+          return { success: true, message: `No se encontraron clientes que coincidan con "${lead_name}".`, documents: [] };
+        }
+        query = query.in('room_id', roomIds);
+      }
+      
+      if (status) {
+        query = query.eq('status', status);
+      }
+      
+      const { data: docs, error } = await query.order('created_at', { ascending: false }).limit(20);
+      if (error) throw error;
+      
+      return {
+        success: true,
+        documents: (docs || []).map(d => ({
+          id: d.id,
+          cliente: d.chat_rooms?.lead_name || 'Desconocido',
+          empresa: d.chat_rooms?.lead_company || '',
+          documento: d.document_name,
+          estado: d.status,
+          vencimiento: d.due_date,
+          archivo_url: d.uploaded_file_url,
+          notas: d.notes,
+          creado_el: d.created_at
+        }))
+      };
+    } catch (err) {
+      console.error('Error in queryDocuments:', err);
+      return { error: err.message };
+    }
+  },
+
+  async queryMilestones({ lead_name }) {
+    try {
+      let query = supabase.from('client_milestones').select('*, chat_rooms(lead_name, lead_company)');
+      
+      if (lead_name) {
+        const { data: rooms } = await supabase.from('chat_rooms').select('id').ilike('lead_name', `%${lead_name}%`);
+        const roomIds = (rooms || []).map(r => r.id);
+        if (roomIds.length === 0) {
+          return { success: true, message: `No se encontraron hitos para clientes que coincidan con "${lead_name}".`, milestones: [] };
+        }
+        query = query.in('room_id', roomIds);
+      }
+      
+      const { data: miles, error } = await query.order('date', { ascending: true }).limit(20);
+      if (error) throw error;
+      
+      return {
+        success: true,
+        milestones: (miles || []).map(m => ({
+          id: m.id,
+          cliente: m.chat_rooms?.lead_name || 'Desconocido',
+          empresa: m.chat_rooms?.lead_company || '',
+          titulo: m.title,
+          fecha: m.date,
+          estado: m.status,
+          gcal_event_id: m.gcal_event_id,
+          creado_el: m.created_at
+        }))
+      };
+    } catch (err) {
+      console.error('Error in queryMilestones:', err);
+      return { error: err.message };
+    }
+  },
+
+  async queryContracts({ lead_name }) {
+    try {
+      let query = supabase.from('contratos').select('*');
+      
+      if (lead_name) {
+        query = query.ilike('cliente_nombre', `%${lead_name}%`);
+      }
+      
+      const { data: contrs, error } = await query.order('created_at', { ascending: false }).limit(20);
+      if (error) throw error;
+      
+      return {
+        success: true,
+        contratos: (contrs || []).map(c => ({
+          id: c.id,
+          codigo: c.codigo_contrato,
+          cliente: c.cliente_nombre,
+          email: c.cliente_email,
+          telefono: c.cliente_telefono,
+          estado: c.estado,
+          datos_pago: c.formas_pago,
+          creado_el: c.created_at
+        }))
+      };
+    } catch (err) {
+      console.error('Error in queryContracts:', err);
+      return { error: err.message };
+    }
+  },
+
+  async queryChatRooms({ search }) {
+    try {
+      let query = supabase.from('chat_rooms').select('*, chat_messages(content, sender_type, created_at)');
+      
+      if (search) {
+        query = query.or(`lead_name.ilike.%${search}%,lead_email.ilike.%${search}%,lead_company.ilike.%${search}%`);
+      }
+      
+      const { data: rooms, error } = await query.order('last_message_at', { ascending: false }).limit(10);
+      if (error) throw error;
+      
+      return {
+        success: true,
+        salas: (rooms || []).map(r => {
+          const msgs = r.chat_messages || [];
+          msgs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          const lastMsg = msgs[0] || null;
+          
+          return {
+            id: r.id,
+            cliente: r.lead_name,
+            empresa: r.lead_company,
+            email: r.lead_email,
+            token_acceso: r.link_token,
+            ultimo_mensaje: lastMsg ? `${lastMsg.sender_type}: ${lastMsg.content.substring(0, 60)}` : 'Ninguno',
+            fecha_ultimo_mensaje: r.last_message_at,
+            creada_el: r.created_at
+          };
+        })
+      };
+    } catch (err) {
+      console.error('Error in queryChatRooms:', err);
+      return { error: err.message };
+    }
   }
 };
 
@@ -393,11 +579,10 @@ module.exports = async function handler(req, res) {
       });
     }
 
-
     const systemInstruction = {
       parts: [{ text: `Actúas como "El Cerebro", el orquestador cognitivo principal de CerebroComercial AI (marca iadebarrio.com). 
-Tienes acceso a un equipo de agentes especializados: 🔍 Buscador (Hunter.io), 🕷️ Enriquecedor (Scraping+IA), 📧 Email (Resend), 📊 Analítico (Supabase). Cuando necesites ejecutar una acción, delegas al agente correspondiente.
-Tu tono de voz es cercano, directo, amigable (tuteando, ej: "¡Hola! Claro, ahora mismo busco leads...") y extremadamente resolutivo. Evita formalidades and rodeos cliché.
+Tienes acceso a un equipo de agentes especializados: 🔍 Buscador (Hunter.io), 🕷️ Enriquecedor (Scraping+IA), 📧 Email (Resend), 📊 Analítico (Supabase) y 👥 Consultor (Base de Datos). Cuando necesites ejecutar una acción, delegas al agente correspondiente.
+Tu tono de voz es cercano, directo, amigable (tuteando, ej: "¡Hola! Claro, ahora mismo busco leads...") y extremadamente resolutivo. Evita formalidades y rodeos cliché.
 
 REGLAS CRÍTICAS PARA BÚSQUEDA DE LEADS:
 - **FILTRO GEOGRÁFICO OBLIGATORIO**: Si el usuario te pide buscar leads de un sector, industria o deporte en España pero NO indica la ubicación geográfica (provincia, región o Comunidad Autónoma), DEBES responder primero preguntando amablemente en qué zona o región desea buscar (ej: "¿En qué provincia o Comunidad Autónoma te gustaría realizar la búsqueda?") y DETENER la ejecución sin llamar a ninguna herramienta. NUNCA asumas una región por defecto (como Baleares o Cataluña) si no ha sido explícitamente especificada por el usuario.
@@ -435,6 +620,11 @@ OTRAS HERRAMIENTAS:
 - Si te piden enviar un email o secuencia, usa sendSequence.
 - Si te piden estadísticas, usa getOutboxStats.
 - Si te piden listar leads, usa listLeads.
+- Si te piden consultar documentos, hitos/reuniones del calendario, propuestas, contratos, chats o clientes, usa las herramientas del agente Consultor:
+  * queryDocuments: Para consultar las solicitudes de documentos (vencimientos, estados: pending/reviewing/approved/rejected, URL del archivo).
+  * queryMilestones: Para consultar hitos y citas del calendario.
+  * queryContracts: Para consultar las propuestas y contratos de leads.
+  * queryChatRooms: Para consultar salas de chat, tokens, emails e historial.
 
 REGLA DE ADVERTENCIA DE CRÉDITOS:
 - Siempre que el usuario te pida buscar leads o consultar estadísticas, revisa los datos de créditos retornados por las herramientas ('hunter_credits_used' y 'hunter_credits_limit').

@@ -4082,7 +4082,8 @@ const AGENT_NAMES = {
     searcher: { name: 'Buscador', icon: '🔍', tech: 'Hunter.io' },
     enricher: { name: 'Enriquecedor', icon: '🕷️', tech: 'Scraping + IA' },
     emailer: { name: 'Email', icon: '📧', tech: 'Resend' },
-    analytics: { name: 'Analítico', icon: '📊', tech: 'Supabase' }
+    analytics: { name: 'Analítico', icon: '📊', tech: 'Supabase' },
+    consultor: { name: 'Consultor', icon: '👥', tech: 'Base de Datos' }
 };
 
 function setAgentStatus(agentId, status, message) {
